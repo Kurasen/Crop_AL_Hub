@@ -4,6 +4,13 @@ from blueprint.utils.JWT import generate_token, token_required
 from models import UserModel
 from flask_restx import Resource, Api, fields
 
+# 模拟用户数据
+USERS = [
+    {"id": 1, "username": "test001", "password": "123123", "telephone": "1234567890", "email": "user1@example.com"},
+    {"id": 2, "username": "test002", "password": "123123", "telephone": "1234567891", "email": "user2@example.com"},
+    {"id": 3, "username": "test003", "password": "123123", "telephone": "1234567892", "email": "user3@example.com"},
+]
+
 # 定义 Flask-RESTX 的 API 文档对象
 api = Api(version='1.0', title='Flask Login API', description='Login functionality with JWT', doc='/swagger-ui')
 
@@ -35,34 +42,43 @@ class LoginResource(Resource):
         if not data or 'login_identifier' not in data or 'password' not in data or 'login_type' not in data:
             return {"message": "Missing login identifier, password, or login type"}, 400
 
-        # # 查询数据库中的用户
-        # user = UserModel.query.filter_by(username=username).first()
-
-        # # 查询数据库中的用户，尝试匹配 username、telephone 或 email
-        # user = UserModel.query.filter(
-        #     (UserModel.username == login_identifier) |
-        #     (UserModel.telephone == login_identifier) |
-        #     (UserModel.email == login_identifier)
-        # ).first()
-
-        # 根据 login_type 查询对应字段
-        if login_type == 'username':
-            user = UserModel.query.filter_by(username=login_identifier).first()
-        elif login_type == 'telephone':
-            user = UserModel.query.filter_by(telephone=login_identifier).first()
-        elif login_type == 'email':
-            user = UserModel.query.filter_by(email=login_identifier).first()
+        # 模拟数据验证
+        if login_type == "username":
+            user = next((u for u in USERS if u["username"] == login_identifier), None)
+        elif login_type == "telephone":
+            user = next((u for u in USERS if u["telephone"] == login_identifier), None)
+        elif login_type == "email":
+            user = next((u for u in USERS if u["email"] == login_identifier), None)
         else:
-            return {"message": "Invalid login type"}, 400  # 如果传递的 login_type 不合法
+            return {"message": "Invalid login type"}, 400
 
 
-        if not user or not check_password_hash(user.password, password):
-            return {"message": "Invalid username or password"}, 401
+        # # 根据 login_type 查询对应字段
+        # if login_type == 'username':
+        #     user = UserModel.query.filter_by(username=login_identifier).first()
+        # elif login_type == 'telephone':
+        #     user = UserModel.query.filter_by(telephone=login_identifier).first()
+        # elif login_type == 'email':
+        #     user = UserModel.query.filter_by(email=login_identifier).first()
+        # else:
+        #     return {"message": "Invalid login type"}, 400  # 如果传递的 login_type 不合法
+        #
+        # if not user or not check_password_hash(user.password, password):
+        #     return {"message": "Invalid username or password"}, 401
+        #
+        # # 生成 JWT
+        # token = generate_token(user.id, user.username)
+        # return {"message": "Login successful", "token": token}, 200
+        # # 可选：添加一个 GET 方法供调试或说明用途
 
-        # 生成 JWT
-        token = generate_token(user.id, user.username)
+        # 模拟验证用户和密码
+        if not user or user["password"] != password:
+            return {"message": "Invalid username, telephone, email, or password"}, 401
+
+        # 生成 JWT Token
+        token = generate_token(user["id"], user["username"])  # 使用 user["id"] 和 user["username"]
         return {"message": "Login successful", "token": token}, 200
-        # 可选：添加一个 GET 方法供调试或说明用途
+
 
     def get(self):
         return {"message": "Use POST method to login"}, 200
