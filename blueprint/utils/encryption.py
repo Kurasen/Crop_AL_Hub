@@ -9,14 +9,15 @@ app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
 
-def encrypt_existing_password():
-    with app.app_context():  # 激活应用程序上下文
-        user = UserModel.query.filter_by(username='test001').first()
-        if user:
-            user.password = generate_password_hash('123123')  # 加密明文密码
-            db.session.commit()
-            print("Password updated successfully.")
-        else:
-            print("User not found.")
+def encrypt_all_passwords():
+    with app.app_context():
+        # 获取所有用户
+        users = UserModel.query.all()
+        for user in users:
+            # 为每个用户的密码生成加密后的密码
+            user.password = generate_password_hash(user.password)
+            # 提交更改
+        db.session.commit()
+        print("All passwords have been updated successfully.")
 
-encrypt_existing_password()
+encrypt_all_passwords()
