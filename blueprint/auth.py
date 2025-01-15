@@ -9,7 +9,7 @@ api = Api(version='1.0', title='Flask Login API', description='Login functionali
 
 # 定义 Swagger 接口参数模型
 login_model = api.model('Login', {
-    'login_identifier': fields.String(required=True, description='Username, phone number, or email for login'),
+    'login_identifier': fields.String(required=True, description='Username, telephone, or email for login'),
     'login_type': fields.String(required=True, description='The type of login: username, telephone, or email'),
     'password': fields.String(required=True, description='The password for login')
 })
