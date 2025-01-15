@@ -9,8 +9,7 @@ Crop_AL_Hub项目登录功能后端实现
 
 若无，则输入：pip install falsk-migrate
 
-2.需要已有crop_all_hub数据库，删除migrations文件夹后
-依次运行
+2.需要已有crop_all_hub数据库，删除migrations文件夹后依次运行
 
 flask db init
 flask db migrate
