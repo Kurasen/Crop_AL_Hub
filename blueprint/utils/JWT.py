@@ -37,26 +37,6 @@ def token_required(f):
         if not token:
             return jsonify({"message": "Token is missing"}), 401
 
-    #     # Bearer Token 格式处理
-    #     if token.startswith("Bearer "):
-    #         token = token.split(" ")[1]
-    #
-    #     # 获取并验证 token
-    #     user_data, error = verify_token(token)  # 解包返回值
-    #     if error:
-    #         return jsonify({"message": error}), 401
-    #
-    #     print(f"Decoded user_data: {user_data}, type: {type(user_data)}")  # 打印调试信息
-    #
-    #     # 确保 user_data 是字典类型
-    #     if not isinstance(user_data, dict):
-    #         return jsonify({"message": "Invalid token payload"}), 401
-    #
-    #     kwargs['current_user'] = user_data  # 将 user_data 放入 kwargs 中
-    #     return f(*args, **kwargs)
-    #
-    # return decorated
-
         try:
             # 解码 JWT
             token = token.split(" ")[1]  # 假设格式为 "Bearer <token>"
