@@ -6,6 +6,8 @@ from config import Config  # 载入配置
 
 SECRET_KEY = Config.SECRET_KEY
 
+##未设置缓存token,每次登录token都会刷新
+
 # 生成 JWT
 def generate_token(user_id, username):
     payload = {

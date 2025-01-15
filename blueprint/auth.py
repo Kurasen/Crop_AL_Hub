@@ -9,7 +9,8 @@ api = Api(version='1.0', title='Flask Login API', description='Login functionali
 
 # 定义 Swagger 接口参数模型
 login_model = api.model('Login', {
-    'username': fields.String(required=True, description='The username for login'),
+    'login_identifier': fields.String(required=True, description='Username, phone number, or email for login'),
+    'login_type': fields.String(required=True, description='The type of login: username, telephone, or email'),
     'password': fields.String(required=True, description='The password for login')
 })
 
@@ -27,14 +28,34 @@ class LoginResource(Resource):
     def post(self):
         # 从请求中获取数据
         data = request.get_json()
-        username = data['username']
+        login_identifier = data['login_identifier']
+        login_type = data['login_type']
         password = data['password']
 
-        if not data or 'username' not in data or 'password' not in data:
-            return {"message": "Missing username or password"}, 400
+        if not data or 'login_identifier' not in data or 'password' not in data or 'login_type' not in data:
+            return {"message": "Missing login identifier, password, or login type"}, 400
 
-        # 查询数据库中的用户
-        user = UserModel.query.filter_by(username=username).first()
+        # # 查询数据库中的用户
+        # user = UserModel.query.filter_by(username=username).first()
+
+        # # 查询数据库中的用户，尝试匹配 username、telephone 或 email
+        # user = UserModel.query.filter(
+        #     (UserModel.username == login_identifier) |
+        #     (UserModel.telephone == login_identifier) |
+        #     (UserModel.email == login_identifier)
+        # ).first()
+
+        # 根据 login_type 查询对应字段
+        if login_type == 'username':
+            user = UserModel.query.filter_by(username=login_identifier).first()
+        elif login_type == 'telephone':
+            user = UserModel.query.filter_by(telephone=login_identifier).first()
+        elif login_type == 'email':
+            user = UserModel.query.filter_by(email=login_identifier).first()
+        else:
+            return {"message": "Invalid login type"}, 400  # 如果传递的 login_type 不合法
+
+
         if not user or not check_password_hash(user.password, password):
             return {"message": "Invalid username or password"}, 401
 
