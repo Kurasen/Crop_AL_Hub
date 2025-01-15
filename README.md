@@ -12,8 +12,11 @@ Crop_AL_Hub项目登录功能后端实现
 2.需要已有crop_all_hub数据库，删除migrations文件夹后依次运行
 
 flask db init
+
 flask db migrate
+
 flask db upgrade
+
 生成User表
 
 3.往表里插入一条数据，表中的密码需存放加密后的密码，可先在表中输入密码“123123”后
