@@ -26,7 +26,11 @@ flask db upgrade
 5.使用swagger或Postman进行测试时，需选择登录类型，如：、
 
 {
+
   "login_identifier": "12345678901",   // 假设使用手机号登录
+  
   "login_type": "telephone",            // 可以是 "username", "telephone", "email"
+  
   "password": "123123"
+  
 }
