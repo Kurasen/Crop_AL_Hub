@@ -18,3 +18,5 @@ flask db upgrade
 
 3.忘表里插入一条数据，表中的密码需存放加密后的密码，可先在表中输入密码“123123”用blueprint/utils/encryption.py将密码加密
 
+4.按需修改.env中的配置
+![Clip_2025-01-15_12-53-56](https://github.com/user-attachments/assets/1cab8a33-f2cf-42e1-8de2-1e471eb66a4a)
