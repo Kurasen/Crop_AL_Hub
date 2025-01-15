@@ -23,7 +23,7 @@ flask db upgrade
 
 ![Clip_2025-01-15_12-53-56](https://github.com/user-attachments/assets/1cab8a33-f2cf-42e1-8de2-1e471eb66a4a)
 
-5.使用swagger或Postman进行测试时，需选择登录类型，如：、
+5.使用swagger或Postman进行测试时，需选择登录类型，如：
 
 {
 
