@@ -2,7 +2,24 @@
 Crop_AL_Hub项目登录功能后端实现
 
 
-## **使用流程**
+## **模拟数据使用流程**
+使用swagger或Postman进行登录post请求测试时，需选择登录类型，如：
+
+{
+
+"login_identifier": "12345678901",   // 假设使用手机号登录
+
+"login_type": "telephone",            // 可以是 "username", "telephone", "email"
+
+"password": "123123"
+
+}
+
+
+
+
+
+## 使用数据库连接
 1.查看是否下载flask-migrate : pip list
 
 ![Clip_2025-01-15_11-29-15](https://github.com/user-attachments/assets/f5b45e09-c6be-48b0-bb9d-78cbcec0a23c)
