@@ -86,7 +86,7 @@ class TestModelResource(Resource):
         if not file:
             return {'message': 'No file uploaded'}, 400
 
-        # 模拟处理模型（模型 ID 这里我们用 1）
+        # 模拟处理模型（模型 ID 这里用 1）
         processed_image = process_image(file)
         model_output_json = generate_mock_json(model_id=1)
 
