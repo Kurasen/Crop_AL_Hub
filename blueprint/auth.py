@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from werkzeug.security import check_password_hash
 from blueprint.utils.JWT import generate_token, token_required
-from models import UserModel
+from usermodels import UserModel
 from flask_restx import Resource, Api, fields
 
 # 模拟用户数据
@@ -11,8 +11,10 @@ USERS = [
     {"id": 3, "username": "test003", "password": "123123", "telephone": "1234567892", "email": "user3@example.com"},
 ]
 
+# 创建 Blueprint 和 URL 前缀
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 # 定义 Flask-RESTX 的 API 文档对象
-api = Api(version='1.0', title='Flask Login API', description='Login functionality with JWT', doc='/swagger-ui')
+api = Api(version='1.0', title='Flask Login API', description='Login functionality with JWT')
 # 定义命名空间
 auth_ns = api.namespace('auth', description='Operations related to auth')
 
@@ -23,11 +25,10 @@ login_model = api.model('Login', {
     'password': fields.String(required=True, description='The password for login')
 })
 
-# 创建 Blueprint 和 URL 前缀
-auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
-# 为 auth_bp 创建 API 对象
-api.init_app(auth_bp)
+# 注册模型
+api.models['Login'] = login_model
+
 
 # 登录功能：使用 Flask-RESTX 的 Resource 类来处理 POST 请求
 @auth_ns.route('/login')  # 这里是直接定义接口路由
@@ -53,7 +54,6 @@ class LoginResource(Resource):
             user = next((u for u in USERS if u["email"] == login_identifier), None)
         else:
             return {"message": "Invalid login type"}, 400
-
 
         # # 根据 login_type 查询对应字段
         # if login_type == 'username':
@@ -81,9 +81,9 @@ class LoginResource(Resource):
         token = generate_token(user["id"], user["username"])  # 使用 user["id"] 和 user["username"]
         return {"message": "Login successful", "token": token}, 200
 
-
     def get(self):
         return {"message": "Use POST method to login"}, 200
+
 
 # 受保护接口：需要使用 JWT 认证
 @auth_ns.route('/protected')

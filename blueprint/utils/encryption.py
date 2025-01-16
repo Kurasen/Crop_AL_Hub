@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from exts import db
-from models import UserModel
+from usermodels import UserModel
 from flask import Flask
 from config import Config
 
