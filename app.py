@@ -14,6 +14,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
+    print("test")
     # 初始化数据库
     db.init_app(app)
     migrate = Migrate(app, db)
