@@ -1,8 +1,8 @@
 from werkzeug.security import generate_password_hash
-from exts import db
-from usermodels import UserModel
+from app.exts import db
+from app.models.user import UserModel
 from flask import Flask
-from config import Config
+from app.config import Config
 
 # 创建 Flask 应用
 app = Flask(__name__)

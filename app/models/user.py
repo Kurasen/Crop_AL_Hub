@@ -1,8 +1,8 @@
 import re
 from datetime import datetime
 from sqlalchemy.orm import validates
-from werkzeug.security import generate_password_hash, check_password_hash
-from exts import db
+from werkzeug.security import generate_password_hash
+from app.exts import db
 
 class UserModel(db.Model):
     __tablename__ = 'user'
@@ -39,10 +39,6 @@ class UserModel(db.Model):
         self.superior_id = superior_id
         self.landline = landline
         self.seat = seat
-
-    # 验证密码
-    def check_password(self, password):
-        return check_password_hash(self.password, password)
 
     # 中国手机号格式验证：11位数字，以1开头
     @validates('telephone')

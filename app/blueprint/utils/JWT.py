@@ -2,7 +2,7 @@ import jwt
 import datetime
 from flask import jsonify, request
 from functools import wraps
-from config import Config  # 载入配置
+from app.config import Config  # 载入配置
 
 SECRET_KEY = Config.SECRET_KEY
 

@@ -1,7 +1,5 @@
-from flask import Blueprint, jsonify, request
-from werkzeug.security import check_password_hash
-from blueprint.utils.JWT import generate_token, token_required
-from usermodels import UserModel
+from flask import Blueprint, request
+from app.blueprint.utils.JWT import generate_token, token_required
 from flask_restx import Resource, Api, fields
 
 # 模拟用户数据
