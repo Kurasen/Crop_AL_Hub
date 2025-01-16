@@ -3,13 +3,8 @@ Crop_AL_Hub项目登录功能后端实现
 
 
 ## **模拟数据使用流程**
-登录页面测试网址：http://127.0.0.1:5000/auth/swagger-ui
+页面测试网址：http://127.0.0.1:5000/swagger-ui
 
-models和datasets测试网址:
-
-http://127.0.0.1:5000/models_datasets/datasets
-
-http://127.0.0.1:5000/models_datasets/models/
 
 使用swagger或Postman进行登录post请求测试时，需选择登录类型，如：
 {

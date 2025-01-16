@@ -2,8 +2,9 @@ import io
 import json
 
 from PIL import Image
-from flask import Blueprint, jsonify, request, send_file
-from flask_restx import Api, Resource, fields
+from flask import Blueprint, jsonify, request, send_file, after_this_request, Response, make_response
+from flask_restx import Api, Resource, fields, reqparse
+from werkzeug.datastructures import FileStorage
 
 # 创建蓝图
 models_bp = Blueprint('models', __name__, url_prefix='/models')
@@ -16,7 +17,7 @@ models_ns = api.namespace('models',description='Operations models')
 
 # 定义上传的文件模型
 models_model = api.model('ImageUpload', {
-    'file': fields.String(required=True, description='Upload image file', type='file')
+    'file': fields.Raw(required=True, description='Upload image file', type='file')
 })
 
 # 注册模型
@@ -47,6 +48,10 @@ def generate_mock_json(model_id):
         'description': f'Model {model_id} processed the image successfully.'
     }
 
+# 定义文件上传字段
+upload_parser = reqparse.RequestParser()
+upload_parser.add_argument('file', type=FileStorage, location='files', required=True, help='上传图片文件')
+
 
 # 获取模型列表的接口
 @models_ns.route('/list')
@@ -74,22 +79,33 @@ class RunModelResource(Resource):
         else:
             return jsonify({"error": "Model ID and Dataset ID are required"}), 400  # 错误时返回 400 状态码
 
-# 接收图片并返回处理后的图片和 JSON
+#接收图片并返回处理后的图片和 JSON
 @models_ns.route('/test_model')
 class TestModelResource(Resource):
-    @api.doc(description='Upload an image, process it, and return the processed image and a JSON response.')
-    @api.expect(models_model)
+    @api.doc(description='上传图片，处理后返回处理结果和 JSON 响应')
+    @api.expect(upload_parser)  # 使用 reqparse 定义的 parser
     def post(self):
-        # 获取上传的文件
-        file = request.files.get('file')
+        # 使用 reqparse 获取文件
+        args = upload_parser.parse_args()
+        uploaded_file = args.get('file')
 
-        if not file:
-            return {'message': 'No file uploaded'}, 400
+        if not uploaded_file:
+            return {'message': '未上传文件'}, 400
 
-        # 模拟处理模型（模型 ID 这里用 1）
-        processed_image = process_image(file)
+        # 处理上传的文件
+        processed_image = process_image(uploaded_file)
         model_output_json = generate_mock_json(model_id=1)
 
-        # 返回处理后的图片和 JSON 响应
-        # 注意：这里无法直接返回文件和 JSON 一起，但可以使用自定义返回格式或返回头
-        return send_file(processed_image, mimetype='image/png', download_name='processed_image.png', as_attachment=True)
+        # 将处理后的图片保存到内存
+        img_io = processed_image
+        img_io.seek(0)
+
+        # 在响应后处理阶段附加 JSON 数据
+        @after_this_request
+        def add_json_response(response):
+            response.headers['X-Model-Output'] = json.dumps(model_output_json)
+            return response
+
+        # 返回处理后的图片
+        return send_file(img_io, mimetype='image/png', as_attachment=True, download_name='processed_image.png')
+
