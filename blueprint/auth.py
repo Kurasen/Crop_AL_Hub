@@ -13,6 +13,8 @@ USERS = [
 
 # 定义 Flask-RESTX 的 API 文档对象
 api = Api(version='1.0', title='Flask Login API', description='Login functionality with JWT', doc='/swagger-ui')
+# 定义命名空间
+auth_ns = api.namespace('auth', description='Operations related to auth')
 
 # 定义 Swagger 接口参数模型
 login_model = api.model('Login', {
@@ -28,7 +30,7 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 api.init_app(auth_bp)
 
 # 登录功能：使用 Flask-RESTX 的 Resource 类来处理 POST 请求
-@api.route('/login')  # 这里是直接定义接口路由
+@auth_ns.route('/login')  # 这里是直接定义接口路由
 class LoginResource(Resource):
     @api.doc(description='Login and get a JWT token')
     @api.expect(login_model)  # 绑定 Swagger 文档模型
@@ -84,7 +86,7 @@ class LoginResource(Resource):
         return {"message": "Use POST method to login"}, 200
 
 # 受保护接口：需要使用 JWT 认证
-@api.route('/protected')
+@auth_ns.route('/protected')
 class ProtectedRoute(Resource):
     @api.doc(description='Protected route, requires JWT token')
     @token_required  # 使用装饰器，确保用户已认证

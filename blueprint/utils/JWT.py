@@ -50,7 +50,7 @@ def token_required(f):
         if not isinstance(data, dict):
             return {"message": "Invalid token data"}, 400
 
-            # 将解码后的数据传递给视图函数
+        # 将解码后的数据传递给视图函数
         return f(current_user=data, *args, **kwargs)
 
     return decorated
