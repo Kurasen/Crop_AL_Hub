@@ -79,7 +79,7 @@ class RunModelResource(Resource):
         else:
             return jsonify({"error": "Model ID and Dataset ID are required"}), 400  # 错误时返回 400 状态码
 
-#接收图片并返回处理后的图片和 JSON
+# 接收图片并返回处理后的图片和 JSON
 @models_ns.route('/test_model')
 class TestModelResource(Resource):
     @api.doc(description='上传图片，处理后返回处理结果和 JSON 响应')
@@ -109,3 +109,44 @@ class TestModelResource(Resource):
         # 返回处理后的图片
         return send_file(img_io, mimetype='image/png', as_attachment=True, download_name='processed_image.png')
 
+# # 接收图片并返回处理后的 JSON
+# @models_ns.route('/test_model')
+# class GetResultResource(Resource):
+#     @api.doc(description='获取模型处理结果的 JSON 响应')
+#     @api.expect(upload_parser)  # 使用 reqparse 定义的 parser
+#     def post(self):
+#         # 使用 reqparse 获取文件
+#         args = upload_parser.parse_args()
+#         uploaded_file = args.get('file')
+#
+#         if not uploaded_file:
+#             return {'message': '未上传文件'}, 400
+#
+#         # 处理上传的文件
+#         processed_image = process_image(uploaded_file)
+#         model_output_json = generate_mock_json(model_id=1)
+#
+#         # 返回模型输出的 JSON 数据
+#         return jsonify(model_output_json)
+#
+# @models_ns.route('/test_model/download_image')
+# class DownloadImageResource(Resource):
+#     @api.doc(description='上传图片并返回处理后的图片文件')
+#     @api.expect(upload_parser)  # 使用 reqparse 定义的 parser
+#     def post(self):
+#         # 使用 reqparse 获取文件
+#         args = upload_parser.parse_args()
+#         uploaded_file = args.get('file')
+#
+#         if not uploaded_file:
+#             return {'message': '未上传文件'}, 400
+#
+#         # 处理上传的文件
+#         processed_image = process_image(uploaded_file)
+#
+#         # 将处理后的图片保存到内存
+#         img_io = processed_image
+#         img_io.seek(0)
+#
+#         # 返回处理后的图片
+#         return send_file(img_io, mimetype='image/png', as_attachment=True, download_name='processed_image.png')
