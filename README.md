@@ -19,8 +19,6 @@ Crop_AL_Hub项目登录功能后端实现
 
 
 
-
-
 ## 数据库连接使用流程
 1.查看是否下载flask-migrate : pip list
 

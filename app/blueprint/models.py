@@ -27,17 +27,17 @@ api.models['ImageUpload'] = models_model
 def get_mock_models():
     return [{"id": i, "name": f"Model_{i}"} for i in range(1, 11)]
 
-# 模拟的图像处理函数
-def process_image(image_file):
-    # 使用 Pillow 处理图片（这里只是简单的打开并转为灰度）
-    image = Image.open(image_file)
-    image = image.convert('L')  # 转为灰度图
-
-    # 将处理后的图片保存到内存
-    img_io = io.BytesIO()
-    image.save(img_io, 'PNG')  # 保存为 PNG 格式
-    img_io.seek(0)  # 返回指针到文件开头
-    return img_io
+# # 模拟的图像处理函数
+# def process_image(image_file):
+#     # 使用 Pillow 处理图片（这里只是简单的打开并转为灰度）
+#     image = Image.open(image_file)
+#     image = image.convert('L')  # 转为灰度图
+#
+#     # 将处理后的图片保存到内存
+#     img_io = io.BytesIO()
+#     image.save(img_io, 'PNG')  # 保存为 PNG 格式
+#     img_io.seek(0)  # 返回指针到文件开头
+#     return img_io
 
 # 处理模型输出的 JSON 数据（可以根据不同模型返回不同字段）
 def generate_mock_json(model_id):
@@ -51,7 +51,6 @@ def generate_mock_json(model_id):
 # 定义文件上传字段
 upload_parser = reqparse.RequestParser()
 upload_parser.add_argument('file', type=FileStorage, location='files', required=True, help='上传图片文件')
-
 
 # 获取模型列表的接口
 @models_ns.route('/list')
