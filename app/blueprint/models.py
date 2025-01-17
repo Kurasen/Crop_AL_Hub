@@ -57,9 +57,10 @@ upload_parser.add_argument('file', type=FileStorage, location='files', required=
 @models_ns.route('/list')
 class ModelsResource(Resource):
     @api.doc(description='Retrieve a list of models')
+    @api.marshal_with(models_model, as_list=True)  # 标明返回是一个数据集列表
     def get(self):
         # 返回模拟的模型数据
-        return jsonify(get_mock_models())
+        return get_mock_models()
 
 # 定义 run_model 接口，接收模型编号和数据集编号
 @models_ns.route('/run')
