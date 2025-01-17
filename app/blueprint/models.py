@@ -35,17 +35,9 @@ UPLOAD_FOLDER = os.path.join(project_root, 'test')  # 定位到 'test' 文件夹
 def get_mock_models():
     return [{"id": i, "name": f"Model_{i}"} for i in range(1, 11)]
 
-# # 模拟的图像处理函数
-# def process_image(image_file):
-#     # 使用 Pillow 处理图片（这里只是简单的打开并转为灰度）
-#     image = Image.open(image_file)
-#     image = image.convert('L')  # 转为灰度图
-#
-#     # 将处理后的图片保存到内存
-#     img_io = io.BytesIO()
-#     image.save(img_io, 'PNG')  # 保存为 PNG 格式
-#     img_io.seek(0)  # 返回指针到文件开头
-#     return img_io
+# 模拟的图像处理函数
+def process_image(image_file):
+     return image_file
 
 # 处理模型输出的 JSON 数据（可以根据不同模型返回不同字段）
 def generate_mock_json(model_id):
@@ -107,7 +99,7 @@ class TestModelResource(Resource):
         uploaded_file.save(file_path)
 
         # 模拟的图像处理：在这里只是返回原图，假装做了处理
-        processed_image_path = file_path  # 假装处理，直接使用上传的文件路径
+        processed_image_path = process_image(file_path)
 
         # 生成模型输出的 JSON 数据（你可以根据需要修改）
         model_output_json = {
