@@ -1,7 +1,7 @@
-import io
-import json
 
-from PIL import Image
+import json
+import os
+
 from flask import Blueprint, jsonify, request, send_file, after_this_request, Response, make_response
 from flask_restx import Api, Resource, fields, reqparse
 from werkzeug.datastructures import FileStorage
@@ -22,6 +22,14 @@ models_model = api.model('ImageUpload', {
 
 # 注册模型
 api.models['ImageUpload'] = models_model
+
+# 定义文件上传字段
+upload_parser = reqparse.RequestParser()
+upload_parser.add_argument('file', type=FileStorage, location='files', required=True, help='上传图片文件')
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
+UPLOAD_FOLDER = os.path.join(project_root, 'test')  # 定位到 'test' 文件夹
+
 
 # 模拟数据函数：模型数据
 def get_mock_models():
@@ -48,9 +56,6 @@ def generate_mock_json(model_id):
         'description': f'Model {model_id} processed the image successfully.'
     }
 
-# 定义文件上传字段
-upload_parser = reqparse.RequestParser()
-upload_parser.add_argument('file', type=FileStorage, location='files', required=True, help='上传图片文件')
 
 # 获取模型列表的接口
 @models_ns.route('/list')
@@ -85,29 +90,40 @@ class TestModelResource(Resource):
     @api.doc(description='上传图片，处理后返回处理结果和 JSON 响应')
     @api.expect(upload_parser)  # 使用 reqparse 定义的 parser
     def post(self):
-        # 使用 reqparse 获取文件
+        # 使用 reqparse 获取上传的图片文件
         args = upload_parser.parse_args()
         uploaded_file = args.get('file')
 
         if not uploaded_file:
             return {'message': '未上传文件'}, 400
 
-        # 处理上传的文件
-        processed_image = process_image(uploaded_file)
-        model_output_json = generate_mock_json(model_id=1)
+        # 确保上传文件目录存在
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
 
-        # 将处理后的图片保存到内存
-        img_io = processed_image
-        img_io.seek(0)
+        # 保存上传的文件到指定文件夹
+        file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
+        # 保存文件
+        uploaded_file.save(file_path)
 
-        # 在响应后处理阶段附加 JSON 数据
+        # 模拟的图像处理：在这里只是返回原图，假装做了处理
+        processed_image_path = file_path  # 假装处理，直接使用上传的文件路径
+
+        # 生成模型输出的 JSON 数据（你可以根据需要修改）
+        model_output_json = {
+            'model_id': 1,
+            'accuracy': 92.5,
+            'description': f'Model 1 processed the image successfully.'
+        }
+
+        # 将模型输出 JSON 添加到响应头部
         @after_this_request
         def add_json_response(response):
             response.headers['X-Model-Output'] = json.dumps(model_output_json)
             return response
 
-        # 返回处理后的图片
-        return send_file(img_io, mimetype='image/png', as_attachment=True, download_name='processed_image.png')
+        # 返回“假装处理”后的图片
+        return send_file(processed_image_path, mimetype='image/jpeg', as_attachment=True, download_name=uploaded_file.filename)
 
 # # 接收图片并返回处理后的 JSON
 # @models_ns.route('/test_model')
@@ -128,7 +144,7 @@ class TestModelResource(Resource):
 #
 #         # 返回模型输出的 JSON 数据
 #         return jsonify(model_output_json)
-#
+## 接收图片并返回处理后的图片
 # @models_ns.route('/test_model/download_image')
 # class DownloadImageResource(Resource):
 #     @api.doc(description='上传图片并返回处理后的图片文件')
