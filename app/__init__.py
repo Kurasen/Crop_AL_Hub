@@ -8,7 +8,7 @@ from app.blueprint.auth import auth_bp, auth_ns, login_model
 from flask_migrate import Migrate
 from flask_restx import Api
 
-load_dotenv()  # 自动加载 .env 文件中的环境变量
+#load_dotenv()  # 自动加载 .env 文件中的环境变量
 
 def create_app():
     print("Creating Flask app...")
@@ -17,7 +17,7 @@ def create_app():
 
     # 初始化数据库
     #db.init_app(app)
-    migrate = Migrate(app, db)
+    #migrate = Migrate(app, db)
     # 创建 Swagger API 文档
 
     api = Api(app, version='1.0', title='Flask Login API', description='A simple login API with JWT authentication',

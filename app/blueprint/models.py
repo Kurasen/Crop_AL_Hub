@@ -17,7 +17,8 @@ models_ns = api.namespace('models',description='Operations models')
 
 # 定义上传的文件模型
 models_model = api.model('ImageUpload', {
-    'file': fields.Raw(required=True, description='Upload image file', type='file')
+    'id': fields.Integer(description='Model ID'),
+    'name': fields.String(description='Model Name'),
 })
 
 # 注册模型
