@@ -31,10 +31,12 @@ upload_parser.add_argument('file', type=FileStorage, location='files', required=
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 UPLOAD_FOLDER = os.path.join(project_root, 'test')  # 定位到 'test' 文件夹
 
-
 # 模拟数据函数：模型数据
 def get_mock_models():
-    return [{"id": i, "name": f"Model_{i}"} for i in range(1, 11)]
+    return [
+        {"id": i, "name": f"Model_{i}", "description": f"This is Dataset_{i}"}
+        for i in range(1, 11)
+    ]
 
 # 模拟的图像处理函数
 def process_image(image_file):
@@ -48,7 +50,6 @@ def generate_mock_json(model_id):
         'accuracy': 92.5,
         'description': f'Model {model_id} processed the image successfully.'
     }
-
 
 # 获取模型列表的接口
 @models_ns.route('/list')
