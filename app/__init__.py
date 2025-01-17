@@ -16,7 +16,7 @@ def create_app():
     app.config.from_object(Config)
 
     # 初始化数据库
-    db.init_app(app)
+    #db.init_app(app)
     migrate = Migrate(app, db)
     # 创建 Swagger API 文档
 
