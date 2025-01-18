@@ -4,7 +4,7 @@ from werkzeug.security import check_password_hash
 from app.blueprint.utils.JWT import generate_token, token_required
 from flask_restx import Resource, Api, fields
 
-from app.models.user import UserModel
+from app.models.user import User
 
 #
 # # 模拟用户数据
@@ -60,11 +60,11 @@ class LoginResource(Resource):
 
         # 根据 login_type 查询对应字段
         if login_type == 'username':
-            user = UserModel.query.filter_by(username=login_identifier).first()
+            user = User.query.filter_by(username=login_identifier).first()
         elif login_type == 'telephone':
-            user = UserModel.query.filter_by(telephone=login_identifier).first()
+            user = User.query.filter_by(telephone=login_identifier).first()
         elif login_type == 'email':
-            user = UserModel.query.filter_by(email=login_identifier).first()
+            user = User.query.filter_by(email=login_identifier).first()
         else:
             return {"message": "Invalid login type"}, 400  # 如果传递的 login_type 不合法
 

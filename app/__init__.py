@@ -1,10 +1,10 @@
 from dotenv import load_dotenv
 from flask import Flask
-from app.blueprint.datasets import datasets_bp, datasets_ns, dataset_model
-from app.blueprint.models import models_bp, models_ns, models_model
+from app.blueprint.api.datasets_bp import datasets_bp, datasets_ns, dataset_model
+from app.blueprint.api.models_bp import models_bp, models_ns, models_model
 from app.config import Config
 from app.exts import db
-from app.blueprint.auth import auth_bp, auth_ns, login_model
+from app.blueprint.api.auth_bp import auth_bp, auth_ns, login_model
 from flask_migrate import Migrate
 from flask_restx import Api
 

@@ -1,10 +1,9 @@
 import re
-from datetime import datetime
 from sqlalchemy.orm import validates
 from werkzeug.security import generate_password_hash
 from app.exts import db
 
-class UserModel(db.Model):
+class User(db.Model):
     __tablename__ = 'user_table'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True) #个人id

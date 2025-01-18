@@ -6,6 +6,8 @@ from flask import Blueprint, jsonify, request, send_file, after_this_request, Re
 from flask_restx import Api, Resource, fields, reqparse
 from werkzeug.datastructures import FileStorage
 
+from app.models.model import Model
+
 # 创建蓝图
 models_bp = Blueprint('models', __name__, url_prefix='/models')
 
@@ -19,7 +21,13 @@ models_ns = api.namespace('models',description='Operations models')
 models_model = api.model('ImageUpload', {
     'id': fields.Integer(description='Model ID'),
     'name': fields.String(description='Model Name'),
+    'image': fields.String(description='Model Image'),
+    'input': fields.String(description='Model Input'),
+    'describe': fields.String(description='Model Description'),
+    'cuda': fields.Boolean(description='CUDA Support'),
+    'instruction': fields.String(description='Model Instruction')
 })
+
 
 # 注册模型
 api.models['ImageUpload'] = models_model
@@ -31,12 +39,20 @@ upload_parser.add_argument('file', type=FileStorage, location='files', required=
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 UPLOAD_FOLDER = os.path.join(project_root, 'test')  # 定位到 'test' 文件夹
 
-# 模拟数据函数：模型数据
-def get_mock_models():
-    return [
-        {"id": i, "name": f"Model_{i}", "description": f"This is Dataset_{i}"}
-        for i in range(1, 11)
-    ]
+# 从数据库获取模型数据
+def get_all_models():
+    # 从数据库查询所有模型
+    models = Model.query.all()
+    return [{
+        'id': model.id,
+        'name': model.name,
+        'image': model.image,
+        'input': model.input,
+        'describe': model.describe,
+        'cuda': model.cuda,
+        'instruction': model.instruction
+    } for model in models]
+
 
 # 模拟的图像处理函数
 def process_image(image_file):
@@ -58,7 +74,7 @@ class ModelsResource(Resource):
     @api.marshal_with(models_model, as_list=True)  # 标明返回是一个数据集列表
     def get(self):
         # 返回模拟的模型数据
-        return get_mock_models()
+        return get_all_models()
 
 # 定义 run_model 接口，接收模型编号和数据集编号
 @models_ns.route('/run')
