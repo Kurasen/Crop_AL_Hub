@@ -16,7 +16,6 @@ class LoginAttemptsRepository:
         redis_pool = current_app.config['REDIS_POOL']
         return redis_pool.get_redis_client('user')  # 获取用户登录相关数据的 Redis 连接（db=1）
 
-
     @staticmethod
     def check_login_attempts(login_identifier):
         """
@@ -34,7 +33,6 @@ class LoginAttemptsRepository:
         redis_client = LoginAttemptsRepository.get_redis_client()
         redis_client.incr(login_identifier)
         redis_client.expire(login_identifier, LOCKOUT_TIME)
-
 
     @staticmethod
     def reset_login_attempts(login_identifier):

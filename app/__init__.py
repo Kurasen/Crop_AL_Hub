@@ -2,7 +2,7 @@ import redis
 from flask import Flask
 from app.blueprint.api.datasets_bp import datasets_ns, dataset_model
 from app.blueprint.api.models_bp import models_ns, models_model
-from app.blueprint.utils.redis_connection_pool import RedisConnectionPool
+from app.core.redis_connection_pool import RedisConnectionPool
 from app.config import config
 from app.exts import db
 from app.blueprint.api.auth_bp import auth_ns, login_model
@@ -70,9 +70,6 @@ def create_app():
         print("Connected to Redis successfully!")
     except redis.exceptions.ConnectionError as e:
         print("Failed to connect to Redis:", e)
-
-    # 将 redis_client 绑定到 Flask 应用实例
-    #app.redis_client = redis_client
 
     return app
 

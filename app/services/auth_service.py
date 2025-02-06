@@ -40,7 +40,6 @@ class AuthService:
         token = generate_token(user.id, user.username)
         return {"message": "Login successful", "token": token}, 200
 
-
     @staticmethod
     # 验证密码
     def check_password(user, password):

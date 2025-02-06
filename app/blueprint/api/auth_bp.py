@@ -1,11 +1,10 @@
 import redis
-from flask import Blueprint, request, current_app
+from flask import request, current_app
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
 from app.blueprint.utils.JWT import token_required
 from flask_restx import Resource, Api, fields, Namespace
 from app.repositories.User.auth_repo import AuthRepository
 from app.repositories.User.login_attempt_repo import LoginAttemptsRepository
-
 
 auth_ns = Namespace('auth', description='Operations related to auth')
 
@@ -74,8 +73,14 @@ class RefreshTokenResource(Resource):
         token = request.headers.get('Authorization')  # 从 Authorization 头中获取 Token
         if not token:
             return {"message": "Token is missing"}, 400
+
+        # 如果 token 包含 "Bearer " 前缀，去掉它
+        if token.startswith('Bearer '):
+            token = token[len('Bearer '):]
+
         result = AuthRepository.refresh_token(token)  # 调用 AuthService 处理刷新逻辑
         return result
+
 
 @auth_ns.route('/test-redis')
 class TestRedisResource(Resource):

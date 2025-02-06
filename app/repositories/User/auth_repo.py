@@ -7,18 +7,19 @@ from app.repositories.User.login_attempt_repo import LoginAttemptsRepository
 from flask import current_app
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
+
 class AuthRepository:
     """
     认证服务层，负责处理用户的登录验证、密码校验、Token刷新等业务逻辑。
     """
+
     @staticmethod
     def get_redis_client():
         """获取 Redis 客户端，默认使用 db=1"""
         redis_pool = current_app.config['REDIS_POOL']
         return redis_pool.get_redis_client('user')  # 获取用户登录相关数据的 Redis 连接（db=1）
 
-
-# 根据用户提供的登录类型查询用户
+    # 根据用户提供的登录类型查询用户
     @staticmethod
     def get_user_by_identifier(login_identifier, login_type):
         """根据用户提供的登录类型查询用户"""
@@ -72,8 +73,6 @@ class AuthRepository:
             return False, "Password must contain at least one special character"
         return True, ""
 
-
-
     @staticmethod
     def login_user(login_identifier, login_type, password):
         """
@@ -112,12 +111,9 @@ class AuthRepository:
             # 确保释放锁
             redis_client.delete(lock_key)
 
-
     def refresh_token(token):
         """
         使用 Refresh Token 获取新的 Access Token。
-
-        :param refresh_token: 用户的 Refresh Token
         :return: 返回新的 Access Token，或者错误信息
         """
         try:

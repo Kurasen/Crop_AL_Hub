@@ -1,5 +1,5 @@
 import redis
-from flask import current_app
+
 
 class RedisConnectionPool:
     def __init__(self, redis_host='localhost', redis_port=6379, redis_password=None):
@@ -29,4 +29,5 @@ class RedisConnectionPool:
         """获取 Redis 客户端，根据传入的 db 参数选择不同的数据库"""
         if db not in self.pool:
             raise ValueError(f"Invalid Redis database: {db}")
+        self.logger.info(f"Getting Redis client for database: {db}")
         return redis.Redis(connection_pool=self.pool[db])

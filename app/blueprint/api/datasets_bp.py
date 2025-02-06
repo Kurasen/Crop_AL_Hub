@@ -4,14 +4,6 @@ from flask_restx import Resource, fields, Namespace
 from app.models.dataset import Dataset
 from app.repositories.dataset_repo import DatasetRepository
 
-# # 创建蓝图
-# datasets_bp = Blueprint('datasets', __name__)
-#
-# # 创建 API 对象
-# api = Api(datasets_bp, version='1.0', title='Flask Datasets API', description='Retrieve datasets')
-#
-# # 定义命名空间：数据集
-# datasets_ns = api.namespace('datasets', description='Operations related to datasets')
 
 datasets_ns = Namespace('datasets', description='Operations related to datasets')
 
@@ -25,9 +17,6 @@ dataset_model = datasets_ns.model('Dataset', {
     'describe': fields.String(description='Dataset Description'),
     'cuda': fields.Boolean(required=True, description='Is CUDA supported')
 })
-
-# # 注册模型
-# api.models['Dataset'] = dataset_model  # 注册模型
 
 
 # 获取数据集列表的函数，
