@@ -76,40 +76,16 @@ class AuthRepository:
     @staticmethod
     def login_user(login_identifier, login_type, password):
         """
-        登录用户，检查用户的登录信息并限制登录尝试次数。
+        根据 login_identifier 和 login_type 验证用户身份，并校验密码是否正确
+        :param login_identifier: 用户名/电话/邮箱
+        :param login_type: 登录方式（username, telephone, email）
+        :param password: 用户密码
+        :return: 用户对象或 None，如果找不到用户或密码不匹配
         """
-
-        # Step 1: 检查登录次数限制
-        if not LoginAttemptsRepository.check_login_attempts(login_identifier):
-            return {"message": "Too many login attempts. Please try again later."}, 429
-
-        # Step 2: 使用 Redis 锁来防止并发请求
-        redis_client = AuthRepository.get_redis_client()
-        lock_key = f"lock:{login_identifier}"
-        lock = redis_client.set(lock_key, 'locked', nx=True, ex=5)  # 5 秒锁
-        if not lock:
-            return "Too many users, please try again later.", 429
-
-        try:
-            # Step 3: 验证用户的登录信息
-            user = AuthRepository.get_user_by_identifier(login_identifier, login_type)
-            if not user or not verify_password(user, password):
-                # 登录失败，增加登录尝试次数
-                LoginAttemptsRepository.increment_login_attempts(login_identifier)
-                return {"message": "Invalid credentials"}, 401
-
-            # 登录成功，重置尝试次数
-            LoginAttemptsRepository.reset_login_attempts(login_identifier)
-
-            # 生成 Token
-            token = generate_token(user.id, user.username)
-            return {"message": "Login successful", "token": token}, 200
-        except (IntegrityError, OperationalError, SQLAlchemyError) as e:
-            # 捕获数据库异常
-            return {"message": f"Database error: {str(e)}"}, 500
-        finally:
-            # 确保释放锁
-            redis_client.delete(lock_key)
+        user = AuthRepository.get_user_by_identifier(login_identifier, login_type)
+        if user and verify_password(user, password):  # 密码匹配
+            return user
+        return None  # 用户未找到或密码错误
 
     def refresh_token(token):
         """
