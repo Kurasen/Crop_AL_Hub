@@ -45,47 +45,25 @@ class AuthRepository:
     def get_user_by_email(email):
         return User.query.filter_by(email=email).first()
 
-    # 验证输入格式
     @staticmethod
-    def validate_username_format(login_type, login_identifier):
-        """验证用户名、电话或邮箱格式"""
-        patterns = {
-            'username': r'^[a-zA-Z0-9_]{3,20}$',
-            'telephone': r'^\+?[0-9]{10,15}$',
-            'email': r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-        }
-        if not re.match(patterns.get(login_type, ""), login_identifier):
-            return {"message": f"Invalid {login_type} format"}, 400
-        return None
-
-    # 验证密码格式
-    @staticmethod
-    def validate_password_format(password):
-        if len(password) < 8:
-            return False, "Password must be at least 8 characters long"
-        if not re.search(r'[A-Z]', password):  # 至少一个大写字母
-            return False, "Password must contain at least one uppercase letter"
-        if not re.search(r'[a-z]', password):  # 至少一个小写字母
-            return False, "Password must contain at least one lowercase letter"
-        if not re.search(r'[0-9]', password):  # 至少一个数字
-            return False, "Password must contain at least one number"
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):  # 至少一个特殊字符
-            return False, "Password must contain at least one special character"
-        return True, ""
+    def increment_login_attempts(login_identifier):
+        """增加登录失败尝试次数"""
+        redis_client = AuthRepository.get_redis_client()
+        redis_client.incr(f"login_attempts:{login_identifier}")
+        redis_client.expire(f"login_attempts:{login_identifier}", 3600)  # 1小时过期
 
     @staticmethod
-    def login_user(login_identifier, login_type, password):
-        """
-        根据 login_identifier 和 login_type 验证用户身份，并校验密码是否正确
-        :param login_identifier: 用户名/电话/邮箱
-        :param login_type: 登录方式（username, telephone, email）
-        :param password: 用户密码
-        :return: 用户对象或 None，如果找不到用户或密码不匹配
-        """
-        user = AuthRepository.get_user_by_identifier(login_identifier, login_type)
-        if user and verify_password(user, password):  # 密码匹配
-            return user
-        return None  # 用户未找到或密码错误
+    def reset_login_attempts(login_identifier):
+        """重置登录失败次数"""
+        redis_client = AuthRepository.get_redis_client()
+        redis_client.delete(f"login_attempts:{login_identifier}")
+
+    @staticmethod
+    def check_login_attempts(login_identifier):
+        """检查登录失败次数"""
+        redis_client = AuthRepository.get_redis_client()
+        attempts = redis_client.get(f"login_attempts:{login_identifier}")
+        return int(attempts) < 5  # 最大 5 次登录尝试
 
     def refresh_token(token):
         """

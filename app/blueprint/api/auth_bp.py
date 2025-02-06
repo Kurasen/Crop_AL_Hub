@@ -71,7 +71,7 @@ class RefreshTokenResource(Resource):
         if token.startswith('Bearer '):
             token = token[len('Bearer '):]
 
-        result = AuthRepository.refresh_token(token)  # 调用 AuthService 处理刷新逻辑
+        result = AuthService.refresh_token(token)
         return result
 
 
