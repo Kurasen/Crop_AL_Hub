@@ -1,5 +1,5 @@
 import jwt
-import datetime
+from datetime import datetime, timedelta
 from flask import jsonify, request
 from functools import wraps
 from app.config import Config  # 载入配置
@@ -7,16 +7,15 @@ from app.config import Config  # 载入配置
 SECRET_KEY = Config.SECRET_KEY
 
 
-##未设置缓存token,每次登录token都会刷新
-
 # 生成 JWT
 def generate_token(user_id, username):
-    payload = {
-        "id": user_id,
-        "username": username,
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1)  # 有效期1小时
-    }
-    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    expiration = timedelta(hours=1)
+    exp = datetime.utcnow() + expiration
+    token = jwt.encode({
+        'user_id': user_id,
+        'username': username,
+        'exp': exp
+    }, SECRET_KEY, algorithm='HS256')
     return token
 
 
@@ -57,3 +56,4 @@ def token_required(f):
         return f(current_user=data, *args, **kwargs)
 
     return decorated
+
