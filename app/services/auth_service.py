@@ -3,8 +3,8 @@ import re
 from werkzeug.security import check_password_hash
 
 from app.blueprint.utils.JWT import generate_token
-from app.blueprint.utils.auth_utils import verify_password
 from app.repositories.User.auth_repo import AuthRepository
+from app.repositories.User.login_attempt_repo import LoginAttemptsRepository
 
 
 class AuthService:
@@ -29,7 +29,7 @@ class AuthService:
         #     return {"message": message}, 400  # 如果密码不符合要求，返回错误信息
 
         # Step 3: 检查登录失败次数
-        if not AuthRepository.check_login_attempts(login_identifier):
+        if not LoginAttemptsRepository.check_login_attempts(login_identifier):
             return {"message": "Too many login attempts. Please try again later."}, 429
 
         # Step 4: 使用 Redis 锁来防止并发请求
@@ -42,12 +42,12 @@ class AuthService:
         try:
             # Step 5: 验证用户身份
             user = AuthRepository.get_user_by_identifier(login_identifier, login_type)
-            if not user or not verify_password(user, password):  # 密码校验
-                AuthRepository.increment_login_attempts(login_identifier)
+            if not user or not AuthService.check_password(user, password):  # 密码校验
+                LoginAttemptsRepository.increment_login_attempts(login_identifier)
                 return {"message": "Invalid username or password"}, 401
 
             # Step 6: 登录成功，重置登录次数，生成 Token
-            AuthRepository.reset_login_attempts(login_identifier)
+            LoginAttemptsRepository.reset_login_attempts(login_identifier)
             token = generate_token(user.id, user.username)
             return {"message": "Login successful", "token": token}, 200
         finally:
@@ -62,7 +62,7 @@ class AuthService:
     def authenticate_user(login_identifier, login_type, password):
         """验证用户身份"""
         user = AuthRepository.get_user_by_identifier(login_identifier, login_type)
-        if user and verify_password(user, password):
+        if user and AuthService.check_password(user, password):
             return user, None
         return None, "Invalid username or password"
 

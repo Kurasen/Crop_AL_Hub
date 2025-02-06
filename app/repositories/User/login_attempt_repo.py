@@ -1,4 +1,3 @@
-import redis
 from flask import current_app
 
 MAX_LOGIN_ATTEMPTS = 5
@@ -23,7 +22,12 @@ class LoginAttemptsRepository:
         """
         redis_client = LoginAttemptsRepository.get_redis_client()  # 获取 db=1 的客户端
         attempts = redis_client.get(login_identifier)  # 获取登录尝试次数
-        return not (attempts and int(attempts) >= MAX_LOGIN_ATTEMPTS)
+        # 如果没有尝试次数，意味着该用户尚未尝试登录过，返回 True 允许登录
+        if attempts is None:
+            return True
+
+        # 如果尝试次数大于等于最大限制，返回 False 表示锁定
+        return int(attempts) < MAX_LOGIN_ATTEMPTS
 
     @staticmethod
     def increment_login_attempts(login_identifier):

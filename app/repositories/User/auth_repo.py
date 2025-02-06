@@ -1,18 +1,13 @@
-import re
 import jwt
 from app.blueprint.utils.JWT import verify_token, generate_token
-from app.blueprint.utils.auth_utils import verify_password
 from app.models.user import User
-from app.repositories.User.login_attempt_repo import LoginAttemptsRepository
 from flask import current_app
-from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
 
 class AuthRepository:
     """
     认证服务层，负责处理用户的登录验证、密码校验、Token刷新等业务逻辑。
     """
-
     @staticmethod
     def get_redis_client():
         """获取 Redis 客户端，默认使用 db=1"""
@@ -45,25 +40,6 @@ class AuthRepository:
     def get_user_by_email(email):
         return User.query.filter_by(email=email).first()
 
-    @staticmethod
-    def increment_login_attempts(login_identifier):
-        """增加登录失败尝试次数"""
-        redis_client = AuthRepository.get_redis_client()
-        redis_client.incr(f"login_attempts:{login_identifier}")
-        redis_client.expire(f"login_attempts:{login_identifier}", 3600)  # 1小时过期
-
-    @staticmethod
-    def reset_login_attempts(login_identifier):
-        """重置登录失败次数"""
-        redis_client = AuthRepository.get_redis_client()
-        redis_client.delete(f"login_attempts:{login_identifier}")
-
-    @staticmethod
-    def check_login_attempts(login_identifier):
-        """检查登录失败次数"""
-        redis_client = AuthRepository.get_redis_client()
-        attempts = redis_client.get(f"login_attempts:{login_identifier}")
-        return int(attempts) < 5  # 最大 5 次登录尝试
 
     def refresh_token(token):
         """

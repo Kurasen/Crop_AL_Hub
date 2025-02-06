@@ -75,14 +75,3 @@ class RefreshTokenResource(Resource):
         return result
 
 
-@auth_ns.route('/test-redis')
-class TestRedisResource(Resource):
-    def get(self):
-        try:
-            # 尝试设置和获取一个 Redis 键值对
-
-            current_app.redis_client.set('test_key', 'Hello, Redis!')
-            value = current_app.redis_client.get('test_key')
-            return {"message": "Redis is working", "redis_value": value}, 200
-        except redis.exceptions.ConnectionError as e:
-            return {"message": "Failed to connect to Redis", "error": str(e)}, 500
