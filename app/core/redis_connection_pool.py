@@ -14,14 +14,27 @@ class RedisConnectionPool:
                 port=self.redis_port,
                 password=self.redis_password,
                 db=0,  # 默认数据库 db0
-                decode_responses=True
+                decode_responses=True,
+                max_connections=100,  # 最大连接数
+                socket_timeout=5,  # 超时时间设置为 5 秒
             ),
             "user": redis.ConnectionPool(
                 host=self.redis_host,
                 port=self.redis_port,
                 password=self.redis_password,
                 db=1,  # 用户相关操作使用 db1
-                decode_responses=True
+                decode_responses=True,
+                max_connections=100,
+                socket_timeout=5,
+            ),
+            "cache": redis.ConnectionPool(
+                host=self.redis_host,
+                port=self.redis_port,
+                password=self.redis_password,
+                db=2,  # 缓存数据使用 db2
+                decode_responses=True,
+                max_connections=50,
+                socket_timeout=1,
             )
         }
 
@@ -29,5 +42,5 @@ class RedisConnectionPool:
         """获取 Redis 客户端，根据传入的 db 参数选择不同的数据库"""
         if db not in self.pool:
             raise ValueError(f"Invalid Redis database: {db}")
-        self.logger.info(f"Getting Redis client for database: {db}")
+        #self.logger.info(f"Getting Redis client for database: {db}")
         return redis.Redis(connection_pool=self.pool[db])

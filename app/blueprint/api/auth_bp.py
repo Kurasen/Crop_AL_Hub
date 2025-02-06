@@ -5,6 +5,7 @@ from app.blueprint.utils.JWT import token_required
 from flask_restx import Resource, Api, fields, Namespace
 from app.repositories.User.auth_repo import AuthRepository
 from app.repositories.User.login_attempt_repo import LoginAttemptsRepository
+from app.services.auth_service import AuthService
 
 auth_ns = Namespace('auth', description='Operations related to auth')
 
@@ -32,16 +33,8 @@ class LoginResource(Resource):
             if missing_fields:
                 return {"message": f"Missing fields: {', '.join(missing_fields)}"}, 400
 
-            login_identifier = data['login_identifier']
-            login_type = data['login_type']
-            password = data['password']
-
-            # Step 1: 检查登录次数限制
-            if not LoginAttemptsRepository.check_login_attempts(login_identifier):
-                return {"message": "Too many login attempts. Please try again later."}, 429
-
-            # Step 2: 进行身份验证
-            response, status = AuthRepository.login_user(login_identifier, login_type, password)
+            # 将数据传递给 AuthService 处理
+            response, status = AuthService.login(data)
             return response, status
 
         except (IntegrityError, OperationalError, SQLAlchemyError):

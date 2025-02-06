@@ -10,17 +10,22 @@ class AuthService:
 
     @staticmethod
     def login(data):
+        """
+        登录服务：处理用户登录并生成 Token。
+        """
         login_identifier = data['login_identifier']
         login_type = data['login_type']
         password = data['password']
 
-        # 检查输入格式
-        AuthRepository.validate_username_format(login_type, login_identifier)
-
-        # 验证密码强度
-        is_valid, message = AuthRepository.validate_password_format(password)
-        if not is_valid:
-            return {"message": message}, 400
+        # # 检查输入格式
+        # validation_error = AuthRepository.validate_username_format(login_type, login_identifier)
+        # if validation_error:
+        #     return validation_error # 返回格式错误信息
+        #
+        # # 验证密码强度
+        # is_valid, message = AuthRepository.validate_password_format(password)
+        # if not is_valid:
+        #     return {"message": message}, 400
 
         # 检查登录失败次数
         if not LoginAttemptsRepository.check_login_attempts(login_identifier):
@@ -47,18 +52,9 @@ class AuthService:
 
     @staticmethod
     def authenticate_user(login_identifier, login_type, password):
-        # 根据 login_type 查找用户
-        if login_type == 'username':
-            user = AuthRepository.get_user_by_username(login_identifier)
-        elif login_type == 'telephone':
-            user = AuthRepository.get_user_by_telephone(login_identifier)
-        elif login_type == 'email':
-            user = AuthRepository.get_user_by_email(login_identifier)
-        else:
-            return None, "Invalid login type"
+        user = AuthRepository.get_user_by_identifier(login_identifier, login_type)
 
-        # 检查用户是否存在且密码是否正确
-        if user and check_password_hash(user.password, password):
+        if user and verify_password(user, password):
             return user, None
         return None, "Invalid username or password"
 
