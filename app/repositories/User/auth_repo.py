@@ -1,26 +1,33 @@
 import re
 import jwt
 from app.blueprint.utils.JWT import verify_token, generate_token
+from app.blueprint.utils.auth_utils import verify_password
 from app.models.user import User
 from app.repositories.User.login_attempt_repo import LoginAttemptsRepository
 from flask import current_app
+from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
 class AuthRepository:
     """
     认证服务层，负责处理用户的登录验证、密码校验、Token刷新等业务逻辑。
     """
+    @staticmethod
+    def get_redis_client():
+        """获取 Redis 客户端，默认使用 db=1"""
+        redis_pool = current_app.config['REDIS_POOL']
+        return redis_pool.get_redis_client('user')  # 获取用户登录相关数据的 Redis 连接（db=1）
 
-    # 根据用户提供的登录类型查询用户
+
+# 根据用户提供的登录类型查询用户
     @staticmethod
     def get_user_by_identifier(login_identifier, login_type):
-        if login_type == 'username':
-            return User.query.filter_by(username=login_identifier).first()
-        elif login_type == 'telephone':
-            return User.query.filter_by(telephone=login_identifier).first()
-        elif login_type == 'email':
-            return User.query.filter_by(email=login_identifier).first()
-        return None
-
+        """根据用户提供的登录类型查询用户"""
+        filters = {
+            'username': User.username,
+            'telephone': User.telephone,
+            'email': User.email
+        }
+        return User.query.filter(filters.get(login_type) == login_identifier).first()
 
     # 根据用户名来查询用户
     @staticmethod
@@ -40,13 +47,15 @@ class AuthRepository:
     # 验证输入格式
     @staticmethod
     def validate_username_format(login_type, login_identifier):
-        if login_type == 'username' and not re.match(r'^[a-zA-Z0-9_]{3,20}$', login_identifier):
-            return {"message": "Invalid username format"}, 400
-        elif login_type == 'telephone' and not re.match(r'^\+?[0-9]{10,15}$', login_identifier):
-            return {"message": "Invalid telephone format"}, 400
-        elif login_type == 'email' and not re.match(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$',
-                                                    login_identifier):
-            return {"message": "Invalid email format"}, 400
+        """验证用户名、电话或邮箱格式"""
+        patterns = {
+            'username': r'^[a-zA-Z0-9_]{3,20}$',
+            'telephone': r'^\+?[0-9]{10,15}$',
+            'email': r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+        }
+        if not re.match(patterns.get(login_type, ""), login_identifier):
+            return {"message": f"Invalid {login_type} format"}, 400
+        return None
 
     # 验证密码格式
     @staticmethod
@@ -76,15 +85,16 @@ class AuthRepository:
             return {"message": "Too many login attempts. Please try again later."}, 429
 
         # Step 2: 使用 Redis 锁来防止并发请求
-
-        lock = current_app.redis_client.set(current_app.config['LOCK_KEY'], 'locked', nx=True, ex=current_app.config['LOCK_EXPIRE'])
+        redis_client = AuthRepository.get_redis_client()
+        lock_key = f"lock:{login_identifier}"
+        lock = redis_client.set(lock_key, 'locked', nx=True, ex=5)  # 5 秒锁
         if not lock:
             return "Too many users, please try again later.", 429
 
         try:
             # Step 3: 验证用户的登录信息
             user = AuthRepository.get_user_by_identifier(login_identifier, login_type)
-            if not user or not user.check_password(password):
+            if not user or not verify_password(user, password):
                 # 登录失败，增加登录尝试次数
                 LoginAttemptsRepository.increment_login_attempts(login_identifier)
                 return {"message": "Invalid credentials"}, 401
@@ -95,9 +105,13 @@ class AuthRepository:
             # 生成 Token
             token = generate_token(user.id, user.username)
             return {"message": "Login successful", "token": token}, 200
+        except (IntegrityError, OperationalError, SQLAlchemyError) as e:
+            # 捕获数据库异常
+            return {"message": f"Database error: {str(e)}"}, 500
         finally:
             # 确保释放锁
-            current_app.redis_client.delete(current_app.config['LOCK_KEY'])
+            redis_client.delete(lock_key)
+
 
     def refresh_token(token):
         """

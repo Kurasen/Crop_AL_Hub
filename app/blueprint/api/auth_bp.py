@@ -1,13 +1,10 @@
 import redis
 from flask import Blueprint, request, current_app
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
-
 from app.blueprint.utils.JWT import token_required
 from flask_restx import Resource, Api, fields, Namespace
-
 from app.repositories.User.auth_repo import AuthRepository
 from app.repositories.User.login_attempt_repo import LoginAttemptsRepository
-from app.services.auth_service import AuthService
 
 
 auth_ns = Namespace('auth', description='Operations related to auth')
@@ -44,25 +41,11 @@ class LoginResource(Resource):
             if not LoginAttemptsRepository.check_login_attempts(login_identifier):
                 return {"message": "Too many login attempts. Please try again later."}, 429
 
-            # Step 2: 调用服务层进行认证
-            user, error_message = AuthService.authenticate_user(login_identifier, login_type, password)
-            if user is None:
-                # 登录失败，增加登录尝试次数
-                LoginAttemptsRepository.increment_login_attempts(login_identifier)
-                return {"message": error_message}, 401
+            # Step 2: 进行身份验证
+            response, status = AuthRepository.login_user(login_identifier, login_type, password)
+            return response, status
 
-            # Step 3: 登录成功，重置尝试次数
-            LoginAttemptsRepository.reset_login_attempts(login_identifier)
-
-            # 生成 JWT
-            token = AuthService.generate_jwt(user)
-            return {"message": "Login successful", "token": token}, 200
-
-        except IntegrityError as ie:
-            return {"message": "Database integrity error occurred. Please try again later."}, 500
-        except OperationalError as oe:
-            return {"message": "Database operational error occurred. Please try again later."}, 500
-        except SQLAlchemyError as db_error:
+        except (IntegrityError, OperationalError, SQLAlchemyError):
             return {"message": "Database error occurred. Please try again later."}, 500
 
     def get(self):

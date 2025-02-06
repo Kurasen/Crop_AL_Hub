@@ -1,6 +1,7 @@
 from werkzeug.security import check_password_hash
 
 from app.blueprint.utils.JWT import generate_token
+from app.blueprint.utils.auth_utils import verify_password
 from app.repositories.User.auth_repo import AuthRepository
 from app.repositories.User.login_attempt_repo import LoginAttemptsRepository
 
@@ -29,7 +30,7 @@ class AuthService:
         user = AuthRepository.get_user_by_identifier(login_identifier, login_type)
 
         # 检查用户是否存在以及密码是否正确
-        if not user or not check_password_hash(user.password, password):
+        if not user or not verify_password(user, password):
             LoginAttemptsRepository.increment_login_attempts(login_identifier)
             return {"message": "Invalid username or password"}, 401
         else:
