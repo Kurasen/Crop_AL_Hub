@@ -1,9 +1,12 @@
-from flask import Blueprint, request
+import redis
+from flask import Blueprint, request, current_app
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
+
 from app.blueprint.utils.JWT import token_required
 from flask_restx import Resource, Api, fields, Namespace
 
 from app.repositories.User.auth_repo import AuthRepository
+from app.repositories.User.login_attempt_repo import LoginAttemptsRepository
 from app.services.auth_service import AuthService
 
 
@@ -37,10 +40,19 @@ class LoginResource(Resource):
             login_type = data['login_type']
             password = data['password']
 
-            # 调用服务层进行认证
+            # Step 1: 检查登录次数限制
+            if not LoginAttemptsRepository.check_login_attempts(login_identifier):
+                return {"message": "Too many login attempts. Please try again later."}, 429
+
+            # Step 2: 调用服务层进行认证
             user, error_message = AuthService.authenticate_user(login_identifier, login_type, password)
             if user is None:
+                # 登录失败，增加登录尝试次数
+                LoginAttemptsRepository.increment_login_attempts(login_identifier)
                 return {"message": error_message}, 401
+
+            # Step 3: 登录成功，重置尝试次数
+            LoginAttemptsRepository.reset_login_attempts(login_identifier)
 
             # 生成 JWT
             token = AuthService.generate_jwt(user)
@@ -81,3 +93,15 @@ class RefreshTokenResource(Resource):
             return {"message": "Token is missing"}, 400
         result = AuthRepository.refresh_token(token)  # 调用 AuthService 处理刷新逻辑
         return result
+
+@auth_ns.route('/test-redis')
+class TestRedisResource(Resource):
+    def get(self):
+        try:
+            # 尝试设置和获取一个 Redis 键值对
+
+            current_app.redis_client.set('test_key', 'Hello, Redis!')
+            value = current_app.redis_client.get('test_key')
+            return {"message": "Redis is working", "redis_value": value}, 200
+        except redis.exceptions.ConnectionError as e:
+            return {"message": "Failed to connect to Redis", "error": str(e)}, 500

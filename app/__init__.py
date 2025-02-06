@@ -1,3 +1,4 @@
+import redis
 from flask import Flask
 from app.blueprint.api.datasets_bp import datasets_ns, dataset_model
 from app.blueprint.api.models_bp import models_ns, models_model
@@ -49,6 +50,29 @@ def create_app():
     api.models['Login'] = login_model
     api.models['Dataset'] = dataset_model
     api.models['ImageUpload'] = models_model
+
+    # 从环境变量中获取 Redis 配置
+    redis_host = os.getenv('REDIS_HOST', 'localhost')  # 默认使用 localhost
+    redis_port = os.getenv('REDIS_PORT', 6379)        # 默认使用端口 6379
+    redis_password = os.getenv('REDIS_PASSWORD', None) # 如果 Redis 启用了密码，填入密码
+
+    redis_client = redis.StrictRedis(
+        host=redis_host,
+        port=redis_port,
+        password=redis_password,
+        db=0,  # 默认数据库
+        decode_responses=True  # 返回结果解码为字符串
+    )
+
+    # 检查 Redis 连接是否正常
+    try:
+        redis_client.ping()
+        print("Connected to Redis successfully!")
+    except redis.exceptions.ConnectionError as e:
+        print("Failed to connect to Redis:", e)
+
+    # 将 redis_client 绑定到 Flask 应用实例
+    app.redis_client = redis_client
 
     return app
 

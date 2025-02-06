@@ -1,10 +1,9 @@
 import re
-
 import jwt
-
 from app.blueprint.utils.JWT import verify_token, generate_token
 from app.models.user import User
-
+from app.repositories.User.login_attempt_repo import LoginAttemptsRepository
+from flask import current_app
 
 class AuthRepository:
     """
@@ -21,6 +20,7 @@ class AuthRepository:
         elif login_type == 'email':
             return User.query.filter_by(email=login_identifier).first()
         return None
+
 
     # 根据用户名来查询用户
     @staticmethod
@@ -63,6 +63,42 @@ class AuthRepository:
             return False, "Password must contain at least one special character"
         return True, ""
 
+
+
+    @staticmethod
+    def login_user(login_identifier, login_type, password):
+        """
+        登录用户，检查用户的登录信息并限制登录尝试次数。
+        """
+
+        # Step 1: 检查登录次数限制
+        if not LoginAttemptsRepository.check_login_attempts(login_identifier):
+            return {"message": "Too many login attempts. Please try again later."}, 429
+
+        # Step 2: 使用 Redis 锁来防止并发请求
+
+        lock = current_app.redis_client.set(current_app.config['LOCK_KEY'], 'locked', nx=True, ex=current_app.config['LOCK_EXPIRE'])
+        if not lock:
+            return "Too many users, please try again later.", 429
+
+        try:
+            # Step 3: 验证用户的登录信息
+            user = AuthRepository.get_user_by_identifier(login_identifier, login_type)
+            if not user or not user.check_password(password):
+                # 登录失败，增加登录尝试次数
+                LoginAttemptsRepository.increment_login_attempts(login_identifier)
+                return {"message": "Invalid credentials"}, 401
+
+            # 登录成功，重置尝试次数
+            LoginAttemptsRepository.reset_login_attempts(login_identifier)
+
+            # 生成 Token
+            token = generate_token(user.id, user.username)
+            return {"message": "Login successful", "token": token}, 200
+        finally:
+            # 确保释放锁
+            current_app.redis_client.delete(current_app.config['LOCK_KEY'])
+
     def refresh_token(token):
         """
         使用 Refresh Token 获取新的 Access Token。
@@ -78,4 +114,3 @@ class AuthRepository:
             return {"message": "Token has expired. Please log in again."}, 401
         except jwt.InvalidTokenError:
             return {"message": "Invalid token. Please log in again."}, 401
-

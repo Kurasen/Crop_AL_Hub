@@ -6,6 +6,8 @@ from dotenv import load_dotenv, find_dotenv
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    LOCK_KEY = os.getenv('LOCK_KEY', 'user_login_lock')  # 默认值为 'user_login_lock'
+    LOCK_EXPIRE = int(os.getenv('LOCK_EXPIRE', 300))  # 默认过期时间为 300 秒
 
     @staticmethod
     def init_app(app):
