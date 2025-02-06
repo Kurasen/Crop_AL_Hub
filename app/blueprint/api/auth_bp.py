@@ -6,12 +6,6 @@ from flask_restx import Resource, Api, fields, Namespace
 from app.repositories.User.auth_repo import AuthRepository
 from app.services.auth_service import AuthService
 
-# # 创建 Blueprint 和 URL 前缀
-# auth_bp = Blueprint('auth', __name__)
-# # 定义 Flask-RESTX 的 API 文档对象
-# api = Api(version='1.0', title='Flask Login API', description='Login functionality with JWT')
-# # 定义命名空间
-# auth_ns = api.namespace('auth', description='Operations related to auth')
 
 auth_ns = Namespace('auth', description='Operations related to auth')
 
@@ -21,9 +15,6 @@ login_model = auth_ns.model('Login', {
     'login_type': fields.String(required=True, description='The type of login: username, telephone, or email'),
     'password': fields.String(required=True, description='The password for login')
 })
-
-# # 注册模型
-# api.models['Login'] = login_model
 
 
 @auth_ns.route('/login')
