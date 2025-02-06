@@ -1,4 +1,4 @@
-from app.repositories.model_repo import ModelRepository
+from app.repositories.Model.model_repo import ModelRepository
 
 
 class ModelService:

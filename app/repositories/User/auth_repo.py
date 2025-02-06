@@ -40,7 +40,7 @@ class AuthRepository:
     def get_user_by_email(email):
         return User.query.filter_by(email=email).first()
 
-
+    @staticmethod
     def refresh_token(token):
         """
         使用 Refresh Token 获取新的 Access Token。

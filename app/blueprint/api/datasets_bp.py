@@ -1,8 +1,8 @@
-from flask import Blueprint, jsonify, request
+from flask import request
 from flask_restx import Resource, fields, Namespace
 
 from app.models.dataset import Dataset
-from app.repositories.dataset_repo import DatasetRepository
+from app.repositories.Dataset.dataset_repo import DatasetRepository
 
 
 datasets_ns = Namespace('datasets', description='Operations related to datasets')
