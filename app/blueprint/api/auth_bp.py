@@ -49,7 +49,7 @@ class LoginResource(Resource):
 @auth_ns.route('/logout')
 class LogoutResource(Resource):
     @auth_ns.doc(description='Logout and invalidate JWT token',
-                 params={'Authorization': 'Bearer <your_token>'})
+                 params={'Authorization': 'Bearer <your_token>'})#为了方便在swagger上测试
     @token_required  # 使用装饰器，确保用户已认证
     def post(self, current_user):
         """登出功能"""

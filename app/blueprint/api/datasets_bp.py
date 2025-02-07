@@ -1,9 +1,11 @@
-from flask import request
+from flask import request, jsonify
 from flask_restx import Resource, fields, Namespace
+from sqlalchemy.orm import query
 
+from app.exception.errors import DatabaseError, ValidationError
 from app.models.dataset import Dataset
 from app.repositories.Dataset.dataset_repo import DatasetRepository
-
+from app.services.dataset_service import DatasetService
 
 datasets_ns = Namespace('datasets', description='Operations related to datasets')
 
@@ -21,10 +23,11 @@ dataset_model = datasets_ns.model('Dataset', {
 
 # 获取数据集列表的函数，
 def get_datasets_from_db():
-    # 从数据库中查询所有数据集
-    datasets = Dataset.query.all()  # 假设Dataset是SQLAlchemy模型
+    # 假设Dataset是SQLAlchemy模型
+    datasets = Dataset.query.all()
+    if not datasets:
+        raise DatabaseError("No datasets found in the database")  # 如果没有数据集，抛出异常
     return [dataset.to_dict() for dataset in datasets]  # 转换为字典形式并返回
-
 
 
 # 获取数据集列表的接口
@@ -33,14 +36,15 @@ class DatasetsResource(Resource):
     @datasets_ns.doc(description='Retrieve a list of datasets')
     @datasets_ns.marshal_with(dataset_model, as_list=True)  # 标明返回是一个数据集列表
     def get(self):
-        return get_datasets_from_db()
+        datasets = get_datasets_from_db()
+        return datasets
 
 
 @datasets_ns.route('/search')
 class DatasetSearchResource(Resource):
     @datasets_ns.doc(description='Search datasets with filters and queries')
-    @datasets_ns.param('size_min', 'Minimum size of the dataset (e.g., 100MB)')
     @datasets_ns.param('size_max', 'Maximum size of the dataset (e.g., 1GB)')
+    @datasets_ns.param('size_min', 'Minimum size of the dataset (e.g., 100MB)')
     @datasets_ns.param('path', 'Path of the dataset to search')
     @datasets_ns.param('cuda', 'CUDA support (True or False)')
     @datasets_ns.param('describe', 'Description of the dataset to search')
@@ -60,20 +64,10 @@ class DatasetSearchResource(Resource):
         size_max = request.args.get('size_max')
         describe = request.args.get('describe')
 
-        # 转换为范围
-        if size_min and size_max:
-            size_range = (size_min, size_max)
-        elif size_min:
-            size_range = (size_min, '∞')  # 代表无上限
-        elif size_max:
-            size_range = ('0', size_max)  # 代表无下限
-        else:
-            size_range = None
-
-        datasets = DatasetRepository.search(
-            name=name, path=path, cuda=cuda, size_range=size_range, describe=describe
+        datasets = DatasetService.get_datasets(
+            name=name, path=path, cuda=cuda, size_min=size_min, size_max=size_max, describe=describe
         )
-        print(f"Query result: {datasets}")  # 打印查询结果
-        return [dataset.to_dict() for dataset in datasets]
+
+        return datasets
 
 

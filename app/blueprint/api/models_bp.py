@@ -5,6 +5,7 @@ from flask import jsonify, request, send_file, after_this_request
 from flask_restx import Resource, fields, reqparse, Namespace
 from werkzeug.datastructures import FileStorage
 
+from app.exception.errors import ValidationError
 from app.models.model import Model
 from app.services.model_service import ModelService
 
@@ -86,11 +87,11 @@ class RunModelResource(Resource):
         dataset_id = request.args.get('dataset_id', type=int)
 
         # 根据模型和数据集编号生成模拟的准确率
-        if model_id and dataset_id:
-            accuracy = f"Model_{model_id} trained on Dataset_{dataset_id} has an accuracy of {model_id * dataset_id}%"
-            return jsonify({"accuracy": accuracy})  # 使用 jsonify 返回有效的 JSON 响应
-        else:
-            return jsonify({"error": "Model ID and Dataset ID are required"}), 400  # 错误时返回 400 状态码
+        if not model_id or not dataset_id:
+            raise ValidationError("Model ID and Dataset ID are required")  # 参数缺失时抛出 ValidationError
+
+        accuracy = f"Model_{model_id} trained on Dataset_{dataset_id} has an accuracy of {model_id * dataset_id}%"
+        return jsonify({"accuracy": accuracy})
 
 
 # 接收图片并返回处理后的图片和 JSON
@@ -157,20 +158,17 @@ class ModelSearchResource(Resource):
         print(f"Parsed Parameters - Name: {name}, Input: {input_type}, CUDA: {cuda},Describe：{describe}, Page: {page}, Per Page: {per_page}")
 
         # 调用 ModelService 的 search_models 方法
-        try:
-            result = ModelService.search_models(
-                search_term=name,
-                input_type=input_type,
-                cuda=cuda,
-                describe=describe,
-                page=page,
-                per_page=per_page
-            )
 
-            # Print the result to check it
-            print(f"Query result: {result}")
+        result = ModelService.search_models(
+            search_term=name,
+            input_type=input_type,
+            cuda=cuda,
+            describe=describe,
+            page=page,
+            per_page=per_page
+        )
 
-            return result['data'], 200
-        except AttributeError as e:
-            return {'error': str(e)}, 500
+        print(f"Query result: {result}")
+        return result['data'], 200
+
 

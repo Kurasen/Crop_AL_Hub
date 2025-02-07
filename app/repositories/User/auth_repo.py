@@ -1,5 +1,6 @@
 import jwt
 from app.blueprint.utils.JWT import verify_token, generate_token
+from app.exception.errors import AuthenticationError
 from app.models.user import User
 from flask import current_app
 
@@ -25,22 +26,34 @@ class AuthRepository:
             'telephone': User.telephone,
             'email': User.email
         }
-        return User.query.filter(filters.get(login_type) == login_identifier).first()
+        user = User.query.filter(filters.get(login_type) == login_identifier).first()
+        if not user:
+            raise AuthenticationError(f"User with {login_type} '{login_identifier}' not found.")
+        return user
 
     # 根据用户名来查询用户
     @staticmethod
     def get_user_by_username(username):
-        return User.query.filter_by(username=username).first()
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            raise AuthenticationError(f"User with username '{username}' not found.")
+        return user
 
     # 根据电话号码来查询用户
     @staticmethod
     def get_user_by_telephone(telephone):
-        return User.query.filter_by(telephone=telephone).first()
+        user = User.query.filter_by(telephone=telephone).first()
+        if not user:
+            raise AuthenticationError(f"User with telephone '{telephone}' not found.")
+        return user
 
     # 根据邮箱来查询用户
     @staticmethod
     def get_user_by_email(email):
-        return User.query.filter_by(email=email).first()
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            raise AuthenticationError(f"User with email '{email}' not found.")
+        return user
 
     @staticmethod
     def refresh_token(token):
@@ -48,15 +61,12 @@ class AuthRepository:
         使用 Refresh Token 获取新的 Access Token。
         :return: 返回新的 Access Token，或者错误信息
         """
-        try:
-            decoded = verify_token(token)  # 解码并验证 JWT
-            new_token = generate_token(decoded['user_id'], decoded['username'])
+        decoded = verify_token(token)  # 解码并验证 JWT
+        if not decoded:
+            raise AuthenticationError("Invalid token. Please log in again.")
+        new_token = generate_token(decoded['user_id'], decoded['username'])
 
-            # 存储新的 Token 到 Redis
-            TokenRepository.set_user_token(decoded['user_id'], new_token)
+        # 存储新的 Token 到 Redis
+        TokenRepository.set_user_token(decoded['user_id'], new_token)
 
-            return {"message": "Token refreshed", "token": new_token}, 200
-        except jwt.ExpiredSignatureError:
-            return {"message": "Token has expired. Please log in again."}, 401
-        except jwt.InvalidTokenError:
-            return {"message": "Invalid token. Please log in again."}, 401
+        return {"message": "Token refreshed", "token": new_token}, 200

@@ -4,6 +4,7 @@ from app.models.user import User
 from flask import Flask
 from app.config import config
 import os
+
 # 创建 Flask 应用
 
 env = os.getenv('FLASK_ENV', 'default')
@@ -16,6 +17,7 @@ else:
     raise ValueError(f"Invalid environment: {env}")
 
 db.init_app(app)
+
 
 def encrypt_all_passwords():
     with app.app_context():
