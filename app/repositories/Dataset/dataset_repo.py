@@ -28,7 +28,7 @@ class DatasetRepository:
         return Dataset.query.filter_by(cuda=cuda).all()
 
     @staticmethod
-    def search(name=None, path=None, cuda=None, size_range=None):
+    def search(name=None, path=None, cuda=None, size_range=None, describe=None):
         """支持多条件查询"""
         query = Dataset.query
 
@@ -43,6 +43,10 @@ class DatasetRepository:
         # 精确查询CUDA支持
         if cuda is not None:
             query = query.filter(Dataset.cuda == cuda)
+
+        # 添加描述字段的查询条件
+        if describe:
+            query = query.filter(Dataset.describe.ilike(f"%{describe}%"))
 
         # 查询数据集大小范围（处理大小字段转换）
         if size_range:

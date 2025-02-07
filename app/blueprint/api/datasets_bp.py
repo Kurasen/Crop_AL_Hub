@@ -38,11 +38,12 @@ class DatasetsResource(Resource):
 @datasets_ns.route('/search')
 class DatasetSearchResource(Resource):
     @datasets_ns.doc(description='Search datasets with filters and queries')
-    @datasets_ns.param('name', 'Name of the dataset to search')
-    @datasets_ns.param('path', 'Path of the dataset to search')
-    @datasets_ns.param('cuda', 'CUDA support (True or False)')
     @datasets_ns.param('size_min', 'Minimum size of the dataset (e.g., 100MB)')
     @datasets_ns.param('size_max', 'Maximum size of the dataset (e.g., 1GB)')
+    @datasets_ns.param('path', 'Path of the dataset to search')
+    @datasets_ns.param('cuda', 'CUDA support (True or False)')
+    @datasets_ns.param('describe', 'Description of the dataset to search')
+    @datasets_ns.param('name', 'Name of the dataset to search')
     @datasets_ns.marshal_with(dataset_model, as_list=True)
     def get(self):
 
@@ -56,6 +57,7 @@ class DatasetSearchResource(Resource):
         cuda = request.args.get('cuda', type=lambda v: v.lower() == 'true')
         size_min = request.args.get('size_min')
         size_max = request.args.get('size_max')
+        describe = request.args.get('describe')
 
         # 转换为范围
         if size_min and size_max:
@@ -68,7 +70,7 @@ class DatasetSearchResource(Resource):
             size_range = None
 
         datasets = DatasetRepository.search(
-            name=name, path=path, cuda=cuda, size_range=size_range
+            name=name, path=path, cuda=cuda, size_range=size_range, describe=describe
         )
         print(f"Query result: {datasets}")  # 打印查询结果
         return [dataset.to_dict() for dataset in datasets]
