@@ -4,6 +4,7 @@ from app.blueprint.api.datasets_bp import datasets_ns, dataset_model
 from app.blueprint.api.models_bp import models_ns, models_model
 from app.core.redis_connection_pool import RedisConnectionPool
 from app.config import config
+from app.exception.errors import init_error_handlers
 from app.exts import db
 from app.blueprint.api.auth_bp import auth_ns, login_model
 from flask_migrate import Migrate
@@ -25,7 +26,7 @@ def create_app():
     app.config["JSON_AS_ASCII"] = False
 
     # 配置跨域
-    CORS(app, cors_allowd_origins='*')
+    CORS(app, origins='*')
 
     # 加载配置
     if env in config:
@@ -37,9 +38,12 @@ def create_app():
     # 初始化数据库
     db.init_app(app)
     migrate = Migrate(app, db)
-    # 创建 Swagger API 文档
 
-    api = Api(app, version='1.0', title='Flask Login API', description='A simple login API with JWT authentication',
+    # 注册全局异常处理
+    init_error_handlers(app)
+
+    # 创建 Swagger API 文档
+    api = Api(app, version='1.0', title='Flask API', description='A simple API',
               doc='/swagger-ui')  # 这里设置 Swagger UI 的路径
 
     # 注册命名空间,
@@ -70,7 +74,7 @@ def create_app():
         print("Connected to Redis successfully!")
     except redis.exceptions.ConnectionError as e:
         print("Failed to connect to Redis:", e)
-
+        app.logger.error(f"Failed to connect to Redis: {str(e)}")
     return app
 
 

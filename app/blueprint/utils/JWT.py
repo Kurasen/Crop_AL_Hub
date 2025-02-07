@@ -35,13 +35,17 @@ def verify_token(token):
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.headers.get('Authorization')  # 从请求头中获取 Token
+        token = None
+        if 'Authorization' in request.headers:
+            token = request.headers['Authorization'] # 从请求头中获取 Token
+
         if not token:
             return jsonify({"message": "Token is missing"}), 401
 
         try:
-            # 解码 JWT
-            token = token.split(" ")[1]  # 假设格式为 "Bearer <token>"
+            # 检查是否存在 Bearer 前缀，若有则去掉
+            if token.startswith("Bearer "):
+                token = token.split(" ")[1]  # 去掉 Bearer 前缀
             data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         except jwt.ExpiredSignatureError:
             return {"message": "Token has expired"}, 401
@@ -56,4 +60,5 @@ def token_required(f):
         return f(current_user=data, *args, **kwargs)
 
     return decorated
+
 

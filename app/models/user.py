@@ -20,6 +20,15 @@ class User(db.Model):
         self.email = email
         self.telephone = telephone
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'password': self.password,
+            'email': self.email,
+            'telephone': self.telephone
+        }
+
     # 中国手机号格式验证：11位数字，以1开头
     @validates('telephone')
     def validate_telephone(self, key, value):

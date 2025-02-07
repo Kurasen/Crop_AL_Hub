@@ -3,6 +3,8 @@ from app.blueprint.utils.JWT import verify_token, generate_token
 from app.models.user import User
 from flask import current_app
 
+from app.repositories.Token.token_repo import TokenRepository
+
 
 class AuthRepository:
     """
@@ -49,6 +51,10 @@ class AuthRepository:
         try:
             decoded = verify_token(token)  # 解码并验证 JWT
             new_token = generate_token(decoded['user_id'], decoded['username'])
+
+            # 存储新的 Token 到 Redis
+            TokenRepository.set_user_token(decoded['user_id'], new_token)
+
             return {"message": "Token refreshed", "token": new_token}, 200
         except jwt.ExpiredSignatureError:
             return {"message": "Token has expired. Please log in again."}, 401

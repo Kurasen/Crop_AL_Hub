@@ -25,3 +25,9 @@ class TokenRepository:
         """删除用户的 JWT token"""
         redis_client = TokenRepository.get_redis_client()
         redis_client.delete(f"user_token:{user_id}")
+
+    @staticmethod
+    def token_exists_in_redis(user_id):
+        """检查用户的 JWT token 是否存在 Redis 中"""
+        redis_client = TokenRepository.get_redis_client()
+        return redis_client.exists(f"user_token:{user_id}")

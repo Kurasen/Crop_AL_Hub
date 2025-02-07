@@ -3,6 +3,7 @@ import re
 from werkzeug.security import check_password_hash
 
 from app.blueprint.utils.JWT import generate_token
+from app.repositories.Token.token_repo import TokenRepository
 from app.repositories.User.auth_repo import AuthRepository
 from app.repositories.User.login_attempt_repo import LoginAttemptsRepository
 
@@ -46,9 +47,18 @@ class AuthService:
                 LoginAttemptsRepository.increment_login_attempts(login_identifier)
                 return {"message": "Invalid username or password"}, 401
 
-            # Step 6: 登录成功，重置登录次数，生成 Token
+            # Step 6: 检查是否已经有有效的 Token 存储在 Redis 中
+            token = TokenRepository.get_user_token(user.id)
+            if token:
+                return {"message": "Login successful", "token": token}, 200
+
+            # Step 7: 登录成功，重置登录次数，生成 Token
             LoginAttemptsRepository.reset_login_attempts(login_identifier)
             token = generate_token(user.id, user.username)
+
+            # Step 8:存储 Token 到 Redis
+            TokenRepository.set_user_token(user.id, token)
+
             return {"message": "Login successful", "token": token}, 200
         finally:
             redis_client.delete(lock_key)
