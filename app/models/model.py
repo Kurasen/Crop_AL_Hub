@@ -9,15 +9,15 @@ class Model(db.Model):
     name = db.Column(db.String(100), nullable=False)  # 模型名称
     image = db.Column(db.String(255), nullable=False)  # 模型图片路径
     input = db.Column(db.String(100), nullable=False)  # 输入类型
-    describe = db.Column(db.String(255))  # 描述
+    description = db.Column(db.String(255))  # 描述
     cuda = db.Column(db.Boolean, default=False)  # 是否支持 CUDA
     instruction = db.Column(db.Text)  # 使用说明
 
-    def __init__(self, name, image, input, describe=None, cuda=False, instruction=None):
+    def __init__(self, name, image, input, description=None, cuda=False, instruction=None):
         self.name = name
         self.image = image
         self.input = input
-        self.describe = describe
+        self.description = description
         self.cuda = cuda
         self.instruction = instruction
 
@@ -30,7 +30,7 @@ class Model(db.Model):
             'name': self.name,
             'image': self.image,
             'input': self.input,
-            'describe': self.describe,
+            'description': self.description,
             'cuda': bool(self.cuda),
             'instruction': self.instruction,
         }

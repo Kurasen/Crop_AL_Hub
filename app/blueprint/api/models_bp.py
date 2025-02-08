@@ -44,7 +44,7 @@ def get_all_models():
         'name': model.name,
         'image': model.image,
         'input': model.input,
-        'describe': model.describe,
+        'describe': model.description,
         'cuda': model.cuda,
         'instruction': model.instruction
     } for model in models]
