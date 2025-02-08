@@ -71,7 +71,10 @@ class ModelsResource(Resource):
     @models_ns.doc(description='Retrieve a list of models')
     @models_ns.marshal_with(models_model, as_list=True)  # 标明返回是一个数据集列表
     def get(self):
-        # 返回模拟的模型数据
+        """
+        获取所有模型的信息列表，包括模型ID、名称、图片、输入类型等。
+        返回的模型列表将包括每个模型的描述、是否支持CUDA等信息。
+        """
         return get_all_models()
 
 
@@ -82,6 +85,10 @@ class RunModelResource(Resource):
     @models_ns.param('dataset_id', 'Dataset ID to use')
     @models_ns.param('model_id', 'Model ID to use')
     def post(self):
+        """
+        通过模型ID和数据集ID运行模型，并返回模型的训练准确率。
+        参数：模型ID和数据集ID
+        """
         # 获取请求参数中的模型编号和数据集编号
         model_id = request.args.get('model_id', type=int)
         dataset_id = request.args.get('dataset_id', type=int)
@@ -100,6 +107,9 @@ class TestModelResource(Resource):
     @models_ns.doc(description='上传图片，处理后返回处理结果和 JSON 响应')
     @models_ns.expect(upload_parser)  # 使用 reqparse 定义的 parser
     def post(self):
+        """
+        上传一张图片，进行处理并返回处理后的图片和相应的 JSON 数据。
+        """
         # 使用 reqparse 获取上传的图片文件
         args = upload_parser.parse_args()
         uploaded_file = args.get('file')
@@ -146,6 +156,12 @@ class ModelSearchResource(Resource):
     @models_ns.param('name', 'Name of the model to search')
     @models_ns.marshal_with(models_model, as_list=True)
     def get(self):
+        """
+        通过模型名称、输入类型、是否支持CUDA等条件来搜索模型。
+        支持分页查询，并返回模型的详细信息。
+        示例请求：
+        ?name=example&input=image&cuda=true&describe=good&size_min=100MB&size_max=1GB&page=1&per_page=10
+        """
         # 获取查询参数
         name = request.args.get('name')
         input_type = request.args.get('input')

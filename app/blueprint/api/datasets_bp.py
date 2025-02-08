@@ -36,6 +36,9 @@ class DatasetsResource(Resource):
     @datasets_ns.doc(description='Retrieve a list of datasets')
     @datasets_ns.marshal_with(dataset_model, as_list=True)  # 标明返回是一个数据集列表
     def get(self):
+        """
+        获取所有数据集的信息列表，包括数据集ID、名称、路径、大小等。
+        """
         datasets = get_datasets_from_db()
         return datasets
 
