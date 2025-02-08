@@ -11,7 +11,7 @@ class DatasetService:
             raise DatabaseError("No datasets found.")
         return [DatasetService._convert_to_dict(dataset) for dataset in datasets]
 
-    def get_datasets(name=None, path=None, cuda=None, size_min=None, size_max=None, describe=None):
+    def get_datasets(name=None, path=None, cuda=None, size_min=None, size_max=None, describe=None, page=1, per_page=10):
 
         """根据过滤条件获取数据集"""
         # 转换大小为字节（None 代表不限制）
@@ -20,8 +20,13 @@ class DatasetService:
 
         # 打印转换后的大小值
         #print(f"Converted sizes: min_size={min_size_value}, max_size={max_size_value}")
-        datasets = DatasetRepository.search(
-            name=name, path=path, cuda=cuda, size_range=(min_size_value, max_size_value), describe=describe
+        total_count, datasets = DatasetRepository.search(
+            name=name,
+            path=path,
+            cuda=cuda,
+            describe=describe,
+            page=page,
+            per_page=per_page
         )
 
         if size_min or size_max:
@@ -30,8 +35,14 @@ class DatasetService:
                 if DatasetService._is_size_in_range(dataset.size, min_size_value, max_size_value)
             ]
 
-        # 不抛异常，返回空列表
-        return [DatasetService._convert_to_dict(dataset) for dataset in datasets]
+        # 将结果转换为字典格式并返回
+        return {
+            "data": [DatasetService._convert_to_dict(dataset) for dataset in datasets],
+            "total_count": total_count,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": (total_count + per_page - 1) // per_page  # 计算总页数
+        }
 
     @staticmethod
     def _convert_to_dict(dataset):

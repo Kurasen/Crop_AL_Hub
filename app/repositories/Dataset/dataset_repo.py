@@ -28,7 +28,7 @@ class DatasetRepository:
         return Dataset.query.filter_by(cuda=cuda).all()
 
     @staticmethod
-    def search(name=None, path=None, cuda=None, size_range=None, describe=None):
+    def search(name=None, path=None, cuda=None, describe=None, page=1, per_page=10):
         """支持多条件查询"""
         query = Dataset.query
 
@@ -48,5 +48,11 @@ class DatasetRepository:
         if describe:
             query = query.filter(Dataset.describe.ilike(f"%{describe}%"))
 
+        # 计算总数
+        total_count = query.count()
+
+        # 分页查询
+        datasets = query.offset((page - 1) * per_page).limit(per_page).all()
+
         print(f"SQL Query: {str(query)}")
-        return query.all()
+        return total_count, datasets

@@ -1,10 +1,7 @@
-from flask import request, jsonify
+from flask import request
 from flask_restx import Resource, fields, Namespace
-from sqlalchemy.orm import query
-
-from app.exception.errors import DatabaseError, ValidationError
+from app.exception.errors import DatabaseError
 from app.models.dataset import Dataset
-from app.repositories.Dataset.dataset_repo import DatasetRepository
 from app.services.dataset_service import DatasetService
 
 datasets_ns = Namespace('datasets', description='Operations related to datasets')
@@ -66,11 +63,20 @@ class DatasetSearchResource(Resource):
         size_min = request.args.get('size_min')
         size_max = request.args.get('size_max')
         describe = request.args.get('describe')
+        page = int(request.args.get('page', 1))  # 默认页码为1
+        per_page = int(request.args.get('per_page', 5))  # 默认每页返回10条
 
-        datasets = DatasetService.get_datasets(
-            name=name, path=path, cuda=cuda, size_min=size_min, size_max=size_max, describe=describe
+        result = DatasetService.get_datasets(
+            name=name,
+            path=path,
+            cuda=cuda,
+            size_min=size_min,
+            size_max=size_max,
+            describe=describe,
+            page=page,
+            per_page=per_page
         )
 
-        return datasets
+        return result['data'], 200
 
 

@@ -167,14 +167,10 @@ class ModelSearchResource(Resource):
         input_type = request.args.get('input')
         cuda = request.args.get('cuda', type=lambda v: v.lower() == 'true')  # Properly handle 'cuda' param
         describe = request.args.get('describe')
-        page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 10))
-
-        # 打印解析后的参数
-        print(f"Parsed Parameters - Name: {name}, Input: {input_type}, CUDA: {cuda},Describe：{describe}, Page: {page}, Per Page: {per_page}")
+        page = int(request.args.get('page', 1))  # 默认第一页
+        per_page = int(request.args.get('per_page', 5))  #如果前端没有传递 per_page 参数，后端会默认返回 5 条数据
 
         # 调用 ModelService 的 search_models 方法
-
         result = ModelService.search_models(
             search_term=name,
             input_type=input_type,
