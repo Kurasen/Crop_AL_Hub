@@ -1,6 +1,8 @@
+import json
+
 import jwt
-from app.blueprint.utils.JWT import verify_token, generate_token
-from app.exception.errors import AuthenticationError
+from app.blueprint.utils.JWT import verify_token, generate_access_token
+from app.exception.errors import AuthenticationError, DatabaseError
 from app.models.user import User
 from flask import current_app
 
@@ -11,6 +13,7 @@ class AuthRepository:
     """
     认证服务层，负责处理用户的登录验证、密码校验、Token刷新等业务逻辑。
     """
+
     @staticmethod
     def get_redis_client():
         """获取 Redis 客户端，默认使用 db=1"""
@@ -61,12 +64,36 @@ class AuthRepository:
         使用 Refresh Token 获取新的 Access Token。
         :return: 返回新的 Access Token，或者错误信息
         """
-        decoded = verify_token(token)  # 解码并验证 JWT
-        if not decoded:
-            raise AuthenticationError("Invalid token. Please log in again.")
-        new_token = generate_token(decoded['user_id'], decoded['username'])
+        try:
+            decoded = verify_token(token)  # 解码并验证 JWT
+            current_app.logger.debug(f"Decoded token: {decoded}")
+            if not decoded:
+                raise AuthenticationError("Invalid token. Please log in again.")
 
-        # 存储新的 Token 到 Redis
-        TokenRepository.set_user_token(decoded['user_id'], new_token)
+            # 删除旧的 access_token 和 refresh_token
+            user_id = decoded['user_id']
+            # 确保旧的 access_token 已被删除
+            current_app.logger.debug(f"Checking for existing access token in Redis for user {user_id}")
+            old_access_token = TokenRepository.get_user_token(user_id)
 
-        return {"message": "Token refreshed", "token": new_token}, 200
+            if old_access_token:
+                current_app.logger.debug(f"Deleting old access token for user {user_id}")
+                TokenRepository.delete_user_token(user_id)  # 删除旧的 access_token
+            else:
+                current_app.logger.debug(f"No old access token found for user {user_id}")
+
+            # 生成新的 access_token
+            new_access_token = generate_access_token(user_id, decoded['username'])
+
+            current_app.logger.debug(f"Storing new access token for user {user_id}")
+            TokenRepository.set_user_token(user_id, new_access_token)  # 存储新的 access_token
+
+            # 返回新的 access_token
+            return {"message": "Token refreshed", "token": new_access_token}, 200
+
+        except AuthenticationError as e:
+            current_app.logger.error(f"Authentication error: {str(e)}")
+            raise e
+        except Exception as e:
+            current_app.logger.error(f"Unexpected error while refreshing token: {str(e)}")
+            raise DatabaseError("Internal error occurred while refreshing token.")

@@ -19,7 +19,7 @@ class DatasetService:
         max_size_value = DatasetService._convert_size_to_bytes(size_max) if size_max else None
 
         # 打印转换后的大小值
-        print(f"Converted sizes: min_size={min_size_value}, max_size={max_size_value}")
+        #print(f"Converted sizes: min_size={min_size_value}, max_size={max_size_value}")
         datasets = DatasetRepository.search(
             name=name, path=path, cuda=cuda, size_range=(min_size_value, max_size_value), describe=describe
         )

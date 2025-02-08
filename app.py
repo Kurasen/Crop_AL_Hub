@@ -1,5 +1,5 @@
 import redis
-from flask import Flask
+from flask import Flask, jsonify
 from app.blueprint.api.datasets_bp import datasets_ns, dataset_model
 from app.blueprint.api.models_bp import models_ns, models_model
 from app.core.redis_connection_pool import RedisConnectionPool
@@ -11,6 +11,8 @@ from flask_migrate import Migrate
 from flask_restx import Api
 from flask_cors import CORS
 import os
+
+from swagger_config import configure_swagger
 
 
 def create_app():
@@ -46,6 +48,15 @@ def create_app():
     api = Api(app, version='1.0', title='Flask API', description='A simple API',
               doc='/swagger-ui')  # 这里设置 Swagger UI 的路径
 
+    # 导出 Swagger 配置为 JSON 文件
+    @app.route('/swagger.json')
+    def swagger_json():
+        """导出 Swagger 配置为 JSON 格式"""
+        return jsonify(api.__schema__)
+
+    # 配置 Swagger 认证（引入 swagger_config.py）
+    configure_swagger(api)
+
     # 注册命名空间,
     api.add_namespace(auth_ns, path='/auth')  # 自定义路径
     api.add_namespace(models_ns, path='/models')  # 自定义路径
@@ -75,6 +86,7 @@ def create_app():
     except redis.exceptions.ConnectionError as e:
         print("Failed to connect to Redis:", e)
         app.logger.error(f"Failed to connect to Redis: {str(e)}")
+
     return app
 
 

@@ -2,11 +2,12 @@ import re
 
 from werkzeug.security import check_password_hash
 
-from app.blueprint.utils.JWT import generate_token
-from app.exception.errors import ValidationError, AuthenticationError
+from app.blueprint.utils.JWT import generate_access_token, generate_refresh_token
+from app.exception.errors import ValidationError, AuthenticationError, DatabaseError
 from app.repositories.Token.token_repo import TokenRepository
 from app.repositories.User.auth_repo import AuthRepository
 from app.repositories.User.login_attempt_repo import LoginAttemptsRepository
+from flask import current_app
 
 
 class AuthService:
@@ -44,7 +45,6 @@ class AuthService:
         try:
             # Step 5: 验证用户身份
             user = AuthRepository.get_user_by_identifier(login_identifier, login_type)
-
             if not AuthService.check_password(user, password):  # 密码校验
                 LoginAttemptsRepository.increment_login_attempts(login_identifier)
                 raise AuthenticationError("Invalid username or password")
@@ -52,17 +52,27 @@ class AuthService:
             # Step 6: 检查是否已经有有效的 Token 存储在 Redis 中
             token = TokenRepository.get_user_token(user.id)
             if token:
+                current_app.logger.info(f"Login successful for {login_identifier}, token already exists.")
                 return {"message": "Login successful", "token": token}, 200
 
             # Step 7: 登录成功，重置登录次数，生成 Token
             LoginAttemptsRepository.reset_login_attempts(login_identifier)
-            token = generate_token(user.id, user.username)
+            access_token = generate_access_token(user.id, user.username)
+            refresh_token = generate_refresh_token(user.id, user.username)
 
             # Step 8:存储 Token 到 Redis
-            TokenRepository.set_user_token(user.id, token)
+            TokenRepository.set_user_token(user.id, access_token)
+            TokenRepository.set_user_token(user.id, refresh_token, 'refresh')
 
-            return {"message": "Login successful", "token": token}, 200
+            current_app.logger.info(f"Login successful for {login_identifier}, generated new tokens.")
+            return {"message": "Login successful", "token": access_token}, 200
 
+        except AuthenticationError as e:
+            current_app.logger.error(f"Authentication failed for {login_identifier}: {str(e)}")
+            raise e
+        except Exception as e:
+            current_app.logger.error(f"Unexpected error during login for {login_identifier}: {str(e)}")
+            raise DatabaseError("Internal error occurred while logging in.")
         finally:
             redis_client.delete(lock_key)
 
@@ -82,7 +92,7 @@ class AuthService:
     @staticmethod
     def generate_jwt(user):
         """生成 JWT Token"""
-        return generate_token(user.id, user.username)
+        return generate_access_token(user.id, user.username)
 
     # 验证输入格式
     @staticmethod

@@ -67,7 +67,6 @@ class DatasetError(CustomError):
 # 全局错误处理函数
 def init_error_handlers(app):
     """注册全局错误处理器，用于捕获和处理不同类型的错误"""
-
     @app.errorhandler(Exception)  # 捕获所有未处理的异常
     def handle_exception(error):
         """
