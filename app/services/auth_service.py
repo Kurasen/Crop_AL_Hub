@@ -2,7 +2,7 @@ import re
 
 from werkzeug.security import check_password_hash
 
-from app.blueprint.utils.JWT import generate_access_token, generate_refresh_token
+from app.blueprint.utils.JWT import generate_access_token, generate_refresh_token, verify_token
 from app.exception.errors import ValidationError, AuthenticationError, DatabaseError
 from app.repositories.Token.token_repo import TokenRepository
 from app.repositories.User.auth_repo import AuthRepository
@@ -49,23 +49,55 @@ class AuthService:
                 LoginAttemptsRepository.increment_login_attempts(login_identifier)
                 raise AuthenticationError("Invalid username or password")
 
-            # Step 6: 检查是否已经有有效的 Token 存储在 Redis 中
-            token = TokenRepository.get_user_token(user.id)
-            if token:
-                current_app.logger.info(f"Login successful for {login_identifier}, token already exists.")
-                return {"message": "Login successful", "token": token}, 200
+            # Step 6: 检查用户是否已有有效的 Access Token
+            stored_access_token = TokenRepository.get_user_token(user.id, "access")
+            stored_refresh_token = TokenRepository.get_user_token(user.id, "refresh")
 
-            # Step 7: 登录成功，重置登录次数，生成 Token
+            print(f"Stored access token: {stored_access_token}")  # 输出当前存储的 access_token
+
+            if not stored_refresh_token:
+                stored_refresh_token = generate_refresh_token(user.id, user.username)
+                TokenRepository.set_user_token(user.id, stored_refresh_token, "refresh")
+
+            print(stored_access_token, stored_refresh_token)
+
+            # 如果 Redis 返回的是 bytes 类型，转换成字符串
+            if isinstance(stored_access_token, bytes):
+                stored_access_token = stored_access_token.decode("utf-8")
+            if isinstance(stored_refresh_token, bytes):
+                stored_refresh_token = stored_refresh_token.decode("utf-8")
+
+            # 如果已经有有效的 access_token，则直接使用
+            if stored_access_token:
+                try:
+                    # 验证 access_token 是否有效并且没有被撤销
+                    verify_token(stored_access_token, check_blacklist=True)
+                    print(f"Access token for {login_identifier} is valid and not revoked.")  # 输出验证成功的信息
+                    current_app.logger.info(f"User {login_identifier} already has a valid access token.")
+                    return {
+                        "message": "Login successful",
+                        "access_token": stored_access_token,
+                        "refresh_token": stored_refresh_token if stored_refresh_token else None
+                    }, 200
+                except AuthenticationError as e:
+                    print(f"Error during token verification: {str(e)}")  # 输出异常信息
+                    # 如果验证失败，说明 token 已过期
+                    if str(e) == "Token has expired" or str(e) == "Token has been revoked":
+                        pass  # 继续生成新的 token
+
+            # Step 7: Access Token 过期，生成新的 Token，并存储新的 Access Token
+            new_access_token = generate_access_token(user.id, user.username)
+            TokenRepository.set_user_token(user.id, new_access_token, "access")
+
+            # Step 8: 登录成功后，重置登录失败次数
             LoginAttemptsRepository.reset_login_attempts(login_identifier)
-            access_token = generate_access_token(user.id, user.username)
-            refresh_token = generate_refresh_token(user.id, user.username)
-
-            # Step 8:存储 Token 到 Redis
-            TokenRepository.set_user_token(user.id, access_token)
-            TokenRepository.set_user_token(user.id, refresh_token, 'refresh')
 
             current_app.logger.info(f"Login successful for {login_identifier}, generated new tokens.")
-            return {"message": "Login successful", "token": access_token}, 200
+            return {
+                "message": "Login successful",
+                "access_token": new_access_token,
+                "refresh_token": stored_refresh_token if stored_refresh_token else None
+            }, 200
 
         except AuthenticationError as e:
             current_app.logger.error(f"Authentication failed for {login_identifier}: {str(e)}")
@@ -74,6 +106,7 @@ class AuthService:
             current_app.logger.error(f"Unexpected error during login for {login_identifier}: {str(e)}")
             raise DatabaseError("Internal error occurred while logging in.")
         finally:
+            # 确保 Redis 锁被释放
             redis_client.delete(lock_key)
 
     @staticmethod
@@ -123,10 +156,32 @@ class AuthService:
         return True, ""
 
     @staticmethod
-    def refresh_token(token):
+    def refresh_token(old_refresh_token):
         """
-        刷新 Token，调用 AuthRepository 的 refresh_token 方法。
-        :param token: 旧的 JWT Token
-        :return: 新的 Access Token 或错误信息
+        使用 refresh_token 获取新的 access_token
         """
-        return AuthRepository.refresh_token(token)
+        # 验证并解码旧的 refresh_token
+        decoded = verify_token(old_refresh_token)
+        user_id = decoded['user_id']
+        username = decoded['username']
+
+        # 检查 Refresh Token 是否仍然有效
+        stored_refresh_token = TokenRepository.get_user_token(user_id, "refresh")
+
+        # 如果 stored_refresh_token 是 bytes 类型，则需要解码
+        if isinstance(stored_refresh_token, bytes):
+            stored_refresh_token = stored_refresh_token.decode("utf-8")
+
+        # 验证 refresh_token 是否一致
+        if not stored_refresh_token or stored_refresh_token != old_refresh_token:
+            raise AuthenticationError("Refresh Token is invalid or has been revoked")
+
+        # 生成新的 Access Token 和新的 Refresh Token
+        new_access_token = generate_access_token(user_id, username)
+        new_refresh_token = generate_refresh_token(user_id, username)
+
+        # 删除旧的 Refresh Token 并存储新的
+        TokenRepository.delete_user_token(user_id, 'refresh')
+        TokenRepository.set_user_token(user_id, new_refresh_token, 'refresh')
+
+        return {"message": "Token refreshed", "access_token": new_access_token, "refresh_token": new_refresh_token}, 200

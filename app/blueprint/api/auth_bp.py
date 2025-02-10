@@ -2,7 +2,7 @@ from flask import request, current_app
 from flask_restx import Resource, fields, Namespace
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
 
-from app.blueprint.utils.JWT import token_required
+from app.blueprint.utils.JWT import token_required, add_to_blacklist, get_jwt_identity, verify_token
 from app.exception.errors import ValidationError, DatabaseError, AuthenticationError, logger
 from app.repositories.Token.token_repo import TokenRepository
 from app.services.auth_service import AuthService
@@ -19,30 +19,19 @@ login_model = auth_ns.model('Login', {
 
 @auth_ns.route('/login')
 class LoginResource(Resource):
-    @auth_ns.doc(description='Login and get a JWT token')
+    @auth_ns.doc(description='Login and get JWT tokens')
     @auth_ns.expect(login_model)
     def post(self):
         """用户登录"""
         if not request.is_json:
-            raise ValidationError("Request must be of type JSON")
+            raise ValidationError("Request must be JSON")
         data = request.get_json()
-        if not data:
-            raise ValidationError("Request body must be a valid JSON")
-
-        missing_fields = [field for field in ['login_identifier', 'password', 'login_type'] if not data.get(field)]
-        if missing_fields:
-            raise ValidationError(f"Missing fields: {', '.join(missing_fields)}")
 
         try:
-            # 将数据传递给 AuthService 处理
             response, status = AuthService.login(data)
             return response, status
-
         except (IntegrityError, OperationalError, SQLAlchemyError):
             raise DatabaseError("Database error occurred. Please try again later.")
-
-    def get(self):
-        return {"message": "Use POST method to login"}, 200
 
 
 @auth_ns.route('/logout')
@@ -53,18 +42,15 @@ class LogoutResource(Resource):
         """登出功能"""
         # 获取当前用户的 ID
         user_id = current_user['user_id']
+        jti = get_jwt_identity()
 
-        # 检查 token 是否存在于 Redis 中
-        if not TokenRepository.token_exists_in_redis(user_id):
-            raise ValidationError("Token not found or already logged out.")
+        # 将 Access Token 加入黑名单
+        add_to_blacklist(jti)
 
-        # 删除 Redis 中存储的 Token
-        TokenRepository.delete_user_token(user_id)
+        # 删除 Refresh Token
         TokenRepository.delete_user_token(user_id, token_type='refresh')
 
         logger.info(f"User {user_id} successfully logged out.")
-
-        # 返回成功消息
         return {"message": "Logout successful"}, 200
 
 
@@ -95,8 +81,22 @@ class RefreshTokenResource(Resource):
         # 如果 Token 不以 "Bearer " 开头，直接使用它
         token = token.strip()  # 确保没有多余的空格
 
+        # 验证 token 类型
         try:
-            # Step 1: 验证 refresh_token 并获取新的 access_token
+            decoded = verify_token(token)
+            token_type = decoded.get('token_type')
+
+            # 如果是 access_token，则返回错误提示
+            if token_type == 'access':
+                raise AuthenticationError("Access token cannot be used to refresh the token. Please use a valid "
+                                          "refresh token.")
+
+        except AuthenticationError as e:
+            logger.error(f"Token refresh failed: {str(e)}")
+            raise e
+
+        try:
+            # 验证 refresh_token 并获取新的 access_token
             response, status = AuthService.refresh_token(token)
             return response, status
         except AuthenticationError as e:
