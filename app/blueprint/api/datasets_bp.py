@@ -6,14 +6,13 @@ from app.services.dataset_service import DatasetService
 
 datasets_ns = Namespace('datasets', description='Operations related to datasets')
 
-
 # 定义数据集的模型（返回模型）
 dataset_model = datasets_ns.model('Dataset', {
     'id': fields.Integer(required=True, description='Dataset ID'),
     'name': fields.String(required=True, description='Dataset Name'),
     'path': fields.String(required=True, description='Dataset Path'),
     'size': fields.String(required=True, description='Dataset Size in MB/GB'),
-    'describe': fields.String(description='Dataset Description'),
+    'description': fields.String(description='Dataset Description'),
     'cuda': fields.Boolean(required=True, description='Is CUDA supported')
 })
 
@@ -47,11 +46,10 @@ class DatasetSearchResource(Resource):
     @datasets_ns.param('size_min', 'Minimum size of the dataset (e.g., 100MB)')
     @datasets_ns.param('path', 'Path of the dataset to search')
     @datasets_ns.param('cuda', 'CUDA support (True or False)')
-    @datasets_ns.param('describe', 'Description of the dataset to search')
+    @datasets_ns.param('description', 'Description of the dataset to search')
     @datasets_ns.param('name', 'Name of the dataset to search')
     @datasets_ns.marshal_with(dataset_model, as_list=True)
     def get(self):
-
         """
         查询数据集，支持模糊查询和过滤条件。
         示例请求参数：
@@ -62,7 +60,7 @@ class DatasetSearchResource(Resource):
         cuda = request.args.get('cuda', type=lambda v: v.lower() == 'true')
         size_min = request.args.get('size_min')
         size_max = request.args.get('size_max')
-        describe = request.args.get('describe')
+        description = request.args.get('description')
         page = int(request.args.get('page', 1))  # 默认页码为1
         per_page = int(request.args.get('per_page', 5))  # 默认每页返回10条
 
@@ -72,11 +70,9 @@ class DatasetSearchResource(Resource):
             cuda=cuda,
             size_min=size_min,
             size_max=size_max,
-            describe=describe,
+            description=description,
             page=page,
             per_page=per_page
         )
 
         return result['data'], 200
-
-

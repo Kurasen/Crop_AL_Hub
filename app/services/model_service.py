@@ -18,13 +18,13 @@ class ModelService:
         return ModelRepository.get_models_by_cuda(cuda_support)
 
     @staticmethod
-    def search_models(search_term=None, input_type=None, cuda=None, describe=None, page=1, per_page=10):
+    def search_models(search_term=None, input_type=None, cuda=None, description=None, page=1, per_page=10):
         # 调用 Repository 层
         return ModelRepository.search_models(
             search_term=search_term,
             input_type=input_type,
             cuda=cuda,
-            describe=describe,
+            description=description,
             page=page,
             per_page=per_page
         )

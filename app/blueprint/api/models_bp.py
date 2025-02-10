@@ -19,7 +19,7 @@ models_model = models_ns.model('ImageUpload', {
     'name': fields.String(description='Model Name'),
     'image': fields.String(description='Model Image'),
     'input': fields.String(description='Model Input'),
-    'describe': fields.String(description='Model Description'),
+    'description': fields.String(description='Model Description'),
     'cuda': fields.Boolean(description='CUDA Support'),
     'instruction': fields.String(description='Model Instruction')
 })
@@ -44,7 +44,7 @@ def get_all_models():
         'name': model.name,
         'image': model.image,
         'input': model.input,
-        'describe': model.description,
+        'description': model.description,
         'cuda': model.cuda,
         'instruction': model.instruction
     } for model in models]
@@ -152,7 +152,7 @@ class ModelSearchResource(Resource):
     @models_ns.doc(description='Search for models by name, input type, or CUDA support')
     @models_ns.param('cuda', 'CUDA support (True or False)')
     @models_ns.param('input', 'Input type of the model to search')
-    @models_ns.param('describe', 'Describe of the model to search')
+    @models_ns.param('description', 'Description of the model to search')
     @models_ns.param('name', 'Name of the model to search')
     @models_ns.marshal_with(models_model, as_list=True)
     def get(self):
@@ -166,7 +166,7 @@ class ModelSearchResource(Resource):
         name = request.args.get('name')
         input_type = request.args.get('input')
         cuda = request.args.get('cuda', type=lambda v: v.lower() == 'true')  # Properly handle 'cuda' param
-        describe = request.args.get('describe')
+        description = request.args.get('description')
         page = int(request.args.get('page', 1))  # 默认第一页
         per_page = int(request.args.get('per_page', 5))  #如果前端没有传递 per_page 参数，后端会默认返回 5 条数据
 
@@ -175,7 +175,7 @@ class ModelSearchResource(Resource):
             search_term=name,
             input_type=input_type,
             cuda=cuda,
-            describe=describe,
+            description=description,
             page=page,
             per_page=per_page
         )

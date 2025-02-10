@@ -18,7 +18,7 @@ class ModelRepository:
         return Model.query.filter_by(cuda=cuda_support).all()
 
     @classmethod
-    def search_models(cls, search_term=None, input_type=None, cuda=None, describe=None, page=1, per_page=10):
+    def search_models(cls, search_term=None, input_type=None, cuda=None, description=None, page=1, per_page=10):
         query = Model.query  # 使用 SQLAlchemy 的 Model.query
 
         if search_term:
@@ -27,8 +27,8 @@ class ModelRepository:
             query = query.filter(Model.input.like(f"%{input_type}"))
         if cuda is not None:
             query = query.filter(Model.cuda == cuda)
-        if describe:
-            query = query.filter(Model.describe.like(f"%{describe}%"))
+        if description:
+            query = query.filter(Model.description.like(f"%{description}%"))
 
         # 分页查询
         total = query.count()
