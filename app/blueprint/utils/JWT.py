@@ -33,7 +33,7 @@ def generate_access_token(user_id, username):
         'user_id': user_id,
         'username': username,
         'jti': jti,  # jwt黑名单
-        'exp': datetime.utcnow() + timedelta(minutes=1),  # 设置过期时间为当前时间加 15 分钟
+        'exp': datetime.utcnow() + timedelta(minutes=15),  # 设置过期时间为当前时间加 15 分钟
         'token_type': 'access'  # 添加 token_type 字段来标识类型
     }, SECRET_KEY, algorithm='HS256')  # 使用 HS256 算法和密钥进行加密
     return token
