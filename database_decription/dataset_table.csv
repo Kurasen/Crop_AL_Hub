@@ -1,13 +1,12 @@
 # 表内数据
-
-id,name,path,size,description,
-1,"雄穗数量识别测试集","detetcion-tassel/dataset/test","2.39GB","用来测试雄穗数量识别模型",
-2,"冠层覆盖度计算测试集","segmentation-canopy/dataset/test","57.6MB","用来测试冠层覆盖度计算模型",
-3,"雄穗面积计算测试集","segmentation-tassel/dataset/test","24.9MB","用来测试雄穗面积计算模型",
-4,"基于近地面图像的株数识别测试集","detetcion-seed-leaf/dataset/test/ng","7.5MB","用来测试基于近地面图像的株数识别模型",
-5,"基于无人机图像的株数识别测试集","detetcion-seed-leaf/dataset/test/uav","3.8MB","用来测试基于无人机图像的株数识别模型",
-6,"基于近地面图像的叶龄识别测试集","detetcion-seed-leaf/dataset/test/ng","7.5MB","用来测试基于近地面图像的叶龄识别模型",
-7,"基于无人机图像的叶龄识别测试集","detetcion-seed-leaf/dataset/test/uav","3.8 MB","用来测试基于无人机图像的叶龄识别模型",
+id,name,path,size,description,type,downloads,stars,likes
+1,"雄穗数量识别测试集","detetcion-tassel/dataset/test","2.39GB","用来测试雄穗数量识别模型",“玉米;数量”,1,2,3
+2,"冠层覆盖度计算测试集","segmentation-canopy/dataset/test","57.6MB","用来测试冠层覆盖度计算模型",“玉米；覆盖度”,6,7,8
+3,"雄穗面积计算测试集","segmentation-tassel/dataset/test","24.9MB","用来测试雄穗面积计算模型",“玉米；面积”,2,2,2
+4,"基于近地面图像的株数识别测试集","detetcion-seed-leaf/dataset/test/ng","7.5MB","用来测试基于近地面图像的株数识别模型",“玉米；近地面；数量”,0,0,0
+5,"基于无人机图像的株数识别测试集","detetcion-seed-leaf/dataset/test/uav","3.8MB","用来测试基于无人机图像的株数识别模型",“玉米；无人机；数量”,1,1,1
+6,"基于近地面图像的叶龄识别测试集","detetcion-seed-leaf/dataset/test/ng","7.5MB","用来测试基于近地面图像的叶龄识别模型",“玉米；近地面；叶龄”,2,3,9
+7,"基于无人机图像的叶龄识别测试集","detetcion-seed-leaf/dataset/test/uav","3.8 MB","用来测试基于无人机图像的叶龄识别模型",“玉米；无人机；叶龄”,0,1,1
 
 # 创建表
 CREATE TABLE dataset_table (
@@ -15,16 +14,20 @@ CREATE TABLE dataset_table (
     name VARCHAR(255),
     path VARCHAR(255),
     size VARCHAR(20),
-    description TEXT
+    description TEXT,
+    type VARCHAR(100),
+    downloads INT,
+    stars INT,
+    likes INT
 );
 
 # 插入数据
-INSERT INTO dataset_table (id, name, path, size, description)
+INSERT INTO dataset_table (id, name, path, size, description, type, downloads, stars, likes)
 VALUES 
-(1, '雄穗数量识别测试集', 'detetcion-tassel/dataset/test', '2.39GB', '用来测试雄穗数量识别模型'),
-(2, '冠层覆盖度计算测试集', 'segmentation-canopy/dataset/test', '57.6MB', '用来测试冠层覆盖度计算模型'),
-(3, '雄穗面积计算测试集', 'segmentation-tassel/dataset/test', '24.9MB', '用来测试雄穗面积计算模型'),
-(4, '基于近地面图像的株数识别测试集', 'detetcion-seed-leaf/dataset/test/ng', '7.5MB', '用来测试基于近地面图像的株数识别模型'),
-(5, '基于无人机图像的株数识别测试集', 'detetcion-seed-leaf/dataset/test/uav', '3.8MB', '用来测试基于无人机图像的株数识别模型'),
-(6, '基于近地面图像的叶龄识别测试集', 'detetcion-seed-leaf/dataset/test/ng', '7.5MB', '用来测试基于近地面图像的叶龄识别模型'),
-(7, '基于无人机图像的叶龄识别测试集', 'detetcion-seed-leaf/dataset/test/uav', '3.8MB', '用来测试基于无人机图像的叶龄识别模型');
+(1, '雄穗数量识别测试集', 'detetcion-tassel/dataset/test', '2.39GB', '用来测试雄穗数量识别模型', '玉米;数量', 1, 2, 3),
+(2, '冠层覆盖度计算测试集', 'segmentation-canopy/dataset/test', '57.6MB', '用来测试冠层覆盖度计算模型', '玉米；覆盖度', 6, 7, 8),
+(3, '雄穗面积计算测试集', 'segmentation-tassel/dataset/test', '24.9MB', '用来测试雄穗面积计算模型', '玉米；面积', 2, 2, 2),
+(4, '基于近地面图像的株数识别测试集', 'detetcion-seed-leaf/dataset/test/ng', '7.5MB', '用来测试基于近地面图像的株数识别模型', '玉米；近地面；数量', 0, 0, 0),
+(5, '基于无人机图像的株数识别测试集', 'detetcion-seed-leaf/dataset/test/uav', '3.8MB', '用来测试基于无人机图像的株数识别模型', '玉米；无人机；数量', 1, 1, 1),
+(6, '基于近地面图像的叶龄识别测试集', 'detetcion-seed-leaf/dataset/test/ng', '7.5MB', '用来测试基于近地面图像的叶龄识别模型', '玉米；近地面；叶龄', 2, 3, 9),
+(7, '基于无人机图像的叶龄识别测试集', 'detetcion-seed-leaf/dataset/test/uav', '3.8MB', '用来测试基于无人机图像的叶龄识别模型', '玉米；无人机；叶龄', 0, 1, 1);
