@@ -1,0 +1,59 @@
+openapi: 3.0.3
+info:
+  title: Flask API - OpenAPI 3.0
+  version: 1.0.0
+  description: A simple API with authentication
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://127.0.0.1:5000
+
+paths:
+  /auth/login:
+    post:
+      summary: 用户登录
+      description: Login and get JWT tokens
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login_identifier:
+                  type: string
+                login_type:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Successful login
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+  /auth/logout:
+    post:
+      summary: 用户登出
+      description: Logout and invalidate JWT token
+      responses:
+        '200':
+          description: Logout successful
+  /auth/protected:
+    get:
+      summary: Protected route
+      description: Requires a valid JWT token
+      responses:
+        '200':
+          description: Protected data returned
+  /auth/refresh_token:
+    post:
+      summary: Refresh access token using refresh token
+      description: Get a new access token
+      responses:
+        '200':
+          description: Token refreshed successfully
+        '400':
+          description: Invalid token
