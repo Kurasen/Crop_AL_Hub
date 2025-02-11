@@ -93,7 +93,6 @@ def create_app():
 if __name__ == '__main__':
 
     app = create_app()
-
     # 只在主进程打印
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         print("Registered routes:")

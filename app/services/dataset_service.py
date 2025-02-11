@@ -11,8 +11,9 @@ class DatasetService:
             raise DatabaseError("No datasets found.")
         return [DatasetService._convert_to_dict(dataset) for dataset in datasets]
 
-    def get_datasets(name=None, path=None, cuda=None, size_min=None, size_max=None, description=None, page=1, per_page=10):
-
+    @staticmethod
+    def search_datasets(name=None, path=None, size_min=None, size_max=None, description=None,
+                        type=None, stars=None, sort_by='accuracy', sort_order='asc', page=1, per_page=10):
         """根据过滤条件获取数据集"""
         # 转换大小为字节（None 代表不限制）
         min_size_value = DatasetService._convert_size_to_bytes(size_min) if size_min else None
@@ -23,8 +24,11 @@ class DatasetService:
         total_count, datasets = DatasetRepository.search(
             name=name,
             path=path,
-            cuda=cuda,
             description=description,
+            type=type,
+            stars=stars,
+            sort_by=sort_by,
+            sort_order=sort_order,
             page=page,
             per_page=per_page
         )

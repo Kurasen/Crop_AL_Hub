@@ -1,3 +1,6 @@
+import re
+
+from app.exception.errors import ValidationError
 from app.models.model import Model
 
 
@@ -17,18 +20,36 @@ class ModelRepository:
         """根据是否支持CUDA查询模型"""
         return Model.query.filter_by(cuda=cuda_support).all()
 
-    @classmethod
-    def search_models(cls, search_term=None, input_type=None, cuda=None, description=None, page=1, per_page=10):
-        query = Model.query  # 使用 SQLAlchemy 的 Model.query
-
-        if search_term:
-            query = query.filter(Model.name.like(f"%{search_term}%"))  # 使用 Model 类的字段进行过滤
-        if input_type:
-            query = query.filter(Model.input.like(f"%{input_type}"))
+    @staticmethod
+    def search_models(name=None, input=None, cuda=None, description=None, type=None, page=1, per_page=10, sort_by='accuracy', sort_order='asc'):
+        query = Model.query
+        if name:
+            query = query.filter(Model.name.like(f"%{name}%"))
+        if input:
+            query = query.filter(Model.input.like(f"%{input}"))
         if cuda is not None:
             query = query.filter(Model.cuda == cuda)
         if description:
             query = query.filter(Model.description.like(f"%{description}%"))
+        if type:
+            if re.search(r"[^\u4e00-\u9fa5,，; ；]", type):
+                raise ValidationError("Invalid type input. Only Chinese characters, spaces, commas, and semicolons "
+                                      "are allowed.")
+
+            tags = re.split(r'[,\s;，；]+', type)
+            tags = [tag.strip() for tag in tags if tag.strip()]
+
+            for tag in tags:
+                query = query.filter(Model.type.ilike(f"%{tag}%"))
+        # 排序逻辑
+        if sort_by in ['accuracy', 'sales', 'stars', 'likes']:
+            if sort_order == 'desc':
+                query = query.order_by(getattr(Model, sort_by).desc())  # 降序
+            else:
+                query = query.order_by(getattr(Model, sort_by).asc())  # 升序
+        else:
+            raise ValidationError("Invalid sort field. Only 'accuracy', 'sales', 'stars', and 'likes' are allowed.")
+
 
         # 分页查询
         total = query.count()

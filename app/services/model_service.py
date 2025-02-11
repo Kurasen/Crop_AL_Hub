@@ -18,13 +18,16 @@ class ModelService:
         return ModelRepository.get_models_by_cuda(cuda_support)
 
     @staticmethod
-    def search_models(search_term=None, input_type=None, cuda=None, description=None, page=1, per_page=10):
+    def search_models(name=None, input=None, cuda=None, description=None, type=None, page=1, per_page=10, sort_by='accuracy', sort_order='asc'):
         # 调用 Repository 层
         return ModelRepository.search_models(
-            search_term=search_term,
-            input_type=input_type,
+            name=name,
+            input=input,
             cuda=cuda,
             description=description,
+            type=type,
+            sort_by=sort_by,
+            sort_order=sort_order,
             page=page,
             per_page=per_page
         )

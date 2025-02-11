@@ -5,10 +5,15 @@ from flask import jsonify, request, send_file, after_this_request
 from flask_restx import Resource, fields, reqparse, Namespace
 from werkzeug.datastructures import FileStorage
 
-from app.exception.errors import ValidationError
+from app.exception.errors import ValidationError, DatabaseError
 from app.models.model import Model
 from app.services.model_service import ModelService
 
+# 定义排序字段的枚举类型（例如：stars, size, etc.）
+SORT_BY_CHOICES = ['accuracy', 'sales', 'stars', 'likes']
+
+# 定义排序顺序的枚举类型（升序或降序）
+SORT_ORDER_CHOICES = ['asc', 'desc']
 
 # 定义命名空间：模型
 models_ns = Namespace('models', description='Operations models')
@@ -16,12 +21,18 @@ models_ns = Namespace('models', description='Operations models')
 # 定义上传的文件模型
 models_model = models_ns.model('ImageUpload', {
     'id': fields.Integer(description='Model ID'),
-    'name': fields.String(description='Model Name'),
-    'image': fields.String(description='Model Image'),
-    'input': fields.String(description='Model Input'),
+    'name': fields.String(required=True, description='Model Name'),
+    'image': fields.String(required=True, description='Model Image Path'),
+    'input': fields.String(required=True, description='Model Input Type'),
     'description': fields.String(description='Model Description'),
     'cuda': fields.Boolean(description='CUDA Support'),
-    'instruction': fields.String(description='Model Instruction')
+    'instruction': fields.String(description='Model Instruction'),
+    'output': fields.String(description='Model Output Type'),
+    'accuracy': fields.Float(description='Model Accuracy'),
+    'type': fields.String(description='Model Type'),
+    'sales': fields.Integer(description='Sales Count'),
+    'stars': fields.Integer(description='Star Rating'),
+    'likes': fields.Integer(description='Like Count')
 })
 
 # 注册模型
@@ -39,15 +50,9 @@ UPLOAD_FOLDER = os.path.join(project_root, 'test')  # 定位到 'test' 文件夹
 def get_all_models():
     # 从数据库查询所有模型
     models = Model.query.all()
-    return [{
-        'id': model.id,
-        'name': model.name,
-        'image': model.image,
-        'input': model.input,
-        'description': model.description,
-        'cuda': model.cuda,
-        'instruction': model.instruction
-    } for model in models]
+    if not models:
+        raise DatabaseError("No datasets found in the database")
+    return [model.to_dict() for model in models]
 
 
 # 模拟的图像处理函数
@@ -150,10 +155,13 @@ class TestModelResource(Resource):
 @models_ns.route('/search')
 class ModelSearchResource(Resource):
     @models_ns.doc(description='Search for models by name, input type, or CUDA support')
-    @models_ns.param('cuda', 'CUDA support (True or False)')
-    @models_ns.param('input', 'Input type of the model to search')
-    @models_ns.param('description', 'Description of the model to search')
-    @models_ns.param('name', 'Name of the model to search')
+    @models_ns.param('sort_by', '排序字段，支持的字段包括：stars、size、downloads、name', enum=SORT_BY_CHOICES)
+    @models_ns.param('sort_order', '排序顺序，选择升序（asc）或降序（desc）', enum=SORT_ORDER_CHOICES)
+    @models_ns.param('type', '模型的类型 ''(e.g., 玉米,无人机 or 玉米;无人机 or 玉米 无人机)')
+    @models_ns.param('cuda', 'CUDA支持 (True或False)')
+    @models_ns.param('input', '模型的输入类型')
+    @models_ns.param('description', '模型的描述')
+    @models_ns.param('name', '模型的名称')
     @models_ns.marshal_with(models_model, as_list=True)
     def get(self):
         """
@@ -164,23 +172,27 @@ class ModelSearchResource(Resource):
         """
         # 获取查询参数
         name = request.args.get('name')
-        input_type = request.args.get('input')
+        input = request.args.get('input')
         cuda = request.args.get('cuda', type=lambda v: v.lower() == 'true')  # Properly handle 'cuda' param
         description = request.args.get('description')
-        page = int(request.args.get('page', 1))  # 默认第一页
-        per_page = int(request.args.get('per_page', 5))  #如果前端没有传递 per_page 参数，后端会默认返回 5 条数据
+        type = request.args.get('type')
+        sort_by = request.args.get('sort_by', default='stars')  # 默认排序字段
+        sort_order = request.args.get('sort_order', default='asc')  # 默认排序顺序
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 5))
 
         # 调用 ModelService 的 search_models 方法
         result = ModelService.search_models(
-            search_term=name,
-            input_type=input_type,
+            name=name,
+            input=input,
             cuda=cuda,
             description=description,
+            type=type,
+            sort_by=sort_by,
+            sort_order=sort_order,
             page=page,
             per_page=per_page
         )
 
         print(f"Query result: {result}")
         return result['data'], 200
-
-
