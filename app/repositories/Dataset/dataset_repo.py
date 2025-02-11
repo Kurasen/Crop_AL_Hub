@@ -1,6 +1,6 @@
 import re
 
-from app.exception.errors import ValidationError
+from app.exception.errors import ValidationError, InvalidSizeError
 from app.models.dataset import Dataset
 
 
@@ -25,9 +25,8 @@ class DatasetRepository:
         """根据路径查询数据集"""
         return Dataset.query.filter(Dataset.path.ilike(f"%{path}%")).all()
 
-
     @staticmethod
-    def search(name=None, path=None, description=None,type=None, stars=None,
+    def search(name=None, path=None, description=None, type=None, stars=None,
                page=1, per_page=10, sort_by='accuracy', sort_order='asc'):
         """支持多条件查询"""
         query = Dataset.query
@@ -63,14 +62,22 @@ class DatasetRepository:
         if stars is not None:
             query = query.filter(Dataset.stars == stars)  # 新字段
 
-        if sort_by in ['stars', 'likes']:
+            # 根据 sort_by 和 sort_order 排序
+        if sort_by in ['stars', 'likes', 'downloads']:
             if sort_order == 'desc':
-                query = query.order_by(getattr(Dataset, sort_by).desc())  # 降序
+                query = query.order_by(getattr(Dataset, sort_by).desc(), Dataset.id.asc())
             else:
-                query = query.order_by(getattr(Dataset, sort_by).asc())  # 升序
-        else:
-            raise ValidationError("Invalid sort field. Only 'stars', and 'likes' are allowed.")
+                query = query.order_by(getattr(Dataset, sort_by).asc(), Dataset.id.asc())
+        elif sort_by == 'size':
+            # 获取所有数据集
+            datasets = query.all()
 
+            # 进行大小转换和排序
+            datasets.sort(key=lambda dataset: DatasetRepository.convert_size_to_bytes(dataset.size),
+                          reverse=(sort_order == 'desc'))
+
+            # 返回排序后的数据集
+            return len(datasets), datasets
         # 计算总数
         total_count = query.count()
 
@@ -79,3 +86,22 @@ class DatasetRepository:
 
         print(f"SQL Query: {str(query)}")
         return total_count, datasets
+
+    @staticmethod
+    def convert_size_to_bytes(size_str):
+        """将 100MB, 1GB 转换为字节数"""
+        if not size_str:
+            raise InvalidSizeError(size_str, "Size string cannot be empty")
+        size_str = str(size_str).strip().upper()
+
+        size_units = {"KB": 1024, "MB": 1024 ** 2, "GB": 1024 ** 3}
+        for unit in size_units:
+            if size_str.endswith(unit):
+                try:
+                    size_value = float(size_str[:-len(unit)])  # 提取数值部分
+                    return int(size_value * size_units[unit])  # 转换为字节
+                except ValueError:
+                    raise ValueError(f"Invalid number in size: {size_str}")
+
+        raise ValueError(f"Unknown size unit in: {size_str}. Use KB, MB, GB.")
+

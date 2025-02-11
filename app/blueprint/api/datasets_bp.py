@@ -5,7 +5,7 @@ from app.models.dataset import Dataset
 from app.services.dataset_service import DatasetService
 
 # 定义排序字段的枚举类型
-SORT_BY_CHOICES = ['stars', 'likes']
+SORT_BY_CHOICES = ['stars', 'likes', 'downloads', 'size']
 
 # 定义排序顺序的枚举类型（升序或降序）
 SORT_ORDER_CHOICES = ['asc', 'desc']
@@ -19,10 +19,10 @@ dataset_model = datasets_ns.model('Dataset', {
     'path': fields.String(required=True, description='Dataset Path'),
     'size': fields.String(required=True, description='Dataset Size in MB/GB'),
     'description': fields.String(description='Dataset Description'),
-    'type': fields.String(description='Dataset Type'),  # 新增字段
-    'downloads': fields.Integer(description='Number of downloads'),  # 新增字段
-    'stars': fields.Integer(description='Dataset star rating'),  # 新增字段
-    'likes': fields.Integer(description='Number of likes')  # 新增字段
+    'type': fields.String(description='Dataset Type'),
+    'downloads': fields.Integer(description='Number of downloads'),
+    'stars': fields.Integer(description='Dataset star rating'),
+    'likes': fields.Integer(description='Number of likes')
 })
 
 
@@ -51,7 +51,7 @@ class DatasetsResource(Resource):
 @datasets_ns.route('/search')
 class DatasetSearchResource(Resource):
     @datasets_ns.doc(description='Search datasets with filters and queries')
-    @datasets_ns.param('sort_by', '排序字段，支持的字段包括：stars、size、downloads、name', enum=SORT_BY_CHOICES)
+    @datasets_ns.param('sort_by', '排序字段，支持的字段包括：stars、size、downloads、size', enum=SORT_BY_CHOICES)
     @datasets_ns.param('sort_order', '排序顺序，选择升序（asc）或降序（desc）', enum=SORT_ORDER_CHOICES)
     @datasets_ns.param('stars', 'Number of stars to search')
     @datasets_ns.param('type', 'Type of the dataset to search, multiple tags separated by comma, semicolon, or space '

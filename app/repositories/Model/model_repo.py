@@ -44,9 +44,9 @@ class ModelRepository:
         # 排序逻辑
         if sort_by in ['accuracy', 'sales', 'stars', 'likes']:
             if sort_order == 'desc':
-                query = query.order_by(getattr(Model, sort_by).desc())  # 降序
+                query = query.order_by(getattr(Model, sort_by).desc(), Model.id.asc())  # 降序
             else:
-                query = query.order_by(getattr(Model, sort_by).asc())  # 升序
+                query = query.order_by(getattr(Model, sort_by).asc(), Model.id.asc())  # 升序
         else:
             raise ValidationError("Invalid sort field. Only 'accuracy', 'sales', 'stars', and 'likes' are allowed.")
 

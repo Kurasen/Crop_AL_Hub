@@ -64,9 +64,19 @@ class DatasetError(CustomError):
         super().__init__(message, 400)
 
 
+class InvalidSizeError(Exception):
+    """自定义异常，用于处理无效的大小字符串"""
+
+    def __init__(self, size_str, message="Invalid size string"):
+        self.size_str = size_str
+        self.message = message
+        super().__init__(self.message)
+
+
 # 全局错误处理函数
 def init_error_handlers(app):
     """注册全局错误处理器，用于捕获和处理不同类型的错误"""
+
     @app.errorhandler(Exception)  # 捕获所有未处理的异常
     def handle_exception(error):
         """

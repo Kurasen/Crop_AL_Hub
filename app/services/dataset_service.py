@@ -13,12 +13,8 @@ class DatasetService:
 
     @staticmethod
     def search_datasets(name=None, path=None, size_min=None, size_max=None, description=None,
-                        type=None, stars=None, sort_by='accuracy', sort_order='asc', page=1, per_page=10):
+                        type=None, stars=None, sort_by='accuracy', sort_order='asc', page=1, per_page=5):
         """根据过滤条件获取数据集"""
-        # 转换大小为字节（None 代表不限制）
-        min_size_value = DatasetService._convert_size_to_bytes(size_min) if size_min else None
-        max_size_value = DatasetService._convert_size_to_bytes(size_max) if size_max else None
-
         # 打印转换后的大小值
         #print(f"Converted sizes: min_size={min_size_value}, max_size={max_size_value}")
         total_count, datasets = DatasetRepository.search(
@@ -32,6 +28,10 @@ class DatasetService:
             page=page,
             per_page=per_page
         )
+
+        # 转换大小为字节（None 代表不限制）
+        min_size_value = DatasetRepository.convert_size_to_bytes(size_min) if size_min else None
+        max_size_value = DatasetRepository.convert_size_to_bytes(size_max) if size_max else None
 
         if size_min or size_max:
             datasets = [
@@ -55,31 +55,13 @@ class DatasetService:
         return dataset.to_dict()  # 假设你有一个 to_dict 方法
 
     @staticmethod
-    def _convert_size_to_bytes(size_str):
-        """将 100MB, 1GB 转换为字节数"""
-        if not size_str:
-            return None
-        size_str = str(size_str).strip().upper()
-
-        size_units = {"KB": 1024, "MB": 1024 ** 2, "GB": 1024 ** 3}
-        for unit in size_units:
-            if size_str.endswith(unit):
-                try:
-                    size_value = float(size_str[:-len(unit)])  # 提取数值部分
-                    return int(size_value * size_units[unit])  # 转换为字节
-                except ValueError:
-                    raise ValueError(f"Invalid number in size: {size_str}")
-
-        raise ValueError(f"Unknown size unit in: {size_str}. Use KB, MB, GB.")
-
-    @staticmethod
     def _is_size_in_range(size_str, min_size, max_size):
         """判断数据集大小是否在范围内"""
         if not size_str:
             return False
 
         # 将 size_str 转换为字节数
-        dataset_size_bytes = DatasetService._convert_size_to_bytes(size_str)
+        dataset_size_bytes = DatasetRepository.convert_size_to_bytes(size_str)
 
         # 判断是否在范围内
         if min_size is not None and dataset_size_bytes < min_size:
