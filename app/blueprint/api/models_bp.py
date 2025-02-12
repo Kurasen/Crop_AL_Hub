@@ -1,10 +1,11 @@
 import json
 import os
 
-from flask import jsonify, request, send_file, after_this_request
+from flask import jsonify, request, send_file, after_this_request, Blueprint, Response
 from flask_restx import Resource, fields, reqparse, Namespace
 from werkzeug.datastructures import FileStorage
 
+from app.blueprint.utils.JSONEncoder import CustomJSONEncoder, create_json_response
 from app.exception.errors import ValidationError, DatabaseError
 from app.models.model import Model
 from app.services.model_service import ModelService
@@ -16,27 +17,7 @@ SORT_BY_CHOICES = ['accuracy', 'sales', 'stars', 'likes']
 SORT_ORDER_CHOICES = ['asc', 'desc']
 
 # 定义命名空间：模型
-models_ns = Namespace('models', description='Operations models')
-
-# 定义上传的文件模型
-models_model = models_ns.model('ImageUpload', {
-    'id': fields.Integer(description='Model ID'),
-    'name': fields.String(required=True, description='Model Name'),
-    'image': fields.String(required=True, description='Model Image Path'),
-    'input': fields.String(required=True, description='Model Input Type'),
-    'description': fields.String(description='Model Description'),
-    'cuda': fields.Boolean(description='CUDA Support'),
-    'instruction': fields.String(description='Model Instruction'),
-    'output': fields.String(description='Model Output Type'),
-    'accuracy': fields.Float(description='Model Accuracy'),
-    'type': fields.String(description='Model Type'),
-    'sales': fields.Integer(description='Sales Count'),
-    'stars': fields.Integer(description='Star Rating'),
-    'likes': fields.Integer(description='Like Count')
-})
-
-# 注册模型
-models_ns.models['ImageUpload'] = models_model
+models_bp = Blueprint('models', __name__)
 
 # 定义文件上传字段
 upload_parser = reqparse.RequestParser()
@@ -71,128 +52,110 @@ def generate_mock_json(model_id):
 
 
 # 获取模型列表的接口
-@models_ns.route('/list')
-class ModelsResource(Resource):
-    @models_ns.doc(description='Retrieve a list of models')
-    @models_ns.marshal_with(models_model, as_list=True)  # 标明返回是一个数据集列表
-    def get(self):
-        """
-        获取所有模型的信息列表，包括模型ID、名称、图片、输入类型等。
-        返回的模型列表将包括每个模型的描述、是否支持CUDA等信息。
-        """
-        return get_all_models()
+@models_bp.route('/list', methods=['GET'])
+def list():
+    """
+    获取所有模型的信息列表，包括模型ID、名称、图片、输入类型等。
+    返回的模型列表将包括每个模型的描述、是否支持CUDA等信息。
+    """
+    models = get_all_models()
+    return create_json_response(models)
 
 
 # 定义 run_model 接口，接收模型编号和数据集编号
-@models_ns.route('/run')
-class RunModelResource(Resource):
-    @models_ns.doc(description='Run the model with the dataset and return the accuracy')
-    @models_ns.param('dataset_id', 'Dataset ID to use')
-    @models_ns.param('model_id', 'Model ID to use')
-    def post(self):
-        """
-        通过模型ID和数据集ID运行模型，并返回模型的训练准确率。
-        参数：模型ID和数据集ID
-        """
-        # 获取请求参数中的模型编号和数据集编号
-        model_id = request.args.get('model_id', type=int)
-        dataset_id = request.args.get('dataset_id', type=int)
+@models_bp.route('/run', methods=['POST'])
+def run():
+    """
+    通过模型ID和数据集ID运行模型，并返回模型的训练准确率。
+    参数：模型ID和数据集ID
+    """
+    # 获取请求参数中的模型编号和数据集编号
+    model_id = request.args.get('model_id', type=int)
+    dataset_id = request.args.get('dataset_id', type=int)
 
-        # 根据模型和数据集编号生成模拟的准确率
-        if not model_id or not dataset_id:
-            raise ValidationError("Model ID and Dataset ID are required")  # 参数缺失时抛出 ValidationError
+    # 根据模型和数据集编号生成模拟的准确率
+    if not model_id or not dataset_id:
+        raise ValidationError("Model ID and Dataset ID are required")  # 参数缺失时抛出 ValidationError
 
-        accuracy = f"Model_{model_id} trained on Dataset_{dataset_id} has an accuracy of {model_id * dataset_id}%"
-        return jsonify({"accuracy": accuracy})
+    accuracy = f"Model_{model_id} trained on Dataset_{dataset_id} has an accuracy of {model_id * dataset_id}%"
+    return jsonify({"accuracy": accuracy})
 
 
 # 接收图片并返回处理后的图片和 JSON
-@models_ns.route('/test_model')
-class TestModelResource(Resource):
-    @models_ns.doc(description='上传图片，处理后返回处理结果和 JSON 响应')
-    @models_ns.expect(upload_parser)  # 使用 reqparse 定义的 parser
-    def post(self):
-        """
-        上传一张图片，进行处理并返回处理后的图片和相应的 JSON 数据。
-        """
-        # 使用 reqparse 获取上传的图片文件
-        args = upload_parser.parse_args()
-        uploaded_file = args.get('file')
+@models_bp.route('/test_model', methods=['POST'])
+def test_model():
+    """
+    上传一张图片，进行处理并返回处理后的图片和相应的 JSON 数据。
+    """
+    # 使用 reqparse 获取上传的图片文件
+    args = upload_parser.parse_args()
+    uploaded_file = args.get('file')
 
-        if not uploaded_file:
-            return {'message': '未上传文件'}, 400
+    if not uploaded_file:
+        return {'message': '未上传文件'}, 400
 
-        # 确保上传文件目录存在
-        if not os.path.exists(UPLOAD_FOLDER):
-            os.makedirs(UPLOAD_FOLDER)
+    # 确保上传文件目录存在
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
 
-        # 保存上传的文件到指定文件夹
-        file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
-        # 保存文件
-        uploaded_file.save(file_path)
+    # 保存上传的文件到指定文件夹
+    file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
+    # 保存文件
+    uploaded_file.save(file_path)
 
-        # 模拟的图像处理：在这里只是返回原图，假装做了处理
-        processed_image_path = process_image(file_path)
+    # 模拟的图像处理：在这里只是返回原图，假装做了处理
+    processed_image_path = process_image(file_path)
 
-        # 生成模型输出的 JSON 数据（你可以根据需要修改）
-        model_output_json = {
-            'model_id': 1,
-            'accuracy': 92.5,
-            'description': f'Model 1 processed the image successfully.'
-        }
+    # 生成模型输出的 JSON 数据（你可以根据需要修改）
+    model_output_json = {
+        'model_id': 1,
+        'accuracy': 92.5,
+        'description': f'Model 1 processed the image successfully.'
+    }
 
-        # 将模型输出 JSON 添加到响应头部
-        @after_this_request
-        def add_json_response(response):
-            response.headers['X-Model-Output'] = json.dumps(model_output_json)
-            return response
+    # 将模型输出 JSON 添加到响应头部
+    @after_this_request
+    def add_json_response(response):
+        response.headers['X-Model-Output'] = json.dumps(model_output_json)
+        return response
 
-        # 返回“假装处理”后的图片
-        return send_file(processed_image_path, mimetype='image/jpeg', as_attachment=True,
-                         download_name=uploaded_file.filename)
+    # 返回“假装处理”后的图片
+    return send_file(processed_image_path, mimetype='image/jpeg', as_attachment=True,
+                     download_name=uploaded_file.filename)
 
 
-@models_ns.route('/search')
-class ModelSearchResource(Resource):
-    @models_ns.doc(description='Search for models by name, input type, or CUDA support')
-    @models_ns.param('sort_by', '排序字段，支持的字段包括：stars、size、downloads、name', enum=SORT_BY_CHOICES)
-    @models_ns.param('sort_order', '排序顺序，选择升序（asc）或降序（desc）', enum=SORT_ORDER_CHOICES)
-    @models_ns.param('type', '模型的类型 ''(e.g., 玉米,无人机 or 玉米;无人机 or 玉米 无人机)')
-    @models_ns.param('cuda', 'CUDA支持 (True或False)')
-    @models_ns.param('input', '模型的输入类型')
-    @models_ns.param('description', '模型的描述')
-    @models_ns.param('name', '模型的名称')
-    @models_ns.marshal_with(models_model, as_list=True)
-    def get(self):
-        """
-        通过模型名称、输入类型、是否支持CUDA等条件来搜索模型。
-        支持分页查询，并返回模型的详细信息。
-        示例请求：
-        ?name=example&input=image&cuda=true&describe=good&size_min=100MB&size_max=1GB&page=1&per_page=10
-        """
-        # 获取查询参数
-        name = request.args.get('name')
-        input = request.args.get('input')
-        cuda = request.args.get('cuda', type=lambda v: v.lower() == 'true')  # Properly handle 'cuda' param
-        description = request.args.get('description')
-        type = request.args.get('type')
-        sort_by = request.args.get('sort_by', default='stars')  # 默认排序字段
-        sort_order = request.args.get('sort_order', default='asc')  # 默认排序顺序
-        page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 5))
+@models_bp.route('/search', methods=['GET'])
+def search():
+    """
+    通过模型名称、输入类型、是否支持CUDA等条件来搜索模型。
+    支持分页查询，并返回模型的详细信息。
+    示例请求：
+    ?name=example&input=image&cuda=true&describe=good&size_min=100MB&size_max=1GB&page=1&per_page=10
+    """
+    # 获取查询参数
+    name = request.args.get('name')
+    input = request.args.get('input')
+    cuda = request.args.get('cuda', type=lambda v: v.lower() == 'true')  # Properly handle 'cuda' param
+    description = request.args.get('description')
+    type = request.args.get('type')
+    sort_by = request.args.get('sort_by', default='stars')  # 默认排序字段
+    sort_order = request.args.get('sort_order', default='asc')  # 默认排序顺序
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 5))
 
-        # 调用 ModelService 的 search_models 方法
-        result = ModelService.search_models(
-            name=name,
-            input=input,
-            cuda=cuda,
-            description=description,
-            type=type,
-            sort_by=sort_by,
-            sort_order=sort_order,
-            page=page,
-            per_page=per_page
-        )
+    # 调用 ModelService 的 search_models 方法
+    result = ModelService.search_models(
+        name=name,
+        input=input,
+        cuda=cuda,
+        description=description,
+        type=type,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        per_page=per_page
+    )
+    # 获取 data 并进行序列化
+    data = result['data']
 
-        print(f"Query result: {result}")
-        return result['data'], 200
+    return create_json_response(data)

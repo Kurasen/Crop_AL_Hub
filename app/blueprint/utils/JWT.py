@@ -89,7 +89,7 @@ def verify_token(token, check_blacklist=True):
     except jwt.ExpiredSignatureError:
         raise AuthenticationError("Token has expired")  # 抛出自定义的认证错误
     except jwt.InvalidTokenError:
-        raise AuthenticationError("Invalid token")  # 抛出自定义的认证错误
+        raise AuthenticationError("Unauthorized, Invalid token")  # 抛出自定义的认证错误
 
 
 # 解析 JWT 并获取用户 ID

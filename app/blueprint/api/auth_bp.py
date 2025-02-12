@@ -1,18 +1,51 @@
-from flask import request, current_app, Blueprint
-from flask_restx import Resource, fields, Namespace
+from flask import request, Blueprint
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
-
 from app.blueprint.utils.JWT import token_required, add_to_blacklist, get_jwt_identity, verify_token
 from app.exception.errors import ValidationError, DatabaseError, AuthenticationError, logger
 from app.repositories.Token.token_repo import TokenRepository
 from app.services.auth_service import AuthService
 
-auth_bp = Blueprint('auth', __name__)
+user_bp = Blueprint('auth', __name__)
 
 
-@auth_bp.route('/login', methods=['POST'])
+@user_bp.route('/login', methods=['POST'])
 def login():
-    """用户登录"""
+    """
+    用户登录 API
+    ---
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            login_identifier:
+              type: string
+              description: 用户的用户名、邮箱或电话号码
+            login_type:
+              type: string
+              description: 登录类型（选择：用户名、邮箱或电话号码）
+              enum:
+                - username
+                - email
+                - telephone  # 提供选择框
+            password:
+              type: string
+              description: 用户的密码
+    responses:
+      200:
+        description: Successfully logged in.
+        schema:
+          type: object
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+      400:
+        description: Invalid username or password.
+    """
     if not request.is_json:
         raise ValidationError("Request must be JSON")
     data = request.get_json()
@@ -23,8 +56,7 @@ def login():
     except (IntegrityError, OperationalError, SQLAlchemyError):
         raise DatabaseError("Database error occurred. Please try again later.")
 
-
-@auth_bp.route('/logout', methods=['POST'])
+@user_bp.route('/logout', methods=['POST'])
 @token_required  # 使用装饰器，确保用户已认证
 def post(current_user):
     """登出功能"""
@@ -43,7 +75,7 @@ def post(current_user):
 
 
 # 受保护接口：需要使用 JWT 认证
-@auth_bp.route('/protected', methods=['GET'])
+@user_bp.route('/protected', methods=['GET'])
 @token_required  # 使用装饰器，确保用户已认证
 def protected_route(current_user):
     """受保护接口"""
@@ -52,7 +84,7 @@ def protected_route(current_user):
     return {"message": f"Hello, {current_user['username']}!"}, 200
 
 
-@auth_bp.route('/refresh_token', methods=['POST'])
+@user_bp.route('/refresh_token', methods=['POST'])
 def refresh_token():
     """刷新 Token"""
     print(f"Request Headers: {request.headers}")  # 打印请求头信息

@@ -1,6 +1,6 @@
 import logging
 from flask import jsonify, request
-from werkzeug.exceptions import HTTPException
+from werkzeug.exceptions import HTTPException, UnsupportedMediaType
 
 # 初始化日志配置，设置错误日志级别
 logging.basicConfig(level=logging.ERROR)
@@ -86,7 +86,20 @@ def init_error_handlers(app):
         :return: 错误响应，包含错误信息和状态码
         """
         # 获取请求的相关信息，便于日志记录
-        request_info = f"Method: {request.method}, URL: {request.url}, Data: {request.get_json()}"
+        try:
+            if request.method == 'GET':
+                # 对于 GET 请求，记录查询参数，不需要读取请求体
+                request_info = f"Method: {request.method}, URL: {request.url}, Data: {request.args.to_dict()}"
+            elif request.is_json:
+                # 只有在请求是 JSON 格式时，才尝试读取 JSON 数据
+                request_info = f"Method: {request.method}, URL: {request.url}, Data: {request.get_json()}"
+            else:
+                # 如果不是 JSON 格式，记录没有请求体
+                request_info = f"Method: {request.method}, URL: {request.url}, Data: No JSON body"
+        except UnsupportedMediaType:
+            # 捕获 UnsupportedMediaType 异常，并返回自定义错误信息
+            return jsonify(
+                {"error": {"code": 415, "message": "Unsupported Media Type, please use application/json"}}), 415
 
         # 判断错误类型并构造响应内容
         if isinstance(error, HTTPException):  # Flask 内置的 HTTP 错误

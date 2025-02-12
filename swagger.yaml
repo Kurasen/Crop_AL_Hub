@@ -1,20 +1,28 @@
 openapi: 3.0.3
 info:
-  title: Flask API - OpenAPI 3.0
-  version: 1.0.0
-  description: A simple API with authentication
+  title: Swagger Petstore - OpenAPI 3.0
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-
+  version: 1.0.11
 servers:
-  - url: http://127.0.0.1:5000
+  - url: http://localhost:5000
+    description: 本地开发服务器
+tags:
+  - name: user
+    description: ''
+  - name: datasets
+    description: ''
+  - name: models
+    description: ''
 
 paths:
   /auth/login:
     post:
+      tags:
+        - user
       summary: 用户登录
-      description: Login and get JWT tokens
+      description: 登录并获取 JWT 令牌
       requestBody:
         content:
           application/json:
@@ -23,37 +31,429 @@ paths:
               properties:
                 login_identifier:
                   type: string
+                  description: 用户的用户名、邮箱或电话号码
                 login_type:
                   type: string
+                  description: 登录类型（选择：用户名、邮箱或电话号码）
+                  enum:
+                    - username
+                    - email
+                    - telephone  # 提供选择框
                 password:
                   type: string
+                  description: 用户的密码
+
       responses:
         '200':
           description: Successful login
         '400':
-          description: Invalid input
+          description: Invalid input, missing fields or incorrect format
+        '401':
+          description: Authentication failed, invalid credentials
         '422':
-          description: Validation exception
+          description: Validation failed, invalid login identifier format
+
   /auth/logout:
     post:
+      tags:
+        - user
       summary: 用户登出
-      description: Logout and invalidate JWT token
+      description: Log out and invalidate the JWT token
       responses:
         '200':
-          description: Logout successful
+          description: Successfully logged out
+        '401':
+          description: Unauthorized, Invalid token
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
   /auth/protected:
     get:
+      tags:
+        - user
       summary: Protected route
       description: Requires a valid JWT token
       responses:
         '200':
           description: Protected data returned
+      security:
+        - BearerAuth: [ ]
   /auth/refresh_token:
     post:
-      summary: Refresh access token using refresh token
+      tags:
+        - user
+      summary: 使用refresh token来刷新access token
       description: Get a new access token
       responses:
         '200':
           description: Token refreshed successfully
         '400':
           description: Invalid token
+      security:
+        - BearerAuth: [ ]
+
+  /datasets/list:
+    get:
+      tags:
+        - datasets
+      summary: 获取所有数据集
+      description: 获取所有数据集的信息列表，包括数据集ID、名称、路径、大小等。
+      responses:
+        200:
+          description: 成功返回所有数据集
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: 数据集ID
+                    name:
+                      type: string
+                      description: 数据集名称
+                    path:
+                      type: string
+                      description: 数据集路径
+                    size:
+                      type: string
+                      description: 数据集大小
+        400:
+          description: 请求无效
+
+  /datasets/search:
+    get:
+      tags:
+        - datasets
+      summary: 搜索数据集
+      description: 查询数据集，支持模糊查询和过滤条件。
+      parameters:
+        - name: sort_by
+          in: query
+          description: 排序字段，支持的字段包括：stars、size、downloads、likes等
+          required: false
+          schema:
+            type: string
+            enum: [ stars, size, downloads, likes ]
+            default: stars
+        - name: sort_order
+          in: query
+          description: 排序顺序，选择升序（asc）或降序（desc）
+          required: false
+          schema:
+            type: string
+            enum: [ asc, desc ]
+            default: asc
+        - name: stars
+          in: query
+          description: 按照星标数量筛选
+          required: false
+          schema:
+            type: integer
+        - name: type
+          in: query
+          description: 按类型筛选，多个标签可以用逗号、分号或空格分隔
+          required: false
+          schema:
+            type: string
+        - name: size_min
+          in: query
+          description: 最小大小筛选
+          required: false
+          schema:
+            type: string
+        - name: size_max
+          in: query
+          description: 最大大小筛选
+          required: false
+          schema:
+            type: string
+        - name: description
+          in: query
+          description: 数据集描述
+          required: false
+          schema:
+            type: string
+        - name: path
+          in: query
+          description: 数据集路径
+          required: false
+          schema:
+            type: string
+        - name: name
+          in: query
+          description: 数据集名称
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: 当前页码
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          description: 每页显示的条数
+          required: false
+          schema:
+            type: integer
+            default: 5
+      responses:
+        200:
+          description: 成功返回搜索结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        description:
+                          type: string
+                        path:
+                          type: string
+                        size:
+                          type: string
+                  total_count:
+                    type: integer
+                    description: 数据集的总数
+        400:
+          description: 请求无效
+
+  /models/list:
+    get:
+      tags:
+        - models
+      summary: 获取所有模型
+      description: 返回系统中所有模型的列表，包括模型 ID、名称、描述等信息。
+      responses:
+        '200':
+          description: 模型列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    model_id:
+                      type: integer
+                      description: 模型的 ID
+                    name:
+                      type: string
+                      description: 模型名称
+                    description:
+                      type: string
+                      description: 模型的描述
+                    supports_cuda:
+                      type: boolean
+                      description: 模型是否支持 CUDA 加速
+        '404':
+          description: 未找到任何模型
+
+  /models/run:
+    post:
+      tags:
+        - models
+      summary: 运行模型并返回准确率
+      description: 使用指定的模型 ID 和数据集 ID 运行模型，并返回训练准确率。
+      parameters:
+        - in: query
+          name: model_id
+          required: true
+          schema:
+            type: integer
+          description: 要运行的模型 ID
+        - in: query
+          name: dataset_id
+          required: true
+          schema:
+            type: integer
+          description: 要使用的数据集 ID
+      responses:
+        '200':
+          description: 模型的训练准确率
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accuracy:
+                    type: string
+                    description: 模型的准确率
+        '400':
+          description: 缺少模型 ID 或数据集 ID
+        '404':
+          description: 模型或数据集未找到
+
+  /models/test_model:
+    post:
+      tags:
+        - models
+      summary: 测试模型并返回处理后的图片
+      description: 上传图片并进行处理，返回处理后的图片和相应的模型输出 JSON 数据。
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 要处理的图片文件
+      responses:
+        '200':
+          description: 处理后的图片和模型输出
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model_id:
+                    type: integer
+                    description: 使用的模型 ID
+                  accuracy:
+                    type: number
+                    format: float
+                    description: 模型的准确率
+                  description:
+                    type: string
+                    description: 模型的处理结果描述
+            application/octet-stream:
+              description: 处理后的图片文件
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: 没有上传文件
+        '500':
+          description: 服务器内部错误
+
+  /models/search:
+    get:
+      tags:
+        - models
+      summary: 根据多个条件搜索模型
+      description: 根据模型名称、输入类型、是否支持 CUDA 等条件来搜索模型，并支持分页查询。
+      parameters:
+        - in: query
+          name: name
+          schema:
+            type: string
+          description: 模型名称
+        - in: query
+          name: input
+          schema:
+            type: string
+          description: 图片的输入类型（例如 'JPG', 'PNG'）
+        - in: query
+          name: cuda
+          schema:
+            type: boolean
+          description: 模型是否支持 CUDA 加速
+        - in: query
+          name: description
+          schema:
+            type: string
+          description: 模型描述
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+            enum:
+              - accuracy
+              - sales
+              - stars
+              - likes
+          description: 排序字段
+        - in: query
+          name: sort_order
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          description: 排序顺序（升序或降序）
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: 当前页码
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            default: 5
+          description: 每页显示的结果数
+      responses:
+        '200':
+          description: 搜索结果列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Model'
+        '400':
+          description: 查询参数无效
+
+components:
+  schemas:
+    Model:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: '基于近地面图像的株数识别模型'
+        accuracy:
+          type: number
+          format: float
+          example: 0.98
+        description:
+          type: string
+          example: '通过数量除以面积可以计算密度'
+        image:
+          type: string
+          example: 'detetcion-seed-leaf'
+        input:
+          type: string
+          example: '*.JPG'
+        instruction:
+          type: string
+          example: '-m ngp'
+        output:
+          type: string
+          example: 'plant_detection_summary.csv'
+        type:
+          type: string
+          example: '玉米；近地面；数量'
+        sales:
+          type: integer
+          example: 0
+        stars:
+          type: integer
+          example: 0
+        likes:
+          type: integer
+          example: 0
+      xml:
+        name: model
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

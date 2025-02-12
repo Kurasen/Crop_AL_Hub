@@ -1,17 +1,21 @@
 import redis
 import yaml
+import os
 
+from flasgger import Swagger
 from flask import Flask, jsonify
 from flask_swagger_ui import get_swaggerui_blueprint
 
+from app.blueprint.api.datasets_bp import datasets_bp
+from app.blueprint.api.models_bp import models_bp
+from app.blueprint.utils.JSONEncoder import CustomJSONEncoder
 from app.core.redis_connection_pool import RedisConnectionPool
 from app.config import config
 from app.exception.errors import init_error_handlers
 from app.exts import db
-from app.blueprint.api.auth_bp import auth_bp
+from app.blueprint.api.auth_bp import user_bp
 from flask_migrate import Migrate
 from flask_cors import CORS
-import os
 
 
 def create_app():
@@ -21,6 +25,8 @@ def create_app():
 
     # 配置转码
     app.config["JSON_AS_ASCII"] = False
+
+    app.json_encoder = CustomJSONEncoder
 
     # 配置跨域
     CORS(app, origins='*')
@@ -40,7 +46,9 @@ def create_app():
     init_error_handlers(app)
 
     # 注册蓝图
-    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(user_bp, url_prefix='/auth')
+    app.register_blueprint(datasets_bp, url_prefix='/datasets')
+    app.register_blueprint(models_bp, url_prefix='/models')
 
     # 从环境变量中获取 Redis 配置
     redis_host = os.getenv('REDIS_HOST', 'localhost')  # 默认使用 localhost
@@ -62,28 +70,32 @@ def create_app():
         print("Failed to connect to Redis:", e)
         app.logger.error(f"Failed to connect to Redis: {str(e)}")
 
-    # 动态加载 swagger.yaml 文件并提供 JSON 接口
-    @app.route('/swagger.json')
-    def swagger_json():
-        swagger_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'swagger.yaml')
-        with open(swagger_path, 'r', encoding='utf-8') as file:
-            yaml_data = yaml.safe_load(file)
-        return jsonify(yaml_data)
+    # # 使用Swagger Editor, 动态加载 swagger.yaml 文件并提供 JSON 接口
+    # @app.route('/swagger.json')
+    # def swagger_json():
+    #     swagger_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'swagger.yaml')
+    #     with open(swagger_path, 'r', encoding='utf-8') as file:
+    #         yaml_data = yaml.safe_load(file)
+    #     return jsonify(yaml_data)
+    #
+    # # 配置 Swagger UI 路径
+    # swagger_url = '/swagger'  # Swagger UI 访问路径
+    # api_url = '/swagger.json'  # Swagger 文档的 JSON 文件路径
+    #
+    # swaggerui_blueprint = get_swaggerui_blueprint(
+    #     swagger_url,
+    #     api_url,
+    #     config={  # Swagger UI 配置
+    #         'app_name': "Flask API with Dynamic Swagger"
+    #     }
+    # )
+    #
+    # # 注册 Swagger UI 蓝图
+    # app.register_blueprint(swaggerui_blueprint, url_prefix=swagger_url)
 
-    # 配置 Swagger UI 路径
-    swagger_url = '/swagger'  # Swagger UI 访问路径
-    api_url = '/swagger.json'  # Swagger 文档的 JSON 文件路径
+    # #配置 Flasgger 来自动生成 Swagger 文档(快速迭代)
+    # Swagger(app)  # 初始化 Flasgger
 
-    swaggerui_blueprint = get_swaggerui_blueprint(
-        swagger_url,
-        api_url,
-        config={  # Swagger UI 配置
-            'app_name': "Flask API with Dynamic Swagger"
-        }
-    )
-
-    # 注册 Swagger UI 蓝图
-    app.register_blueprint(swaggerui_blueprint, url_prefix=swagger_url)
 
     return app
 
