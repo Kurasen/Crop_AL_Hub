@@ -1,10 +1,7 @@
 import redis
-import yaml
 import os
 
-from flasgger import Swagger
-from flask import Flask, jsonify
-from flask_swagger_ui import get_swaggerui_blueprint
+from flask import Flask
 
 from app.blueprint.api.datasets_bp import datasets_bp
 from app.blueprint.api.models_bp import models_bp
@@ -108,5 +105,5 @@ if __name__ == '__main__':
         print("Registered routes:")
         for rule in app.url_map.iter_rules():
             print(f"{rule.endpoint}: {rule}")
-        print("\nSwagger UI available at: http://127.0.0.1:5000/swagger\n")
+        print("\nSwagger UI available at: http://127.0.0.1/swagger-ui/\n")
     app.run(debug=True)

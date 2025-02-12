@@ -51,17 +51,10 @@ class ModelRepository:
             raise ValidationError("Invalid sort field. Only 'accuracy', 'sales', 'stars', and 'likes' are allowed.")
 
 
+        # 总数
+        total_count = query.count()
+
         # 分页查询
-        total = query.count()
-        results = query.offset((page - 1) * per_page).limit(per_page).all()
+        models = query.offset((page - 1) * per_page).limit(per_page).all()
 
-        # 打印查询的 SQL 和结果
-        print(f"Query SQL: {str(query)}")
-        print(f"Query results: {results}")
-
-        return {
-            "data": [result.to_dict() for result in results],
-            "page": page,
-            "per_page": per_page,
-            "total": total
-        }
+        return total_count, models

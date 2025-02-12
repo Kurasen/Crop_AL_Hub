@@ -11,7 +11,7 @@ class DatasetRepository:
         return Dataset.query.all()
 
     @staticmethod
-    def get_by_id(dataset_id):
+    def get_dataset_by_id(dataset_id: int):
         """通过ID获取单个数据集"""
         return Dataset.query.get(dataset_id)
 

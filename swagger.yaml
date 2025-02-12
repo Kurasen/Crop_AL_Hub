@@ -9,7 +9,7 @@ servers:
   - url: http://localhost:5000
     description: 本地开发服务器
 tags:
-  - name: user
+  - name: auth
     description: ''
   - name: datasets
     description: ''
@@ -20,32 +20,30 @@ paths:
   /auth/login:
     post:
       tags:
-        - user
+        - auth
       summary: 用户登录
       description: 登录并获取 JWT 令牌
       requestBody:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                login_identifier:
-                  type: string
-                  description: 用户的用户名、邮箱或电话号码
-                login_type:
-                  type: string
-                  description: 登录类型（选择：用户名、邮箱或电话号码）
-                  enum:
-                    - username
-                    - email
-                    - telephone  # 提供选择框
-                password:
-                  type: string
-                  description: 用户的密码
-
+              $ref: '#/components/schemas/Auth'  # 引用定义的 LoginRequest 组件
       responses:
         '200':
           description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  "message":
+                    type: string
+                    enum:
+                      - "Login successful"
+                  refresh_token:
+                    type: string
         '400':
           description: Invalid input, missing fields or incorrect format
         '401':
@@ -56,7 +54,7 @@ paths:
   /auth/logout:
     post:
       tags:
-        - user
+        - auth
       summary: 用户登出
       description: Log out and invalidate the JWT token
       responses:
@@ -66,10 +64,11 @@ paths:
           description: Unauthorized, Invalid token
       security:
         - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
+
   /auth/protected:
     get:
       tags:
-        - user
+        - auth
       summary: Protected route
       description: Requires a valid JWT token
       responses:
@@ -77,10 +76,11 @@ paths:
           description: Protected data returned
       security:
         - BearerAuth: [ ]
+
   /auth/refresh_token:
     post:
       tags:
-        - user
+        - auth
       summary: 使用refresh token来刷新access token
       description: Get a new access token
       responses:
@@ -98,27 +98,14 @@ paths:
       summary: 获取所有数据集
       description: 获取所有数据集的信息列表，包括数据集ID、名称、路径、大小等。
       responses:
-        200:
-          description: 成功返回所有数据集
+        '200':
+          description: 模型列表
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      description: 数据集ID
-                    name:
-                      type: string
-                      description: 数据集名称
-                    path:
-                      type: string
-                      description: 数据集路径
-                    size:
-                      type: string
-                      description: 数据集大小
+                  $ref: '#/components/schemas/Dataset'
         400:
           description: 请求无效
 
@@ -202,8 +189,8 @@ paths:
             type: integer
             default: 5
       responses:
-        200:
-          description: 成功返回搜索结果
+        '200':
+          description: 成功返回数据集列表
           content:
             application/json:
               schema:
@@ -212,22 +199,24 @@ paths:
                   data:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        name:
-                          type: string
-                        description:
-                          type: string
-                        path:
-                          type: string
-                        size:
-                          type: string
+                      $ref: '#/components/schemas/Dataset'  # 引用Dataset schema
                   total_count:
                     type: integer
-                    description: 数据集的总数
-        400:
+                    description: 数据集总数量
+                    example: 5
+                  page:
+                    type: integer
+                    description: 当前页码
+                    example: 1
+                  per_page:
+                    type: integer
+                    description: 每页返回的数量
+                    example: 5
+                  total_pages:
+                    type: integer
+                    description: 总页数
+                    example: 2
+        '400':
           description: 请求无效
 
   /models/list:
@@ -244,22 +233,9 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    model_id:
-                      type: integer
-                      description: 模型的 ID
-                    name:
-                      type: string
-                      description: 模型名称
-                    description:
-                      type: string
-                      description: 模型的描述
-                    supports_cuda:
-                      type: boolean
-                      description: 模型是否支持 CUDA 加速
+                  $ref: '#/components/schemas/Model'
         '404':
-          description: 未找到任何模型
+          description: No datasets found in the database
 
   /models/run:
     post:
@@ -292,9 +268,9 @@ paths:
                     type: string
                     description: 模型的准确率
         '400':
-          description: 缺少模型 ID 或数据集 ID
+          description: Model ID and Dataset ID are required
         '404':
-          description: 模型或数据集未找到
+          description: Model ID or Dataset ID not found
 
   /models/test_model:
     post:
@@ -314,31 +290,36 @@ paths:
                   description: 要处理的图片文件
       responses:
         '200':
-          description: 处理后的图片和模型输出
+          description: 处理后的图片
           content:
-            application/json:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+                description: 处理后的图像文件
+              example: "image content in binary format"
+          headers:
+            X-Model-Output:
+              description: 模型输出信息
               schema:
                 type: object
                 properties:
                   model_id:
                     type: integer
-                    description: 使用的模型 ID
+                    example: 1
                   accuracy:
                     type: number
                     format: float
-                    description: 模型的准确率
+                    example: 92.5
                   description:
                     type: string
-                    description: 模型的处理结果描述
-            application/octet-stream:
-              description: 处理后的图片文件
-              schema:
-                type: string
-                format: binary
+                    example: "Model 1 processed the image successfully."
+
         '400':
           description: 没有上传文件
         '500':
           description: 服务器内部错误
+
 
   /models/search:
     get:
@@ -403,52 +384,136 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Model'
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Model'  # 引用Dataset schema
+                  total_count:
+                    type: integer
+                    description: 模型总数量
+                    example: 5
+                  page:
+                    type: integer
+                    description: 当前页码
+                    example: 1
+                  per_page:
+                    type: integer
+                    description: 每页返回的数量
+                    example: 5
+                  total_pages:
+                    type: integer
+                    description: 总页数
+                    example: 2
         '400':
           description: 查询参数无效
 
 components:
   schemas:
+    Auth:
+      type: object
+      properties:
+        login_identifier:
+          type: string
+          description: 用户的用户名、邮箱或电话号码
+        login_type:
+          type: string
+          description: 登录类型（选择：用户名、邮箱或电话号码）
+          enum:
+            - username
+            - email
+            - telephone  # 提供选择框
+        password:
+          type: string
+          description: 用户的密码
+      required:
+        - login_identifier
+        - login_type
+        - password
+        -
+    Dataset:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        name:
+          type: string
+          example: "雄穗数量识别测试集"
+        path:
+          type: string
+          example: "detetcion-tassel/dataset/test"
+        size:
+          type: string
+          example: "2.39GB"
+        description:
+          type: string
+          example: "用来测试雄穗数量识别模型"
+        type:
+          type: string
+          example: "玉米;数量"
+        downloads:
+          type: integer
+          format: int32
+          example: 1
+        stars:
+          type: integer
+          format: int32
+          example: 2
+        likes:
+          type: integer
+          format: int32
+          example: 3
+      xml:
+        name: dataset
     Model:
       type: object
       properties:
         id:
           type: integer
-          format: int64
+          format: int32
           example: 1
         name:
           type: string
           example: '基于近地面图像的株数识别模型'
-        accuracy:
-          type: number
-          format: float
-          example: 0.98
-        description:
-          type: string
-          example: '通过数量除以面积可以计算密度'
         image:
           type: string
           example: 'detetcion-seed-leaf'
         input:
           type: string
           example: '*.JPG'
+        description:
+          type: string
+          example: '通过数量除以面积可以计算密度'
+        cude:
+          type: boolean
+          example: false
         instruction:
           type: string
           example: '-m ngp'
         output:
           type: string
           example: 'plant_detection_summary.csv'
+        accuracy:
+          type: number
+          format: float
+          example: 0.98
         type:
           type: string
           example: '玉米；近地面；数量'
         sales:
           type: integer
+          format: int32
           example: 0
         stars:
           type: integer
+          format: int32
           example: 0
         likes:
           type: integer
+          format: int32
           example: 0
       xml:
         name: model

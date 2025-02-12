@@ -69,7 +69,4 @@ def search():
         per_page=per_page
     )
 
-    # 获取 data 并进行序列化
-    data = result['data']
-
-    return create_json_response(data)
+    return create_json_response(result)

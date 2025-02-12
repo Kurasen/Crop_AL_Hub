@@ -8,6 +8,7 @@ from werkzeug.datastructures import FileStorage
 from app.blueprint.utils.JSONEncoder import CustomJSONEncoder, create_json_response
 from app.exception.errors import ValidationError, DatabaseError
 from app.models.model import Model
+from app.services.dataset_service import DatasetService
 from app.services.model_service import ModelService
 
 # 定义排序字段的枚举类型（例如：stars, size, etc.）
@@ -76,6 +77,15 @@ def run():
     # 根据模型和数据集编号生成模拟的准确率
     if not model_id or not dataset_id:
         raise ValidationError("Model ID and Dataset ID are required")  # 参数缺失时抛出 ValidationError
+
+    model = ModelService.get_model_by_id(model_id)
+    dataset = DatasetService.get_dataset_by_id(dataset_id)
+
+    # 如果模型或数据集不存在，则返回错误信息
+    if not model:
+        raise ValidationError(f"Model with ID {model_id} not found")
+    if not dataset:
+        raise ValidationError(f"Dataset with ID {dataset_id} not found")
 
     accuracy = f"Model_{model_id} trained on Dataset_{dataset_id} has an accuracy of {model_id * dataset_id}%"
     return jsonify({"accuracy": accuracy})
@@ -155,7 +165,5 @@ def search():
         page=page,
         per_page=per_page
     )
-    # 获取 data 并进行序列化
-    data = result['data']
 
-    return create_json_response(data)
+    return create_json_response(result)

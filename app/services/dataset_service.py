@@ -12,6 +12,11 @@ class DatasetService:
         return [DatasetService._convert_to_dict(dataset) for dataset in datasets]
 
     @staticmethod
+    def get_dataset_by_id(dataset_id: int):
+        # 获取指定ID的模型
+        return DatasetRepository.get_dataset_by_id(dataset_id)
+
+    @staticmethod
     def search_datasets(name=None, path=None, size_min=None, size_max=None, description=None,
                         type=None, stars=None, sort_by='accuracy', sort_order='asc', page=1, per_page=5):
         """根据过滤条件获取数据集"""

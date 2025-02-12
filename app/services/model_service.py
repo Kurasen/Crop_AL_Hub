@@ -19,8 +19,8 @@ class ModelService:
 
     @staticmethod
     def search_models(name=None, input=None, cuda=None, description=None, type=None, page=1, per_page=10, sort_by='accuracy', sort_order='asc'):
-        # 调用 Repository 层
-        return ModelRepository.search_models(
+        """查询模型，调用Repository层"""
+        total_count, models = ModelRepository.search_models(
             name=name,
             input=input,
             cuda=cuda,
@@ -31,3 +31,11 @@ class ModelService:
             page=page,
             per_page=per_page
         )
+
+        return {
+            "data": [model.to_dict() for model in models],
+            "total_count": total_count,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": (total_count + per_page - 1) // per_page
+        }
