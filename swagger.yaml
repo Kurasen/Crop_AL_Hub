@@ -416,9 +416,11 @@ components:
         login_identifier:
           type: string
           description: 用户的用户名、邮箱或电话号码
+          example: test001
         login_type:
           type: string
           description: 登录类型（选择：用户名、邮箱或电话号码）
+          example: username
           enum:
             - username
             - email
@@ -426,11 +428,11 @@ components:
         password:
           type: string
           description: 用户的密码
+          example: 123123
       required:
         - login_identifier
         - login_type
         - password
-
 
     Dataset:
       type: object
