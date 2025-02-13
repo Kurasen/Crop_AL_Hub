@@ -1,0 +1,49 @@
+version: '3'
+services:
+  flask:
+    build: .
+    image: crop_al_hub-master_flask:latest
+    container_name: flask_app
+    ports:
+      - "5000:5000"  # 将 Flask 的 5000 端口暴露到主机上
+    environment:
+      - FLASK_APP=myapp.py:create_app # 确保设置了 FLASK_APP
+      - FLASK_ENV=development  # 确保设置了开发环境
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    volumes:
+      - .:/app  # 映射代码到容器，确保容器能看到最新的文件
+    working_dir: /app  # 确保工作目录为项目根目录
+    command: flask run --host=0.0.0.0 --port=5000  # 让 Flask 在容器外部也能访问
+    tty: true  # 保持容器活跃
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx_server
+    ports:
+      - "8080:80"  # 将 Nginx 的 80 端口暴露到主机上
+    depends_on:
+      - flask
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/swagger.yaml:/usr/share/nginx/html/swagger.yaml  # Swagger 文件路径
+      - ./nginx/swagger-ui:/usr/share/nginx/html/swagger-ui  # 挂载 Swagger UI 文件夹
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

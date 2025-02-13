@@ -2,6 +2,9 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+# 加载 .env 文件（应用启动时加载）
+load_dotenv(Path('.') / '.env')
+
 
 # 定义基础配置类
 class Config:
@@ -18,7 +21,7 @@ class Config:
     def get_sqlalchemy_uri():
         db_username = os.getenv('DB_USERNAME', 'root')
         db_password = os.getenv('DB_PASSWORD', '123123')
-        db_host = os.getenv('DB_HOST', '127.0.0.1')
+        db_host = os.getenv('DB_HOST', 'host.docker.internal')
         db_port = os.getenv('DB_PORT', '3306')
         db_name = os.getenv('DB_NAME', 'crop_al_hub')
 

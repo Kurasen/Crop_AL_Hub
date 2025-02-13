@@ -2,7 +2,7 @@ import redis
 
 
 class RedisConnectionPool:
-    def __init__(self, redis_host='localhost', redis_port=6379, redis_password=None):
+    def __init__(self, redis_host=None, redis_port=6379, redis_password=None):
         self.redis_host = redis_host
         self.redis_port = redis_port
         self.redis_password = redis_password

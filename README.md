@@ -6,19 +6,6 @@ Crop_AL_Hub项目登录功能后端实现
 页面测试网址：http://127.0.0.1:5000/swagger-ui
 
 
-使用swagger或Postman进行登录post请求测试时，需选择登录类型，如：
-{
-
-"login_identifier": "12345678901",   // 假设使用手机号登录
-
-"login_type": "telephone",            // 可以是 "username", "telephone", "email"
-
-"password": "123123"
-
-}
-
-
-
 ## 数据库连接使用流程
 1.查看是否下载flask-migrate : pip list
 
@@ -39,7 +26,7 @@ flask db migrate
 
 flask db upgrade
 
-生成User表
+生成User_table表
 
 4.往表里插入一条数据，表中的密码需存放加密后的密码，可先在表中输入密码“123123”后
 用blueprint/utils/encryption.py将密码加密

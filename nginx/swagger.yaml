@@ -267,6 +267,7 @@ paths:
                   accuracy:
                     type: string
                     description: 模型的准确率
+                    example: 'Model_Id trained on Dataset_Id has an accuracy of xx%'
         '400':
           description: Model ID and Dataset ID are required
         '404':
@@ -433,6 +434,8 @@ components:
         - login_identifier
         - login_type
         - password
+      xml:
+        name: auth
 
     Dataset:
       type: object
@@ -520,6 +523,7 @@ components:
           example: 0
       xml:
         name: model
+
   securitySchemes:
     BearerAuth:
       type: http

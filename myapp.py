@@ -1,8 +1,8 @@
+
 import redis
 import os
 
 from flask import Flask
-
 from app.blueprint.api.datasets_bp import datasets_bp
 from app.blueprint.api.models_bp import models_bp
 from app.blueprint.utils.JSONEncoder import CustomJSONEncoder
@@ -16,6 +16,10 @@ from flask_cors import CORS
 
 
 def create_app():
+    # 打印环境变量，检查是否加载成功
+    print(f"FLASK_APP: {os.getenv('FLASK_APP')}")
+    print(f"FLASK_ENV: {os.getenv('FLASK_ENV')}")
+
     # 获取运行环境
     env = os.getenv('FLASK_ENV', 'default')
     app = Flask(__name__)
@@ -37,7 +41,7 @@ def create_app():
 
     # 初始化数据库
     db.init_app(app)
-    migrate = Migrate(app, db)
+    Migrate(app, db)
 
     # 注册全局异常处理
     init_error_handlers(app)
@@ -105,5 +109,5 @@ if __name__ == '__main__':
         print("Registered routes:")
         for rule in app.url_map.iter_rules():
             print(f"{rule.endpoint}: {rule}")
-        print("\nSwagger UI available at: http://127.0.0.1/swagger-ui/\n")
+        print("\nSwagger UI available at: http://127.0.0.1:8080/swagger-ui/\n")
     app.run(debug=True)
