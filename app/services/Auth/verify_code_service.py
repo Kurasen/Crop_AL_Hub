@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import random
 import string
+import time
 
 import redis
 from flask import current_app
@@ -13,6 +14,7 @@ from app.exception.errors import ValidationError
 # 使用 Redis 缓存验证码的服务
 class VerificationCodeService:
     CODE_EXPIRE = 300  # 5分钟
+    RATE_LIMIT_TIME = 60  # 限制一分钟内不能重复请求
 
     def __init__(self):
         # 初始化时传递 Redis 配置信息
@@ -35,11 +37,25 @@ class VerificationCodeService:
         current_app.logger.info(f"Redis client connected: {cache_client}")
         # 设置缓存，存储验证码并设置过期时间
         cache_key = VerificationCodeService._generate_redis_key(login_type, login_identifier)
+        rate_limit_key = f"rate_limit:{cache_key}"
+
+        # 检查是否超过一分钟内已经生成过验证码
+        last_generated_time = cache_client.get(rate_limit_key)
+        if last_generated_time:
+            # 如果验证码已经生成并且未超过一分钟
+            time_diff = time.time() - float(last_generated_time)
+            if time_diff < VerificationCodeService.RATE_LIMIT_TIME:
+                raise ValidationError("请在一分钟后重试获取验证码")
 
         try:
-            # 确保 cache_key 是 bytes 类型
+            # 设置验证码缓存，确保 cache_key 是 bytes 类型
             cache_client.setex(cache_key, VerificationCodeService.CODE_EXPIRE, code)
             current_app.logger.info(f"验证码已存储: {cache_key}")
+
+            # 设置限制时间的缓存，记录验证码生成时间
+            cache_client.setex(rate_limit_key, VerificationCodeService.RATE_LIMIT_TIME, time.time())
+            current_app.logger.info(f"验证码生成时间已记录: {rate_limit_key}")
+
         except redis.exceptions.RedisError as e:
             current_app.logger.error(f"Redis存储失败: {str(e)}")
             raise
