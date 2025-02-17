@@ -21,7 +21,8 @@ class ModelRepository:
         return Model.query.filter_by(cuda=cuda_support).all()
 
     @staticmethod
-    def search_models(name=None, input=None, cuda=None, description=None, type=None, page=1, per_page=10, sort_by='accuracy', sort_order='asc'):
+    def search_models(name=None, input=None, cuda=None, description=None, type=None, page=1, per_page=10,
+                      sort_by='accuracy', sort_order='asc'):
         query = Model.query
         if name:
             query = query.filter(Model.name.like(f"%{name}%"))
@@ -50,7 +51,6 @@ class ModelRepository:
         else:
             raise ValidationError("Invalid sort field. Only 'accuracy', 'sales', 'stars', and 'likes' are allowed.")
 
-
         # 总数
         total_count = query.count()
 
@@ -58,3 +58,5 @@ class ModelRepository:
         models = query.offset((page - 1) * per_page).limit(per_page).all()
 
         return total_count, models
+
+

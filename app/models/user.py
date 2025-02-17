@@ -8,7 +8,7 @@ class User(db.Model):
     __tablename__ = 'user_table'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 个人id
-    username = db.Column(db.String(100), unique=True, nullable=False)  # 用户昵称
+    username = db.Column(db.String(100), nullable=False)  # 用户昵称
     password = db.Column(db.String(200), nullable=False)  # 密码字段
     email = db.Column(db.String(100), unique=True, nullable=True)  # 邮箱
     telephone = db.Column(db.String(15), unique=True, nullable=True)  # 手机号

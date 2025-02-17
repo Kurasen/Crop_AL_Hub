@@ -1,12 +1,12 @@
 import hashlib
 import hmac
 import random
+import secrets
 import string
 import time
-
 import redis
-from flask import current_app
 
+from flask import current_app
 from app.core.redis_connection_pool import RedisConnectionPool
 from app.exception.errors import ValidationError
 
@@ -29,7 +29,7 @@ class VerificationCodeService:
         :return: 生成的验证码
         """
         # 生成一个6位数的验证码
-        code = ''.join(random.choices(string.digits, k=6))
+        code = ''.join(secrets.choice(string.digits) for _ in range(6))
 
         # 获取 Redis 客户端（选择缓存数据库 db=2）
 
@@ -78,7 +78,6 @@ class VerificationCodeService:
         try:
             pipe = cache_client.pipeline()
             pipe.get(redis_key)
-            pipe.delete(redis_key)
             result = pipe.execute()  # 返回格式 [stored_code, delete_count]
 
             # 明确处理返回值
@@ -94,6 +93,10 @@ class VerificationCodeService:
                 current_app.logger.warning(f"验证码不匹配: 输入={code}, 存储={stored_code}")
                 raise ValidationError("验证码错误")
 
+            # 验证成功后删除验证码
+            pipe.delete(redis_key)
+            pipe.execute()  # 执行删除操作
+
             return True
         except redis.exceptions.RedisError as e:
             current_app.logger.error(f"Redis操作失败: {str(e)}")
@@ -103,21 +106,17 @@ class VerificationCodeService:
     def _generate_redis_key(login_type, login_identifier):
         # 获取 SECRET_KEY，确保它是 bytes 类型
         secret_key = current_app.config['SECRET_KEY']
-        print(f"SECRET_KEY type: {type(secret_key)}")  # 打印类型检查
 
         # 如果 SECRET_KEY 是字符串类型，则转为 bytes
         if isinstance(secret_key, str):
             secret_key = secret_key.encode('utf-8')
-            print(f"Encoded SECRET_KEY: {secret_key}")  # 打印编码后的值
 
         # 确保 login_type 和 login_identifier 拼接后的 msg 参数是 bytes 类型
-        msg = f"{login_type}:{login_identifier}".encode('utf-8')
-        print(f"msg type: {type(msg)}")  # 打印类型检查
 
         # 使用 HMAC 增强安全性，key 和 msg 都是 bytes 类型
         h = hmac.new(
             key=secret_key,  # 确保是 bytes 类型
-            msg=msg,  # msg 必须是 bytes 类型
+            msg=f"{login_type}:{login_identifier}".encode('utf-8'),  # msg 必须是 bytes 类型
             digestmod=hashlib.sha256
         )
 

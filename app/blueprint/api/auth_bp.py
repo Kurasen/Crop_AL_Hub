@@ -7,7 +7,6 @@ from app.blueprint.utils.JWT import token_required, add_to_blacklist, get_jwt_id
 from app.exception.errors import ValidationError, DatabaseError, AuthenticationError, logger
 from app.repositories.Token.token_repo import TokenRepository
 from app.services.Auth.auth_service import AuthService
-from app.services.Auth.input_format import InputFormatService
 from app.services.Auth.verify_code_service import VerificationCodeService
 from app.services.Token.token_service import TokenService
 

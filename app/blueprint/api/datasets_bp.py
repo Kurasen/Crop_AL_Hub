@@ -1,7 +1,5 @@
-import json
 
-from flask import request, Blueprint, jsonify, Response
-from flask_restx import Resource, fields, Namespace
+from flask import request, Blueprint
 
 from app.blueprint.utils.JSONEncoder import CustomJSONEncoder, create_json_response
 from app.exception.errors import DatabaseError

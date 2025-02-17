@@ -1,9 +1,10 @@
 import json
 import os
 
-from flask import jsonify, request, send_file, after_this_request, Blueprint, Response, make_response
+from flask import jsonify, request, send_file, after_this_request, Blueprint, Response, make_response, current_app
 from flask_restx import Resource, fields, reqparse, Namespace
 from werkzeug.datastructures import FileStorage
+from werkzeug.utils import secure_filename
 
 from app.blueprint.utils.JSONEncoder import CustomJSONEncoder, create_json_response
 from app.exception.errors import ValidationError, DatabaseError
@@ -13,16 +14,13 @@ from app.services.model_service import ModelService
 
 # 定义排序字段的枚举类型（例如：stars, size, etc.）
 SORT_BY_CHOICES = ['accuracy', 'sales', 'stars', 'likes']
-
 # 定义排序顺序的枚举类型（升序或降序）
 SORT_ORDER_CHOICES = ['asc', 'desc']
+# 设置允许的文件格式
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
 
 # 定义命名空间：模型
 models_bp = Blueprint('models', __name__)
-
-# 定义文件上传字段
-upload_parser = reqparse.RequestParser()
-upload_parser.add_argument('file', type=FileStorage, location='files', required=True, help='上传图片文件')
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 UPLOAD_FOLDER = os.path.join(project_root, 'test')  # 定位到 'test' 文件夹
@@ -37,9 +35,9 @@ def get_all_models():
     return [model.to_dict() for model in models]
 
 
-# 模拟的图像处理函数
-def process_image(image_file):
-    return image_file
+# 检查文件扩展名是否有效
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 # 处理模型输出的 JSON 数据（可以根据不同模型返回不同字段）
@@ -97,47 +95,45 @@ def test_model():
     """
     上传一张图片，进行处理并返回处理后的图片和相应的 JSON 数据。
     """
-    # 使用 reqparse 获取上传的图片文件
-    model_id = request.form.get('model_id')  # 获取 model_id
-    args = upload_parser.parse_args()
-    uploaded_file = args.get('file')
+    try:
+        model_id = request.form.get('model_id')
+        if not model_id or model_id == '':
+            raise ValidationError("未提供 model_id")
 
-    if not uploaded_file:
-        raise ValidationError(message="未上传文件")
+        # 文件校验
+        uploaded_file = request.files.get('file')
+        if not uploaded_file or uploaded_file.filename == '':
+            raise ValidationError("未上传文件或未选择文件")
 
-    # 异常处理：如果没有提供 model_id，抛出 ValidationError 异常
-    if not model_id:
-        raise ValidationError(message="未提供 model_id")
+        try:
+            # 尝试将 model_id 转换为整数
+            model_id = int(model_id)
+        except ValueError:
+            raise ValidationError("model_id 应该是整数类型")
 
-    # 确保上传文件目录存在
-    if not os.path.exists(UPLOAD_FOLDER):
-        os.makedirs(UPLOAD_FOLDER)
+        # 检查 model_id 是否有效
+        if not ModelService.get_model_by_id(model_id):
+            raise ValidationError("无效的 model_id")
 
-    # 保存上传的文件到指定文件夹
-    file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
-    # 保存文件
-    uploaded_file.save(file_path)
+        # 处理模型和文件，获取图像处理路径和模型信息
+        processed_image_path, model = ModelService.handle_model_and_file(model_id, uploaded_file)
 
-    # 模拟的图像处理：在这里只是返回原图，假装做了处理
-    processed_image_path = process_image(file_path)
+        # 构造响应
+        response = make_response(send_file(
+            processed_image_path,
+            mimetype='image/jpeg'
+        ))
+        response.headers['X-Model-Output'] = json.dumps({
+            'model_id': model_id,
+            'accuracy': 92.5,
+            'description': f'Model {model_id} processed successfully'
+        })
 
-    # 生成模型输出的 JSON 数据（你可以根据需要修改）
-    model_output_json = {
-        'model_id': model_id,
-        'accuracy': 92.5,
-        'description': f'Model {model_id} processed the image successfully.'
-    }
-
-    # 使用 make_response 设置图片和头部
-    response = make_response(send_file(processed_image_path, mimetype='image/jpeg'))
-
-    # 在响应头中添加模型输出 JSON 数据
-    response.headers['X-Model-Output'] = json.dumps(model_output_json)
-
-    # 返回图片（确保内容类型为 image/jpeg）
-    response.headers['Content-Type'] = 'image/jpeg'
-
-    return response
+    except ValidationError as e:
+        current_app.logger.error(f"Validation Error during registration: {str(e)}")
+        raise e
+    except Exception as e:
+        return create_json_response(str(e), 500)
 
 
 @models_bp.route('/search', methods=['GET'])

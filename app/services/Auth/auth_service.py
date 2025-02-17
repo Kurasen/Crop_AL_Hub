@@ -6,7 +6,7 @@ from app.models.user import User
 from app.repositories.Token.token_repo import TokenRepository
 from app.repositories.Auth.auth_repo import AuthRepository
 from app.repositories.Auth.login_attempt_repo import LoginAttemptsRepository
-from flask import current_app
+from flask import current_app, make_response, jsonify
 from app.services.Auth.input_format import InputFormatService
 from app.services.Auth.passwd_service import PasswordService
 from app.services.Auth.verify_code_service import VerificationCodeService
@@ -35,8 +35,6 @@ class AuthService:
                 raise ValidationError("Invalid login type. Only 'telephone' or 'email' are allowed.")
             InputFormatService.validate_credentials_format(login_type, login_identifier, password)
 
-            print(f"Password before hashing: {password} (type: {type(password)})")  # 调试打印密码类型
-
             # Step 2: 验证验证码
             VerificationCodeService.validate_code(login_type, login_identifier, code)
 
@@ -46,13 +44,15 @@ class AuthService:
 
             # Step 4: 创建用户名
             hashed_password = PasswordService.hashed_password(password)
-            print(f"Hashed password type: {type(hashed_password)}")
             user = User(username=username, password=hashed_password,
                         email=login_identifier if login_type == 'email' else None,
                         telephone=login_identifier if login_type == 'telephone' else None)
             AuthRepository.save_user(user)  # 保存到数据库
 
-            # Step 4: 生成 Token
+            # Step 5: 显示提交事务
+            db.session.commit()
+
+            # Step 6: 生成 Token
             access_token = generate_access_token(user.id, user.username)
             refresh_token = generate_refresh_token(user.id, user.username)
 
@@ -61,15 +61,17 @@ class AuthService:
                 "access_token": access_token,
                 "refresh_token": refresh_token
             }, 201
-        except (ValidationError, SQLAlchemyError) as e:
-            # 回滚事务，如果发生错误
-            db.session.rollback()
-            current_app.logger.error(f"Error during registration: {str(e)}")
-            raise e  # 抛出异常以便全局异常处理类捕获
-
-        finally:
-            # 关闭数据库会话
-            db.session.remove()  # 用 remove() 来确保会话释放
+        except ValidationError as e:
+            current_app.logger.error(f"Validation Error during registration: {str(e)}")
+            raise e
+        except SQLAlchemyError as e:
+            db.session.rollback()  # 事务回滚
+            current_app.logger.error(f"Database Error during registration: {str(e)}")
+            raise ValidationError("Database error occurred, please try again.")
+        except Exception as e:
+            # 捕获其他未处理的异常
+            current_app.logger.error(f"Unexpected Error during registration: {str(e)}")
+            raise ValidationError("An unexpected error occurred during registration.")
 
     @staticmethod
     def login(data):

@@ -1,3 +1,4 @@
+from app.blueprint.utils.upload_file import UploadFile
 from app.repositories.Model.model_repo import ModelRepository
 
 
@@ -18,7 +19,8 @@ class ModelService:
         return ModelRepository.get_models_by_cuda(cuda_support)
 
     @staticmethod
-    def search_models(name=None, input=None, cuda=None, description=None, type=None, page=1, per_page=10, sort_by='accuracy', sort_order='asc'):
+    def search_models(name=None, input=None, cuda=None, description=None, type=None, page=1, per_page=10,
+                      sort_by='accuracy', sort_order='asc'):
         """查询模型，调用Repository层"""
         total_count, models = ModelRepository.search_models(
             name=name,
@@ -39,3 +41,21 @@ class ModelService:
             "per_page": per_page,
             "total_pages": (total_count + per_page - 1) // per_page
         }
+
+    # 模拟的图像处理函数
+    @staticmethod
+    def process_image(image_file):
+        return image_file
+
+    @staticmethod
+    def handle_model_and_file(model_id, uploaded_file):
+        # 校验并获取 model
+        model = ModelRepository.get_model_by_id(model_id)
+
+        # 处理文件上传
+        file_path = UploadFile.save_uploaded_file(uploaded_file)
+
+        # 处理图像（这里只是模拟）
+        processed_image_path = ModelService.process_image(file_path)
+
+        return processed_image_path, model
