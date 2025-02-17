@@ -1,7 +1,7 @@
 import json
 import os
 
-from flask import jsonify, request, send_file, after_this_request, Blueprint, Response
+from flask import jsonify, request, send_file, after_this_request, Blueprint, Response, make_response
 from flask_restx import Resource, fields, reqparse, Namespace
 from werkzeug.datastructures import FileStorage
 
@@ -64,7 +64,7 @@ def list():
 
 
 # 定义 run_model 接口，接收模型编号和数据集编号
-@models_bp.route('/run', methods=['POST'])
+@models_bp.route('/run', methods=['GET'])
 def run():
     """
     通过模型ID和数据集ID运行模型，并返回模型的训练准确率。
@@ -98,11 +98,16 @@ def test_model():
     上传一张图片，进行处理并返回处理后的图片和相应的 JSON 数据。
     """
     # 使用 reqparse 获取上传的图片文件
+    model_id = request.form.get('model_id')  # 获取 model_id
     args = upload_parser.parse_args()
     uploaded_file = args.get('file')
 
     if not uploaded_file:
-        return {'message': '未上传文件'}, 400
+        raise ValidationError(message="未上传文件")
+
+    # 异常处理：如果没有提供 model_id，抛出 ValidationError 异常
+    if not model_id:
+        raise ValidationError(message="未提供 model_id")
 
     # 确保上传文件目录存在
     if not os.path.exists(UPLOAD_FOLDER):
@@ -118,20 +123,21 @@ def test_model():
 
     # 生成模型输出的 JSON 数据（你可以根据需要修改）
     model_output_json = {
-        'model_id': 1,
+        'model_id': model_id,
         'accuracy': 92.5,
-        'description': f'Model 1 processed the image successfully.'
+        'description': f'Model {model_id} processed the image successfully.'
     }
 
-    # 将模型输出 JSON 添加到响应头部
-    @after_this_request
-    def add_json_response(response):
-        response.headers['X-Model-Output'] = json.dumps(model_output_json)
-        return response
+    # 使用 make_response 设置图片和头部
+    response = make_response(send_file(processed_image_path, mimetype='image/jpeg'))
 
-    # 返回“假装处理”后的图片
-    return send_file(processed_image_path, mimetype='image/jpeg', as_attachment=True,
-                     download_name=uploaded_file.filename)
+    # 在响应头中添加模型输出 JSON 数据
+    response.headers['X-Model-Output'] = json.dumps(model_output_json)
+
+    # 返回图片（确保内容类型为 image/jpeg）
+    response.headers['Content-Type'] = 'image/jpeg'
+
+    return response
 
 
 @models_bp.route('/search', methods=['GET'])

@@ -98,8 +98,11 @@ def init_error_handlers(app):
                 request_info = f"Method: {request.method}, URL: {request.url}, Data: No JSON body"
         except UnsupportedMediaType:
             # 捕获 UnsupportedMediaType 异常，并返回自定义错误信息
-            return jsonify(
-                {"error": {"code": 415, "message": "Unsupported Media Type, please use application/json"}}), 415
+            return jsonify({
+                "status": "error",
+                "code": 415,
+                "message": "Unsupported Media Type, please use application/json"
+            }), 415
 
         # 判断错误类型并构造响应内容
         if isinstance(error, HTTPException):  # Flask 内置的 HTTP 错误
@@ -109,11 +112,12 @@ def init_error_handlers(app):
             response = {"error": {"code": error.status_code, "message": error.message}}
             status_code = error.status_code
         else:  # 其他未知错误
-            response = {"error": {"code": 500, "message": "Internal Server Error"}}
+            response = {"status": "error", "code": 500, "message": "Internal Server Error"}
             status_code = 500
 
         # 记录错误日志，包括错误信息和请求信息
-        logger.error(f"Error: {error}, Status Code: {status_code}, Request Info: {request_info}")
+        logger.error(f"Error: {str(error)}, Status Code: {status_code}, Request Info: {request_info}, "
+                     f"IP: {request.remote_addr}, User-Agent: {request.user_agent.string}")
 
         # 返回统一的错误响应
         return jsonify(response), status_code

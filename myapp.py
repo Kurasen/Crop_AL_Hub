@@ -1,4 +1,3 @@
-
 import redis
 import os
 
@@ -10,7 +9,7 @@ from app.core.redis_connection_pool import RedisConnectionPool
 from app.config import config
 from app.exception.errors import init_error_handlers
 from app.exts import db
-from app.blueprint.api.auth_bp import user_bp
+from app.blueprint.api.auth_bp import auth_bp
 from flask_migrate import Migrate
 from flask_cors import CORS
 
@@ -47,7 +46,7 @@ def create_app():
     init_error_handlers(app)
 
     # 注册蓝图
-    app.register_blueprint(user_bp, url_prefix='/auth')
+    app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(datasets_bp, url_prefix='/datasets')
     app.register_blueprint(models_bp, url_prefix='/models')
 
@@ -96,7 +95,6 @@ def create_app():
 
     # #配置 Flasgger 来自动生成 Swagger 文档(快速迭代)
     # Swagger(app)  # 初始化 Flasgger
-
 
     return app
 

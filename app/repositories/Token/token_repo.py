@@ -1,14 +1,6 @@
 from flask import current_app
 
 
-def list_all_tokens():
-    """列出所有用户的 Token（仅用于管理）"""
-    redis_client = TokenRepository.get_redis_client()
-    # 获取所有与 user_*_token:* 相关的 Redis 键
-    keys = redis_client.keys("user_*_token:*")
-    return {key.decode('utf-8'): redis_client.get(key).decode('utf-8') for key in keys}
-
-
 class TokenRepository:
     @staticmethod
     def get_redis_client():

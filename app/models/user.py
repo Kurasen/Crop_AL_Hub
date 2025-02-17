@@ -28,14 +28,5 @@ class User(db.Model):
             'telephone': self.telephone,
         }
 
-    # 中国手机号格式验证：11位数字，以1开头
-    @validates('telephone')
-    def validate_telephone(self, key, value):
-        pattern = r'^1[3-9]\d{9}$'
-        if not re.match(pattern, value):
-            raise ValueError("手机号格式无效")
-        return value
 
-    # 验证密码是否正确
-    def check_password(self, password):
-        return check_password_hash(self.password, password)
+

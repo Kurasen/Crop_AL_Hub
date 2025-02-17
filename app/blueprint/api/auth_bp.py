@@ -1,51 +1,37 @@
 from flask import request, Blueprint
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
+
+from app.blueprint.utils.JSONEncoder import create_json_response
 from app.blueprint.utils.JWT import token_required, add_to_blacklist, get_jwt_identity, verify_token
 from app.exception.errors import ValidationError, DatabaseError, AuthenticationError, logger
 from app.repositories.Token.token_repo import TokenRepository
-from app.services.auth_service import AuthService
+from app.services.Auth.auth_service import AuthService
+from app.services.Auth.verify_code_service import VerificationCodeService
+from app.services.Token.token_service import TokenService
 
-user_bp = Blueprint('auth', __name__)
+auth_bp = Blueprint('auth', __name__)
 
 
-@user_bp.route('/login', methods=['POST'])
+@auth_bp.route('/register', methods=['POST'])
+def register():
+    """
+    用户注册 API
+    """
+    if not request.is_json:
+        raise ValidationError("Request must be JSON")
+
+    # 获取请求的数据
+    data = request.get_json()
+
+    # 通过服务层进行注册处理
+    response, status = AuthService.register(data)
+
+    # 使用 create_json_response 返回 JSON 响应
+    return create_json_response(response, status)
+
+
+@auth_bp.route('/login', methods=['POST'])
 def login():
-    """
-    用户登录 API
-    ---
-    parameters:
-      - in: body
-        name: body
-        required: true
-        schema:
-          type: object
-          properties:
-            login_identifier:
-              type: string
-              description: 用户的用户名、邮箱或电话号码
-            login_type:
-              type: string
-              description: 登录类型（选择：用户名、邮箱或电话号码）
-              enum:
-                - username
-                - email
-                - telephone  # 提供选择框
-            password:
-              type: string
-              description: 用户的密码
-    responses:
-      200:
-        description: Successfully logged in.
-        schema:
-          type: object
-          properties:
-            access_token:
-              type: string
-            refresh_token:
-              type: string
-      400:
-        description: Invalid username or password.
-    """
     if not request.is_json:
         raise ValidationError("Request must be JSON")
     data = request.get_json()
@@ -56,7 +42,8 @@ def login():
     except (IntegrityError, OperationalError, SQLAlchemyError):
         raise DatabaseError("Database error occurred. Please try again later.")
 
-@user_bp.route('/logout', methods=['POST'])
+
+@auth_bp.route('/logout', methods=['POST'])
 @token_required  # 使用装饰器，确保用户已认证
 def post(current_user):
     """登出功能"""
@@ -75,7 +62,7 @@ def post(current_user):
 
 
 # 受保护接口：需要使用 JWT 认证
-@user_bp.route('/protected', methods=['GET'])
+@auth_bp.route('/protected', methods=['GET'])
 @token_required  # 使用装饰器，确保用户已认证
 def protected_route(current_user):
     """受保护接口"""
@@ -84,7 +71,7 @@ def protected_route(current_user):
     return {"message": f"Hello, {current_user['username']}!"}, 200
 
 
-@user_bp.route('/refresh_token', methods=['POST'])
+@auth_bp.route('/refresh_token', methods=['POST'])
 def refresh_token():
     """刷新 Token"""
     print(f"Request Headers: {request.headers}")  # 打印请求头信息
@@ -113,9 +100,62 @@ def refresh_token():
 
     try:
         # 验证 refresh_token 并获取新的 access_token
-        response, status = AuthService.refresh_token(token)
+        response, status = TokenService.refresh_token(token)
         return response, status
     except AuthenticationError as e:
         # 记录刷新 Token 失败的日志
         logger.error(f"Token refresh failed: {str(e)}")
         raise e
+
+
+@auth_bp.route('/generate_code', methods=['POST'])
+def generate_code():
+    """
+    生成验证码并发送给用户（通过手机号或邮箱）
+    """
+    data = request.get_json()
+    login_type = data.get('login_type')  # 'telephone' 或 'email'
+    login_identifier = data.get('login_identifier')
+
+    if not login_type or not login_identifier:
+        raise ValidationError("Missing 'login_type' or 'login_identifier'")
+
+    if login_type not in ['telephone', 'email']:
+        raise ValidationError("Invalid 'login_type'. Should be 'telephone' or 'email'.")
+
+    # 调用 AuthService 生成验证码
+    code = VerificationCodeService.generate_verification_code(login_identifier, login_type)
+
+    response_data = {
+        "message": "Verification code sent successfully.",
+        "code": code
+    }
+
+    return create_json_response(response_data, status_code=200)
+
+
+@auth_bp.route('/verify_code', methods=['POST'])
+def verify_code():
+    """
+    验证用户输入的验证码
+    """
+    data = request.get_json()
+    login_type = data.get('login_type')  # 'telephone' 或 'email'
+    login_identifier = data.get('login_identifier')
+    code = data.get('code')
+
+    if not login_type or not login_identifier or not code:
+        raise ValidationError("Missing 'login_type', 'login_identifier' or 'code'")
+
+    if login_type not in ['telephone', 'email']:
+        raise ValidationError("Invalid 'login_type'. Should be 'telephone' or 'email'.")
+
+    # 调用 AuthService 验证验证码
+    code = VerificationCodeService.validate_code(login_identifier, login_type, code)
+
+    response_data = {
+        "message": "Verification code is valid.",
+        "code": code
+    }
+
+    return create_json_response(response_data, status_code=200)

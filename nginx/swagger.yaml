@@ -17,6 +17,58 @@ tags:
     description: ''
 
 paths:
+  /auth/register:
+    post:
+      tags:
+        - auth
+      summary: 用户注册接口
+      description: 用户可以选择通过手机号或邮箱进行注册，用户名由系统自动生成并保证唯一性
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: 用户注册方式，选择 "email" 或 "telephone"
+                  enum: [email, telephone]
+                  example: "email"
+                email:
+                  type: string
+                  description: 用户邮箱，必须符合邮箱格式。如果选择邮箱注册，该字段必填。
+                  example: "john.doe@example.com"
+                telephone:
+                  type: string
+                  description: 用户手机号，必须符合中国大陆手机号格式。如果选择手机号注册，该字段必填。
+                  example: "+8613800138000"
+                password:
+                  type: string
+                  description: 用户密码，密码长度应为8-20字符，包含至少一个大写字母、一个小写字母、一个数字和一个特殊字符。
+                  example: "Www1111@"
+                code:
+                  type: string
+                  description: 注册时的验证码，手机号或邮箱发送的验证码。
+                  example: "123456"
+              required:
+                - type
+                - password
+                - code
+              oneOf:
+                - required:
+                    - email
+                - required:
+                    - telephone
+      responses:
+        '400':
+          description: Invalid input, missing fields or incorrect format
+        '422':
+          description: Validation failed, invalid input format
+        '409':
+          description: Username, email or telephone already registered
+        '500':
+          description: Internal server error
+
   /auth/login:
     post:
       tags:
@@ -27,7 +79,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Auth'  # 引用定义的 LoginRequest 组件
+              $ref: '#/components/schemas/AuthLogin'  # 引用定义的 LoginRequest 组件
       responses:
         '200':
           description: Successful login
@@ -238,7 +290,7 @@ paths:
           description: No datasets found in the database
 
   /models/run:
-    post:
+    get:
       tags:
         - models
       summary: 运行模型并返回准确率
@@ -289,19 +341,22 @@ paths:
                   type: string
                   format: binary
                   description: 要处理的图片文件
+                model_id:
+                  type: integer
+                  description: 用于处理的模型 ID
+                  example: 2
       responses:
         '200':
-          description: 处理后的图片
+          description: 处理后的图片。响应头包含模型输出信息。
           content:
             image/jpeg:
               schema:
                 type: string
                 format: binary
                 description: 处理后的图像文件
-              example: "image content in binary format"
           headers:
             X-Model-Output:
-              description: 模型输出信息
+              description: 模型输出信息，包含 model_id, accuracy, 和 description。
               schema:
                 type: object
                 properties:
@@ -411,19 +466,41 @@ paths:
 
 components:
   schemas:
-    Auth:
+    AuthRegister:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: 用户名
+          example: "john_doe"
+        password:
+          type: string
+          description: 用户密码
+          example: "password123"
+        email:
+          type: string
+          description: 用户邮箱
+          example: "john.doe@example.com"
+        telephone:
+          type: string
+          description: 用户电话号码
+          example: "13345678906"
+
+    AuthLogin:
       type: object
       properties:
         login_identifier:
           type: string
           description: 用户的用户名、邮箱或电话号码
-          example: test001
+          example: 13345678901
         login_type:
           type: string
           description: 登录类型（选择：用户名、邮箱或电话号码）
-          example: username
+          example: telephone
           enum:
-            - username
             - email
             - telephone  # 提供选择框
         password:

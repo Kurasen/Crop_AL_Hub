@@ -2,7 +2,7 @@ import uuid
 
 import jwt
 from datetime import datetime, timedelta
-from flask import jsonify, request
+from flask import  request
 from functools import wraps
 from app.config import Config  # 载入配置
 from app.exception.errors import AuthenticationError

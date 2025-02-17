@@ -34,7 +34,7 @@ services:
     image: nginx:latest
     container_name: nginx_server
     ports:
-      - "8080:80"  # 将 Nginx 的 80 端口暴露到主机上
+      - "8081:80"  # 将 Nginx 的 80 端口暴露到主机上
     depends_on:
       - flask
     volumes:
