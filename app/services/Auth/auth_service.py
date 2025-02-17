@@ -24,24 +24,29 @@ class AuthService:
             required_fields = ['login_type', 'login_identifier', 'username', 'password', 'code']
             InputFormatService.validate_required_fields(data, required_fields)
 
-            login_type = data.get['login_type']  # 注册方式，'telephone' 或 'email'
-            login_identifier = data.get['login_identifier']
-            username = data.get['username']
+            login_type = data.get('login_type')  # 注册方式，'telephone' 或 'email'
+            login_identifier = data.get('login_identifier')
+            username = data.get('username')
             password = data.get('password')
             code = data.get("code")  # 用户输入的验证码
 
-            # Step 1: 验证格式（手机号或邮箱）,密码
+            # Step 1: 验证格式（手机号或邮箱）,密码。校验login_type是否为电话或邮箱
+            if login_type not in ['telephone', 'email']:
+                raise ValidationError("Invalid login type. Only 'telephone' or 'email' are allowed.")
             InputFormatService.validate_credentials_format(login_type, login_identifier, password)
 
-            # Step 2: 检查是否已注册（根据 login_type）
+            print(f"Password before hashing: {password} (type: {type(password)})")  # 调试打印密码类型
+
+            # Step 2: 验证验证码
+            VerificationCodeService.validate_code(login_type, login_identifier, code)
+
+            # Step 3: 检查是否已注册（根据 login_type）
             if AuthRepository.get_user_by_identifier(login_identifier, login_type):
                 raise ValidationError(f"{login_type.capitalize()} is already registered.")
 
-            # Step 3: 验证验证码
-            VerificationCodeService.validate_code(login_type, login_identifier, code)
-
             # Step 4: 创建用户名
             hashed_password = PasswordService.hashed_password(password)
+            print(f"Hashed password type: {type(hashed_password)}")
             user = User(username=username, password=hashed_password,
                         email=login_identifier if login_type == 'email' else None,
                         telephone=login_identifier if login_type == 'telephone' else None)
@@ -75,9 +80,9 @@ class AuthService:
         required_fields = ['login_type', 'login_identifier', 'password']
         InputFormatService.validate_required_fields(data, required_fields)
 
-        login_identifier = data['login_identifier']
-        login_type = data['login_type']
-        password = data['password']
+        login_identifier = data.get('login_identifier')
+        login_type = data.get('login_type')
+        password = data.get('password')
 
         # Step 1: 校验login_type是否为电话或邮箱
         if login_type not in ['telephone', 'email']:
@@ -85,7 +90,6 @@ class AuthService:
 
         # Step 2: 验证登录信息格式（手机号/邮箱 和 密码）
         InputFormatService.validate_credentials_format(login_type, login_identifier, password)
-
 
         # Step 3: 检查登录失败次数
         if not LoginAttemptsRepository.check_login_attempts(login_identifier):

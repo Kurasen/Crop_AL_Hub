@@ -1,3 +1,4 @@
+
 from flask import request, Blueprint
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
 
@@ -6,6 +7,7 @@ from app.blueprint.utils.JWT import token_required, add_to_blacklist, get_jwt_id
 from app.exception.errors import ValidationError, DatabaseError, AuthenticationError, logger
 from app.repositories.Token.token_repo import TokenRepository
 from app.services.Auth.auth_service import AuthService
+from app.services.Auth.input_format import InputFormatService
 from app.services.Auth.verify_code_service import VerificationCodeService
 from app.services.Token.token_service import TokenService
 
@@ -124,7 +126,7 @@ def generate_code():
         raise ValidationError("Invalid 'login_type'. Should be 'telephone' or 'email'.")
 
     # 调用 AuthService 生成验证码
-    code = VerificationCodeService.generate_verification_code(login_identifier, login_type)
+    code = VerificationCodeService.generate_verification_code(login_type, login_identifier)
 
     response_data = {
         "message": "Verification code sent successfully.",
@@ -133,29 +135,3 @@ def generate_code():
 
     return create_json_response(response_data, status_code=200)
 
-
-@auth_bp.route('/verify_code', methods=['POST'])
-def verify_code():
-    """
-    验证用户输入的验证码
-    """
-    data = request.get_json()
-    login_type = data.get('login_type')  # 'telephone' 或 'email'
-    login_identifier = data.get('login_identifier')
-    code = data.get('code')
-
-    if not login_type or not login_identifier or not code:
-        raise ValidationError("Missing 'login_type', 'login_identifier' or 'code'")
-
-    if login_type not in ['telephone', 'email']:
-        raise ValidationError("Invalid 'login_type'. Should be 'telephone' or 'email'.")
-
-    # 调用 AuthService 验证验证码
-    code = VerificationCodeService.validate_code(login_identifier, login_type, code)
-
-    response_data = {
-        "message": "Verification code is valid.",
-        "code": code
-    }
-
-    return create_json_response(response_data, status_code=200)

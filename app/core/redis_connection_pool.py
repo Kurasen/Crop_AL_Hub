@@ -2,7 +2,8 @@ import redis
 
 
 class RedisConnectionPool:
-    def __init__(self, redis_host=None, redis_port=6379, redis_password=None):
+
+    def __init__(self, redis_host='redis', redis_port=6379, redis_password=None):
         self.redis_host = redis_host
         self.redis_port = redis_port
         self.redis_password = redis_password
@@ -34,7 +35,7 @@ class RedisConnectionPool:
                 db=2,  # 缓存数据使用 db2
                 decode_responses=True,
                 max_connections=50,
-                socket_timeout=1,
+                socket_timeout=5,
             )
         }
 
@@ -44,3 +45,4 @@ class RedisConnectionPool:
             raise ValueError(f"Invalid Redis database: {db}")
         #self.logger.info(f"Getting Redis client for database: {db}")
         return redis.Redis(connection_pool=self.pool[db])
+

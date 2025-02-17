@@ -29,19 +29,18 @@ paths:
             schema:
               type: object
               properties:
-                type:
+                login_type:
                   type: string
                   description: 用户注册方式，选择 "email" 或 "telephone"
-                  enum: [email, telephone]
-                  example: "email"
-                email:
+                  example: "telephone"
+                login_identifier:
                   type: string
-                  description: 用户邮箱，必须符合邮箱格式。如果选择邮箱注册，该字段必填。
-                  example: "john.doe@example.com"
-                telephone:
+                  description: 电话或邮箱信息
+                  example: "13345678906"
+                username:
                   type: string
-                  description: 用户手机号，必须符合中国大陆手机号格式。如果选择手机号注册，该字段必填。
-                  example: "+8613800138000"
+                  description: 用户名(昵称)
+                  example: "test004"
                 password:
                   type: string
                   description: 用户密码，密码长度应为8-20字符，包含至少一个大写字母、一个小写字母、一个数字和一个特殊字符。
@@ -50,15 +49,7 @@ paths:
                   type: string
                   description: 注册时的验证码，手机号或邮箱发送的验证码。
                   example: "123456"
-              required:
-                - type
-                - password
-                - code
-              oneOf:
-                - required:
-                    - email
-                - required:
-                    - telephone
+
       responses:
         '400':
           description: Invalid input, missing fields or incorrect format
@@ -135,6 +126,34 @@ paths:
         - auth
       summary: 使用refresh token来刷新access token
       description: Get a new access token
+      responses:
+        '200':
+          description: Token refreshed successfully
+        '400':
+          description: Invalid token
+      security:
+        - BearerAuth: [ ]
+
+  /auth/generate_code:
+    post:
+      tags:
+        - auth
+      summary: 获取验证码
+      description: Get a
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login_type:
+                  type: string
+                  description: 用户注册方式，选择 "email" 或 "telephone"
+                  example: "telephone"
+                login_identifier:
+                  type: string
+                  description: 电话或邮箱信息
+                  example: "13345678906"
       responses:
         '200':
           description: Token refreshed successfully

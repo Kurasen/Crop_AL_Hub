@@ -18,4 +18,4 @@ class PasswordService:
         """
         # 使用 generate_password_hash 对传入的密码进行加密
         hashed_password = bcrypt.hashpw(plain_password.encode('utf-8'), bcrypt.gensalt())
-        return hashed_password
+        return hashed_password.decode('utf-8')
