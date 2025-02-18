@@ -20,8 +20,6 @@ class DatasetService:
     def search_datasets(name=None, path=None, size_min=None, size_max=None, description=None,
                         type=None, sort_by='accuracy', sort_order='asc', page=1, per_page=5):
         """根据过滤条件获取数据集"""
-        # 打印转换后的大小值
-        #print(f"Converted sizes: min_size={min_size_value}, max_size={max_size_value}")
         total_count, datasets = DatasetRepository.search(
             name=name,
             path=path,

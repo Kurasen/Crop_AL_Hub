@@ -6,7 +6,7 @@ from app.exception.errors import DatabaseError, ValidationError, logger, FileUpl
     NotFoundError
 from app.exts import db
 from app.repositories.Model.model_repo import ModelRepository
-from app.services.dataset_service import DatasetService
+from app.services.Dataset.dataset_service import DatasetService
 
 
 class ModelService:

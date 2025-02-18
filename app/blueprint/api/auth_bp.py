@@ -1,4 +1,3 @@
-
 from flask import request, Blueprint, current_app
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
 
@@ -18,30 +17,21 @@ def register():
     """
     用户注册 API
     """
-    if not request.is_json:
-        raise ValidationError("Request must be JSON")
-
-    # 获取请求的数据
     data = request.get_json()
 
-    # 通过服务层进行注册处理
     response, status = AuthService.register(data)
-
-    # 使用 create_json_response 返回 JSON 响应
     return create_json_response(response, status)
 
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    if not request.is_json:
-        raise ValidationError("Request must be JSON")
+    """
+    用户登录 API
+    """
     data = request.get_json()
 
-    try:
-        response, status = AuthService.login(data)
-        return response, status
-    except (IntegrityError, OperationalError, SQLAlchemyError):
-        raise DatabaseError("Database error occurred. Please try again later.")
+    response, status = AuthService.login(data)
+    return create_json_response(response, status)
 
 
 @auth_bp.route('/logout', methods=['POST'])
@@ -59,7 +49,7 @@ def post(current_user):
     TokenRepository.delete_user_token(user_id, token_type='refresh')
 
     logger.info(f"User {user_id} successfully logged out.")
-    return {"message": "Logout successful"}, 200
+    return create_json_response("Logout successful")
 
 
 # 受保护接口：需要使用 JWT 认证
@@ -133,4 +123,3 @@ def generate_code():
     }
 
     return create_json_response(response_data, status_code=200)
-

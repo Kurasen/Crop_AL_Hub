@@ -603,11 +603,11 @@ components:
       properties:
         login_identifier:
           type: string
-          description: 用户的用户名、邮箱或电话号码
+          description: 用户的邮箱或电话号码具体信息
           example: 13345678901
         login_type:
           type: string
-          description: 登录类型（选择：用户名、邮箱或电话号码）
+          description: 登录类型（选择：邮箱或电话号码）
           example: telephone
           enum:
             - email
