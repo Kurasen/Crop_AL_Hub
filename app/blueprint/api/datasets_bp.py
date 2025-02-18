@@ -1,9 +1,6 @@
-
 from flask import request, Blueprint
 
-from app.blueprint.utils.JSONEncoder import CustomJSONEncoder, create_json_response
-from app.exception.errors import DatabaseError
-from app.models.dataset import Dataset
+from app.blueprint.utils.JSONEncoder import create_json_response
 from app.services.dataset_service import DatasetService
 
 # 定义排序字段的枚举类型
@@ -15,22 +12,13 @@ SORT_ORDER_CHOICES = ['asc', 'desc']
 datasets_bp = Blueprint('datasets', __name__)
 
 
-# 获取数据集列表的函数，
-def get_all_datasets():
-    # 假设Dataset是SQLAlchemy模型
-    datasets = Dataset.query.all()
-    if not datasets:
-        raise DatabaseError("No datasets found in the database")  # 如果没有数据集，抛出异常
-    return [dataset.to_dict() for dataset in datasets]  # 转换为字典形式并返回
-
-
 # 获取数据集列表的接口
 @datasets_bp.route('/list', methods=['GET'])
 def list():
     """
     获取所有数据集的信息列表，包括数据集ID、名称、路径、大小等。
     """
-    datasets = get_all_datasets()
+    datasets = DatasetService.get_all_datasets()
     return create_json_response(datasets)
 
 
@@ -47,7 +35,6 @@ def search():
     size_max = request.args.get('size_max')
     description = request.args.get('description')
     type = request.args.get('type')
-    stars = request.args.get('stars', type=int)
     sort_by = request.args.get('sort_by', default='stars')  # 默认排序字段
     sort_order = request.args.get('sort_order', default='asc')  # 默认排序顺序
     page = int(request.args.get('page', 1))  # 默认页码为1
@@ -60,7 +47,6 @@ def search():
         size_max=size_max,
         description=description,
         type=type,
-        stars=stars,
         sort_by=sort_by,
         sort_order=sort_order,
         page=page,

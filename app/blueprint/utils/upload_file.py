@@ -7,23 +7,21 @@ UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'test')
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
 
 
-class UploadFile:
-    # 检查文件扩展名是否有效
-    @staticmethod
-    def allowed_file(filename):
-        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+# 检查文件扩展名是否有效
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-    @staticmethod
-    def save_uploaded_file(uploaded_file):
-        if not UploadFile.allowed_file(uploaded_file.filename):
-            raise ValidationError("不支持的文件类型")
 
-        # 创建目录（线程安全方式）
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+def save_uploaded_file(uploaded_file):
+    if not allowed_file(uploaded_file.filename):
+        raise ValidationError("不支持的文件类型")
 
-        filename = secure_filename(uploaded_file.filename)
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
+    # 创建目录（线程安全方式）
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-        uploaded_file.save(file_path)
+    filename = secure_filename(uploaded_file.filename)
+    file_path = os.path.join(UPLOAD_FOLDER, filename)
 
-        return file_path
+    uploaded_file.save(file_path)
+
+    return file_path

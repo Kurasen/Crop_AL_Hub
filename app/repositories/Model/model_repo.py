@@ -1,5 +1,6 @@
 import re
 
+from app.common.tag_utils import process_and_filter_tags
 from app.exception.errors import ValidationError
 from app.models.model import Model
 
@@ -26,22 +27,19 @@ class ModelRepository:
         query = Model.query
         if name:
             query = query.filter(Model.name.like(f"%{name}%"))
+
         if input:
             query = query.filter(Model.input.like(f"%{input}"))
+
         if cuda is not None:
             query = query.filter(Model.cuda == cuda)
+
         if description:
             query = query.filter(Model.description.like(f"%{description}%"))
+
         if type:
-            if re.search(r"[^\u4e00-\u9fa5,，; ；]", type):
-                raise ValidationError("Invalid type input. Only Chinese characters, spaces, commas, and semicolons "
-                                      "are allowed.")
+            query = process_and_filter_tags(query, Model.type, type)
 
-            tags = re.split(r'[,\s;，；]+', type)
-            tags = [tag.strip() for tag in tags if tag.strip()]
-
-            for tag in tags:
-                query = query.filter(Model.type.ilike(f"%{tag}%"))
         # 排序逻辑
         if sort_by in ['accuracy', 'sales', 'stars', 'likes']:
             if sort_order == 'desc':

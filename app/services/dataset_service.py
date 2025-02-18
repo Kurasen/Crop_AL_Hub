@@ -18,7 +18,7 @@ class DatasetService:
 
     @staticmethod
     def search_datasets(name=None, path=None, size_min=None, size_max=None, description=None,
-                        type=None, stars=None, sort_by='accuracy', sort_order='asc', page=1, per_page=5):
+                        type=None, sort_by='accuracy', sort_order='asc', page=1, per_page=5):
         """根据过滤条件获取数据集"""
         # 打印转换后的大小值
         #print(f"Converted sizes: min_size={min_size_value}, max_size={max_size_value}")
@@ -27,7 +27,6 @@ class DatasetService:
             path=path,
             description=description,
             type=type,
-            stars=stars,
             sort_by=sort_by,
             sort_order=sort_order,
             page=page,

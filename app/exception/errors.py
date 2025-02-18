@@ -2,6 +2,8 @@ import logging
 from flask import jsonify, request
 from werkzeug.exceptions import HTTPException, UnsupportedMediaType
 
+from app.blueprint.utils.JSONEncoder import create_json_response
+
 # 初始化日志配置，设置错误日志级别
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -18,6 +20,14 @@ class CustomError(Exception):
         """
         self.message = message
         self.status_code = status_code
+
+    def to_dict(self):
+        return {
+            "error": {
+                "code": self.status_code,
+                "message": self.message
+            }
+        }
 
 
 # 继承自 CustomError 的子类，表示验证失败
@@ -96,9 +106,10 @@ def init_error_handlers(app):
             else:
                 # 如果不是 JSON 格式，记录没有请求体
                 request_info = f"Method: {request.method}, URL: {request.url}, Data: No JSON body"
+
         except UnsupportedMediaType:
             # 捕获 UnsupportedMediaType 异常，并返回自定义错误信息
-            return jsonify({
+            return create_json_response({
                 "status": "error",
                 "code": 415,
                 "message": "Unsupported Media Type, please use application/json"
@@ -120,4 +131,4 @@ def init_error_handlers(app):
                      f"IP: {request.remote_addr}, User-Agent: {request.user_agent.string}")
 
         # 返回统一的错误响应
-        return jsonify(response), status_code
+        return create_json_response(response, status_code)

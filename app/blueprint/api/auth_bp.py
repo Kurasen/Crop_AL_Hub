@@ -75,7 +75,7 @@ def protected_route(current_user):
 @auth_bp.route('/refresh_token', methods=['POST'])
 def refresh_token():
     """刷新 Token"""
-    print(f"Request Headers: {request.headers}")  # 打印请求头信息
+
     token = request.headers.get('Authorization')
     if not token:
         raise ValidationError("Token is missing")

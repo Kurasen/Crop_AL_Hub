@@ -45,4 +45,3 @@ class RedisConnectionPool:
             raise ValueError(f"Invalid Redis database: {db}")
         #self.logger.info(f"Getting Redis client for database: {db}")
         return redis.Redis(connection_pool=self.pool[db])
-

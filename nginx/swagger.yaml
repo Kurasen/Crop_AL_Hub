@@ -187,28 +187,18 @@ paths:
       summary: 搜索数据集
       description: 查询数据集，支持模糊查询和过滤条件。
       parameters:
-        - name: sort_by
+        - name: name
           in: query
-          description: 排序字段，支持的字段包括：stars、size、downloads、likes等
+          description: 数据集名称
           required: false
           schema:
             type: string
-            enum: [ stars, size, downloads, likes ]
-            default: stars
-        - name: sort_order
+        - name: description
           in: query
-          description: 排序顺序，选择升序（asc）或降序（desc）
+          description: 数据集描述
           required: false
           schema:
             type: string
-            enum: [ asc, desc ]
-            default: asc
-        - name: stars
-          in: query
-          description: 按照星标数量筛选
-          required: false
-          schema:
-            type: integer
         - name: type
           in: query
           description: 按类型筛选，多个标签可以用逗号、分号或空格分隔
@@ -227,24 +217,28 @@ paths:
           required: false
           schema:
             type: string
-        - name: description
-          in: query
-          description: 数据集描述
-          required: false
-          schema:
-            type: string
         - name: path
           in: query
           description: 数据集路径
           required: false
           schema:
             type: string
-        - name: name
+        - name: sort_by
           in: query
-          description: 数据集名称
+          description: 排序字段，支持的字段包括：stars、size、downloads、likes等
           required: false
           schema:
             type: string
+            enum: [ stars, size, downloads, likes ]
+            default: stars
+        - name: sort_order
+          in: query
+          description: 排序顺序，选择升序（asc）或降序（desc）
+          required: false
+          schema:
+            type: string
+            enum: [ asc, desc ]
+            default: asc
         - name: page
           in: query
           description: 当前页码
@@ -408,20 +402,24 @@ paths:
             type: string
           description: 模型名称
         - in: query
+          name: description
+          schema:
+            type: string
+          description: 模型描述
+        - in: query
           name: input
           schema:
             type: string
+            enum:
+              - jpg
+              - jpeg
+              - png
           description: 图片的输入类型（例如 'JPG', 'PNG'）
         - in: query
           name: cuda
           schema:
             type: boolean
           description: 模型是否支持 CUDA 加速
-        - in: query
-          name: description
-          schema:
-            type: string
-          description: 模型描述
         - in: query
           name: sort_by
           schema:
@@ -543,18 +541,18 @@ components:
         name:
           type: string
           example: "雄穗数量识别测试集"
-        path:
-          type: string
-          example: "detetcion-tassel/dataset/test"
-        size:
-          type: string
-          example: "2.39GB"
         description:
           type: string
           example: "用来测试雄穗数量识别模型"
         type:
           type: string
           example: "玉米;数量"
+        path:
+          type: string
+          example: "detetcion-tassel/dataset/test"
+        size:
+          type: string
+          example: "2.39GB"
         downloads:
           type: integer
           format: int32
@@ -580,15 +578,15 @@ components:
         name:
           type: string
           example: '基于近地面图像的株数识别模型'
+        description:
+          type: string
+          example: '通过数量除以面积可以计算密度'
         image:
           type: string
           example: 'detetcion-seed-leaf'
         input:
           type: string
           example: '*.JPG'
-        description:
-          type: string
-          example: '通过数量除以面积可以计算密度'
         cude:
           type: boolean
           example: false

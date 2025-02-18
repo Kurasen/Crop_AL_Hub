@@ -26,30 +26,6 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')
 UPLOAD_FOLDER = os.path.join(project_root, 'test')  # 定位到 'test' 文件夹
 
 
-# 从数据库获取模型数据
-def get_all_models():
-    # 从数据库查询所有模型
-    models = Model.query.all()
-    if not models:
-        raise DatabaseError("No datasets found in the database")
-    return [model.to_dict() for model in models]
-
-
-# 检查文件扩展名是否有效
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-# 处理模型输出的 JSON 数据（可以根据不同模型返回不同字段）
-def generate_mock_json(model_id):
-    # 这里只是模拟，不同模型的输出可以有所不同
-    return {
-        'model_id': model_id,
-        'accuracy': 92.5,
-        'description': f'Model {model_id} processed the image successfully.'
-    }
-
-
 # 获取模型列表的接口
 @models_bp.route('/list', methods=['GET'])
 def list():
@@ -57,7 +33,7 @@ def list():
     获取所有模型的信息列表，包括模型ID、名称、图片、输入类型等。
     返回的模型列表将包括每个模型的描述、是否支持CUDA等信息。
     """
-    models = get_all_models()
+    models = ModelService.get_all_models()
     return create_json_response(models)
 
 
@@ -76,17 +52,11 @@ def run():
     if not model_id or not dataset_id:
         raise ValidationError("Model ID and Dataset ID are required")  # 参数缺失时抛出 ValidationError
 
-    model = ModelService.get_model_by_id(model_id)
-    dataset = DatasetService.get_dataset_by_id(dataset_id)
-
-    # 如果模型或数据集不存在，则返回错误信息
-    if not model:
-        raise ValidationError(f"Model with ID {model_id} not found")
-    if not dataset:
-        raise ValidationError(f"Dataset with ID {dataset_id} not found")
-
-    accuracy = f"Model_{model_id} trained on Dataset_{dataset_id} has an accuracy of {model_id * dataset_id}%"
-    return jsonify({"accuracy": accuracy})
+    try:
+        accuracy = ModelService.get_model_accuracy(model_id, dataset_id)
+        return jsonify({"accuracy": accuracy})
+    except ValidationError as e:
+        return jsonify({"error": str(e)}), 400
 
 
 # 接收图片并返回处理后的图片和 JSON
@@ -105,33 +75,18 @@ def test_model():
         if not uploaded_file or uploaded_file.filename == '':
             raise ValidationError("未上传文件或未选择文件")
 
-        try:
-            # 尝试将 model_id 转换为整数
-            model_id = int(model_id)
-        except ValueError:
-            raise ValidationError("model_id 应该是整数类型")
-
-        # 检查 model_id 是否有效
-        if not ModelService.get_model_by_id(model_id):
-            raise ValidationError("无效的 model_id")
-
         # 处理模型和文件，获取图像处理路径和模型信息
-        processed_image_path, model = ModelService.handle_model_and_file(model_id, uploaded_file)
+        processed_image_path, model_info = ModelService.process_model_and_file(model_id, uploaded_file)
 
         # 构造响应
         response = make_response(send_file(
             processed_image_path,
             mimetype='image/jpeg'
         ))
-        response.headers['X-Model-Output'] = json.dumps({
-            'model_id': model_id,
-            'accuracy': 92.5,
-            'description': f'Model {model_id} processed successfully'
-        })
+        response.headers['X-Model-Output'] = json.dumps(model_info)
 
-    except ValidationError as e:
-        current_app.logger.error(f"Validation Error during registration: {str(e)}")
-        raise e
+        return response
+
     except Exception as e:
         return create_json_response(str(e), 500)
 

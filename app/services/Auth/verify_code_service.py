@@ -1,6 +1,5 @@
 import hashlib
 import hmac
-import random
 import secrets
 import string
 import time
@@ -15,6 +14,25 @@ from app.exception.errors import ValidationError
 class VerificationCodeService:
     CODE_EXPIRE = 300  # 5分钟
     RATE_LIMIT_TIME = 60  # 限制一分钟内不能重复请求
+
+    # # 使用 Lua 脚本保证原子性（替代管道+WATCH）
+    # LUA_GENERATE_SCRIPT = """
+    # local rate_limit_key = KEYS[1]
+    # local code_key = KEYS[2]
+    # local code = ARGV[1]
+    # local current_time = tonumber(ARGV[2])
+    #
+    # -- 检查限流：获取上次生成时间
+    # local last_time = redis.call('GET', rate_limit_key)
+    # if last_time and (current_time - tonumber(last_time) < tonumber(ARGV[3])) then
+    #     return 0  -- 限流未通过
+    # end
+    #
+    # -- 设置限流时间戳和验证码
+    # redis.call('SETEX', rate_limit_key, ARGV[3], current_time)
+    # redis.call('SETEX', code_key, ARGV[4], code)
+    # return 1  -- 操作成功
+    # """
 
     def __init__(self):
         # 初始化时传递 Redis 配置信息
@@ -32,9 +50,8 @@ class VerificationCodeService:
         code = ''.join(secrets.choice(string.digits) for _ in range(6))
 
         # 获取 Redis 客户端（选择缓存数据库 db=2）
-
         cache_client = RedisConnectionPool().get_redis_client(db='cache')  # 使用单例获取 Redis 客户端
-        current_app.logger.info(f"Redis client connected: {cache_client}")
+
         # 设置缓存，存储验证码并设置过期时间
         cache_key = VerificationCodeService._generate_redis_key(login_type, login_identifier)
         rate_limit_key = f"rate_limit:{cache_key}"
@@ -63,6 +80,36 @@ class VerificationCodeService:
         current_app.logger.info(f"Sending {login_type} verification code to {login_identifier}: {code}")
 
         return code
+    #
+    # @staticmethod
+    # def generate_verification_code(login_type, login_identifier):
+    #     # 生成安全验证码
+    #     code = ''.join(secrets.choice(string.digits) for _ in range(6))
+    #     cache_client = RedisConnectionPool().get_redis_client(db='cache')
+    #
+    #     # 生成 Redis 键
+    #     cache_key = VerificationCodeService._generate_redis_key(login_type, login_identifier)
+    #     rate_limit_key = f"rate_limit:{cache_key}"
+    #
+    #     # 执行 Lua 脚本（原子操作）
+    #     result = cache_client.eval(
+    #         VerificationCodeService.LUA_GENERATE_SCRIPT,
+    #         2,  # KEYS 数量
+    #         rate_limit_key,
+    #         cache_key,
+    #         code,
+    #         time.time(),
+    #         VerificationCodeService.RATE_LIMIT_TIME,
+    #         VerificationCodeService.CODE_EXPIRE
+    #     )
+    #
+    #     # 处理脚本返回结果
+    #     if result == 0:
+    #         raise ValidationError("请在一分钟后重试获取验证码")
+    #
+    #     # 异步发送验证码（示例：Celery 任务）
+    #     send_verification_code_async.delay(login_type, login_identifier, code)
+    #     return code  # 生产环境应移除
 
     @staticmethod
     def validate_code(login_type, login_identifier, code):
