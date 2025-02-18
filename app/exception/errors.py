@@ -32,71 +32,68 @@ class CustomError(Exception):
 
 # 继承自 CustomError 的子类，表示验证失败
 class ValidationError(CustomError):
-    def __init__(self, message="Validation failed"):
+    def __init__(self, message="Validation failed", status_code=400):
         """
         参数验证失败的异常
 
         :param message: 错误信息
         """
-        super().__init__(message, 400)
+        super().__init__(message, status_code)
 
 
 # 继承自 CustomError 的子类，表示数据库错误
 class DatabaseError(CustomError):
-    def __init__(self, message="Database error"):
+    def __init__(self, message="Database error", status_code=500):
         """
         数据库错误的异常
 
         :param message: 错误信息
         """
-        super().__init__(message, 500)
+        super().__init__(message, status_code)
 
 
 # 继承自 CustomError 的子类，表示认证错误
 class AuthenticationError(CustomError):
-    def __init__(self, message="Authentication failed"):
+    def __init__(self, message="Authentication failed", status_code=401):
         """
         认证失败的异常
 
         :param message: 错误信息
         """
-        super().__init__(message, 401)
+        super().__init__(message, status_code)
 
 
-# 继承自 CustomError 的子类，表示数据集相关错误
-class DatasetError(CustomError):
-    def __init__(self, message="Dataset error"):
+class InvalidSizeError(CustomError):
+    def __init__(self, size_str, message="Invalid size string", status_code=422):
         """
-        数据集错误的异常
-
-        :param message: 错误信息
+        自定义异常，用于处理无效的大小字符串
         """
-        super().__init__(message, 400)
-
-
-class InvalidSizeError(Exception):
-    """自定义异常，用于处理无效的大小字符串"""
-
-    def __init__(self, size_str, message="Invalid size string"):
         self.size_str = size_str
-        self.message = message
-        super().__init__(self.message)
+        super().__init__(message, status_code)
 
 
-class FileUploadError(Exception):
-    """文件上传相关的异常"""
+class FileUploadError(CustomError):
+    def __init__(self, message="File upload failed", status_code=500):
+        """
+        文件上传相关的异常
+        """
+        super().__init__(message, status_code)
 
-    def __init__(self, message="File upload failed"):
-        self.message = message
-        super().__init__(self.message)
+
+class ImageProcessingError(CustomError):
+    def __init__(self, message="Image processing failed", status_code=500):
+        """
+        图像处理相关的异常
+        """
+        super().__init__(message, status_code)
 
 
-class ImageProcessingError(Exception):
-    """图像处理相关的异常"""
-
-    def __init__(self, message="Image processing failed"):
-        self.message = message
-        super().__init__(self.message)
+class NotFoundError(CustomError):
+    def __init__(self, message="Resource not found", status_code=404):
+        """
+        资源未找到的异常
+        """
+        super().__init__(message, status_code)
 
 
 # 全局错误处理函数
@@ -144,7 +141,7 @@ def init_error_handlers(app):
 
         # 记录错误日志，包括错误信息和请求信息
         current_app.logger.error(f"Error: {str(error)}, Status Code: {status_code}, Request Info: {request_info}, "
-                     f"IP: {request.remote_addr}, User-Agent: {request.user_agent.string}")
+                                 f"IP: {request.remote_addr}, User-Agent: {request.user_agent.string}")
 
         # 返回统一的错误响应
         return create_json_response(response, status_code)

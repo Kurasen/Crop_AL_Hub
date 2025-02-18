@@ -1,6 +1,6 @@
 import re
 
-from app.common.tag_utils import process_and_filter_tags
+from app.common.input_verify import process_and_filter_tags
 from app.exception.errors import ValidationError
 from app.exts import db
 from app.models.model import Model

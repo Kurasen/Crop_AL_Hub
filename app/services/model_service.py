@@ -1,7 +1,9 @@
 from flask import current_app
 
 from app.blueprint.utils.upload_file import save_uploaded_file
-from app.exception.errors import DatabaseError, ValidationError, logger, FileUploadError, ImageProcessingError
+from app.common.Validator import Validator
+from app.exception.errors import DatabaseError, ValidationError, logger, FileUploadError, ImageProcessingError, \
+    NotFoundError
 from app.exts import db
 from app.repositories.Model.model_repo import ModelRepository
 from app.services.dataset_service import DatasetService
@@ -60,17 +62,23 @@ class ModelService:
         """创建模型"""
         try:
             # 校验数据是否合法
-            required_fields = ["name", "input" "instruction",]
-            for field in required_fields:
-                if field not in data:
-                    raise ValidationError(f"Missing required field: {field}")
-            # 开启事务
+            validator = Validator()
+            validator.required(
+                fields=["name", "input", "instruction"],
+                custom_messages={  # 确保键名与字段名完全一致
+                    "name": "名称不能为空",
+                    "input": "输入图片类型不能为空",
+                    "instruction": "命令不能为空"
+                }
+            )
+            validator.validate(data)  # 确保此处传递了 data
+
             model = ModelRepository.create_model(data)
-            db.session.commit()  # 显式提交事务
+            db.session.commit()
             return model.to_dict(), 201
         except Exception as e:
-            db.session.rollback()  # 回滚事务
-            current_app.logger.error(f"Error occurred while creating model : {str(e)}")
+            db.session.rollback()
+            current_app.logger.error(f"Error occurred while creating model: {str(e)}")
             raise e
 
     @staticmethod
@@ -80,34 +88,48 @@ class ModelService:
             # 获取模型对象
             model = ModelRepository.get_model_by_id(model_id)
             if not model:
-                raise ValidationError(f"Model with ID {model_id} not found")
+                raise NotFoundError(f"Model with ID {model_id} not found")
 
             # 更新模型
             updated_model = ModelRepository.update_model(model, **updates)
-            db.session.commit()  # 显式提交事务
+
+            db.session.commit()
             return updated_model.to_dict(), 200
+        except NotFoundError as ne:
+            db.session.rollback()  # 回滚事务
+            current_app.logger.error(f"Validation error while updating model {model_id}: {str(ne)}")
+            raise ne
         except Exception as e:
             db.session.rollback()  # 回滚事务
-            current_app.logger.error(f"Error occurred while updating model {model_id}: {str(e)}")
-            raise Exception("An unexpected error occurred while updating the model.")
+            current_app.logger.error(f"Unexpected error while updating model {model_id}: {str(e)}")
+            raise e
 
     @staticmethod
     def delete_model(model_id):
         """删除模型"""
         try:
+            # 获取模型对象
             model = ModelRepository.get_model_by_id(model_id)
             if not model:
-                raise ValidationError(f"Model with ID {model_id} not found")
+                raise NotFoundError(f"Model with ID {model_id} not found")  # 使用 NotFound 异常
 
+            # 删除模型
             ModelRepository.delete_model(model)
 
+            # 提交事务
             db.session.commit()
 
             return {"message": "Model deleted successfully"}, 200
+
+        except NotFoundError as ne:
+            # 处理模型未找到的异常
+            current_app.logger.error(f"Model with ID {model_id} not found: {str(ne)}")
+            raise ne
         except Exception as e:
+            # 捕获其他异常
             db.session.rollback()  # 回滚事务
-            current_app.logger.error(f"Error occurred while deleting model {model_id}: {str(e)}")  # 错误日志
-            raise Exception(f"Failed to delete model with ID {model_id}: {str(e)}")
+            current_app.logger.error(f"Error occurred while deleting model {model_id}: {str(e)}")
+            raise e
 
     # 模拟的图像处理函数
     @staticmethod
@@ -142,15 +164,15 @@ class ModelService:
             }
 
             return processed_image_path, model_info
-        except ValidationError as e:
-            current_app.logger.error(f"Validation error: {str(e)}")
-            raise e
-        except FileUploadError as e:
-            current_app.logger.error(f"File upload error: {str(e)}")
-            raise e
-        except ImageProcessingError as e:
-            current_app.logger.error(f"Image processing error: {str(e)}")
-            raise e
+        except ValidationError as ve:
+            current_app.logger.error(f"Validation error: {str(ve)}")
+            raise ve
+        except FileUploadError as fe:
+            current_app.logger.error(f"File upload error: {str(fe)}")
+            raise fe
+        except ImageProcessingError as ie:
+            current_app.logger.error(f"Image processing error: {str(ie)}")
+            raise ie
         except Exception as e:
             current_app.logger.error(f"Unexpected error: {str(e)}")
             raise e
@@ -177,9 +199,9 @@ class ModelService:
                 "dataset_id": dataset_id,
                 "accuracy": accuracy
             }
-        except ValidationError as e:
-            logger.error(f"Validation error: {e.message}")
-            raise e
+        except ValidationError as ve:
+            logger.error(f"Validation error: {ve.message}")
+            raise ve
         except Exception as e:
             logger.error(f"Database error occurred while retrieving model accuracy: {str(e)}")
             raise e

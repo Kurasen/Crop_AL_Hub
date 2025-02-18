@@ -26,3 +26,4 @@ def process_and_filter_tags(query, type_field, type_str):
             query = query.filter(type_field.ilike(f"%{tag}%"))
 
     return query
+

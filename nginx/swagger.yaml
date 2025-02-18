@@ -499,7 +499,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Model'
+                allOf:
+                  - type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                        example: 1
+                  - $ref: '#/components/schemas/Model'
         '400':
           description: 请求数据无效
         '500':
@@ -530,7 +537,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Model'
+                allOf:
+                  - type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                        example: 1
+                  - $ref: '#/components/schemas/Model'
         '400':
           description: 请求数据无效
         '404':
@@ -564,7 +578,6 @@ components:
     AuthRegister:
       type: object
       required:
-        - username
         - password
       properties:
         username:
@@ -583,7 +596,8 @@ components:
           type: string
           description: 用户电话号码
           example: "13345678906"
-
+      description: >
+        请提供电子邮件 (email) 或电话号码 (telephone)
     AuthLogin:
       type: object
       properties:
@@ -649,10 +663,7 @@ components:
     Model:
       type: object
       properties:
-        id:
-          type: integer
-          format: int32
-          example: 1
+
         name:
           type: string
           example: '基于近地面图像的株数识别模型'
@@ -665,7 +676,7 @@ components:
         input:
           type: string
           example: '*.JPG'
-        cude:
+        cuda:
           type: boolean
           example: false
         instruction:
@@ -693,8 +704,19 @@ components:
           type: integer
           format: int32
           example: 0
-      xml:
-        name: model
+      required:
+        - name
+        - description
+        - image
+        - input
+        - cuda
+        - instruction
+        - output
+        - accuracy
+        - type
+        - sales
+        - stars
+        - likes
 
   securitySchemes:
     BearerAuth:
