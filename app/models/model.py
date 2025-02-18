@@ -5,7 +5,7 @@ from app.exts import db
 class Model(db.Model):
     __tablename__ = 'model_table'
 
-    id = db.Column(db.Integer, primary_key=True)  # 主键
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 主键
     name = db.Column(db.String(100), nullable=False)  # 模型名称
     image = db.Column(db.String(255), nullable=False)  # 模型图片路径，长度改为 255
     input = db.Column(db.String(100), nullable=False)  # 输入类型
@@ -16,7 +16,7 @@ class Model(db.Model):
     accuracy = db.Column(db.Numeric(4, 2))  # 精度字段，DECIMAL(4, 2) 对应 Numeric(4, 2)
     type = db.Column(db.String(100))  # 模型类型
     sales = db.Column(db.Integer)  # 销售字段
-    stars = db.Column(db.Integer)  # 星级字段
+    stars = db.Column(db.Integer)  # 收藏字段
     likes = db.Column(db.Integer)  # 点赞数字段
 
     def __init__(self, name, image, input, description=None, cuda=False, instruction=None, output=None, accuracy=None,

@@ -1,5 +1,5 @@
 import logging
-from flask import jsonify, request
+from flask import jsonify, request, current_app
 from werkzeug.exceptions import HTTPException, UnsupportedMediaType
 
 from app.blueprint.utils.JSONEncoder import create_json_response
@@ -83,6 +83,22 @@ class InvalidSizeError(Exception):
         super().__init__(self.message)
 
 
+class FileUploadError(Exception):
+    """文件上传相关的异常"""
+
+    def __init__(self, message="File upload failed"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class ImageProcessingError(Exception):
+    """图像处理相关的异常"""
+
+    def __init__(self, message="Image processing failed"):
+        self.message = message
+        super().__init__(self.message)
+
+
 # 全局错误处理函数
 def init_error_handlers(app):
     """注册全局错误处理器，用于捕获和处理不同类型的错误"""
@@ -127,7 +143,7 @@ def init_error_handlers(app):
             status_code = 500
 
         # 记录错误日志，包括错误信息和请求信息
-        logger.error(f"Error: {str(error)}, Status Code: {status_code}, Request Info: {request_info}, "
+        current_app.logger.error(f"Error: {str(error)}, Status Code: {status_code}, Request Info: {request_info}, "
                      f"IP: {request.remote_addr}, User-Agent: {request.user_agent.string}")
 
         # 返回统一的错误响应

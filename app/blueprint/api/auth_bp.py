@@ -1,5 +1,5 @@
 
-from flask import request, Blueprint
+from flask import request, Blueprint, current_app
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
 
 from app.blueprint.utils.JSONEncoder import create_json_response
@@ -96,7 +96,7 @@ def refresh_token():
                                       "refresh token.")
 
     except AuthenticationError as e:
-        logger.error(f"Token refresh failed: {str(e)}")
+        current_app.logger.error(f"Token refresh failed: {str(e)}")
         raise e
 
     try:
@@ -105,7 +105,7 @@ def refresh_token():
         return response, status
     except AuthenticationError as e:
         # 记录刷新 Token 失败的日志
-        logger.error(f"Token refresh failed: {str(e)}")
+        current_app.logger.error(f"Token refresh failed: {str(e)}")
         raise e
 
 

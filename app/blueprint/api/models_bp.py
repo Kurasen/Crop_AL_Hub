@@ -7,7 +7,7 @@ from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
 from app.blueprint.utils.JSONEncoder import CustomJSONEncoder, create_json_response
-from app.exception.errors import ValidationError, DatabaseError
+from app.exception.errors import ValidationError, DatabaseError, logger
 from app.models.model import Model
 from app.services.dataset_service import DatasetService
 from app.services.model_service import ModelService
@@ -48,15 +48,8 @@ def run():
     model_id = request.args.get('model_id', type=int)
     dataset_id = request.args.get('dataset_id', type=int)
 
-    # 根据模型和数据集编号生成模拟的准确率
-    if not model_id or not dataset_id:
-        raise ValidationError("Model ID and Dataset ID are required")  # 参数缺失时抛出 ValidationError
-
-    try:
-        accuracy = ModelService.get_model_accuracy(model_id, dataset_id)
-        return jsonify({"accuracy": accuracy})
-    except ValidationError as e:
-        return jsonify({"error": str(e)}), 400
+    model_accuracy_info = ModelService.get_model_accuracy(model_id, dataset_id)
+    return create_json_response(model_accuracy_info)
 
 
 # 接收图片并返回处理后的图片和 JSON
@@ -65,30 +58,27 @@ def test_model():
     """
     上传一张图片，进行处理并返回处理后的图片和相应的 JSON 数据。
     """
-    try:
-        model_id = request.form.get('model_id')
-        if not model_id or model_id == '':
-            raise ValidationError("未提供 model_id")
 
-        # 文件校验
-        uploaded_file = request.files.get('file')
-        if not uploaded_file or uploaded_file.filename == '':
-            raise ValidationError("未上传文件或未选择文件")
+    model_id = request.form.get('model_id')
+    if not model_id or model_id == '':
+        raise ValidationError("未提供 model_id")
 
-        # 处理模型和文件，获取图像处理路径和模型信息
-        processed_image_path, model_info = ModelService.process_model_and_file(model_id, uploaded_file)
+    # 文件校验
+    uploaded_file = request.files.get('file')
+    if not uploaded_file or uploaded_file.filename == '':
+        raise ValidationError("未上传文件或未选择文件")
 
-        # 构造响应
-        response = make_response(send_file(
-            processed_image_path,
-            mimetype='image/jpeg'
-        ))
-        response.headers['X-Model-Output'] = json.dumps(model_info)
+    # 处理模型和文件，获取图像处理路径和模型信息
+    processed_image_path, model_info = ModelService.process_model_and_file(model_id, uploaded_file)
 
-        return response
+    # 构造响应
+    response = make_response(send_file(
+        processed_image_path,
+        mimetype='image/jpeg'
+    ))
+    response.headers['X-Model-Output'] = json.dumps(model_info)
 
-    except Exception as e:
-        return create_json_response(str(e), 500)
+    return response
 
 
 @models_bp.route('/search', methods=['GET'])
@@ -124,3 +114,35 @@ def search():
     )
 
     return create_json_response(result)
+
+
+@models_bp.route('/create', methods=['POST'])
+def create_model():
+    """
+    创建新模型
+    """
+    # 获取请求数据
+    data = request.get_json()
+
+    model_data, status = ModelService.create_model(data)
+    return create_json_response(model_data, status)
+
+
+@models_bp.route('/update/<int:model_id>', methods=['PUT'])
+def update_model(model_id):
+    """
+    更新现有模型
+    """
+    data = request.get_json()
+
+    updated_model, status = ModelService.update_model(model_id, data)
+    return create_json_response(updated_model, status)
+
+
+@models_bp.route('/delete/<int:model_id>', methods=['DELETE'])
+def delete_model(model_id):
+    """
+    删除现有模型
+    """
+    response, status = ModelService.delete_model(model_id)
+    return create_json_response(response, status)

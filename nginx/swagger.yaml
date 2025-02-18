@@ -481,6 +481,84 @@ paths:
         '400':
           description: 查询参数无效
 
+  /models/create:
+    post:
+      tags:
+        - models
+      summary: 创建新模型
+      description: 根据提供的模型信息创建一个新模型。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Model'
+      responses:
+        '201':
+          description: 模型成功创建
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Model'
+        '400':
+          description: 请求数据无效
+        '500':
+          description: Internal server error
+
+  /models/update/{model_id}:
+    put:
+      tags:
+        - models
+      summary: 更新现有模型
+      description: 更新给定 ID 的模型信息。
+      parameters:
+        - name: model_id
+          in: path
+          required: true
+          description: 要更新的模型的 ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Model'
+      responses:
+        '200':
+          description: 模型成功更新
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Model'
+        '400':
+          description: 请求数据无效
+        '404':
+          description: 模型未找到
+        '500':
+          description: Internal server error
+
+  /models/delete/{model_id}:
+    delete:
+      tags:
+        - models
+      summary: 删除现有模型
+      description: 根据给定的模型 ID 删除模型。
+      parameters:
+        - name: model_id
+          in: path
+          required: true
+          description: 要删除的模型的 ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 模型成功删除
+        '404':
+          description: 模型未找到
+        '500':
+          description: Internal server error
+
 components:
   schemas:
     AuthRegister:

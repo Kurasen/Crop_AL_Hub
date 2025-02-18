@@ -1,7 +1,7 @@
 import redis
 import os
 
-from flask import Flask
+from flask import Flask, current_app
 from app.blueprint.api.datasets_bp import datasets_bp
 from app.blueprint.api.models_bp import models_bp
 from app.blueprint.utils.JSONEncoder import CustomJSONEncoder
@@ -68,7 +68,7 @@ def create_app():
         print("Connected to Redis successfully!")
     except redis.exceptions.ConnectionError as e:
         print("Failed to connect to Redis:", e)
-        app.logger.error(f"Failed to connect to Redis: {str(e)}")
+        current_app.logger.error(f"Failed to connect to Redis: {str(e)}")
 
     # # 使用Swagger Editor, 动态加载 swagger.yaml 文件并提供 JSON 接口
     # @app.route('/swagger.json')

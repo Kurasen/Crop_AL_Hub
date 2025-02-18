@@ -6,7 +6,7 @@ from app.exts import db
 class Dataset(db.Model):
     __tablename__ = 'dataset_table'  # 数据库表名
 
-    id = db.Column(db.Integer, primary_key=True)  # 主键
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 主键
     name = db.Column(db.String(100), nullable=False)  # 数据集名称
     path = db.Column(db.String(255), nullable=False)  # 数据集文件路径
     size = db.Column(db.String(50), nullable=False)  # 数据集大小 (例如 MB 或 GB)
