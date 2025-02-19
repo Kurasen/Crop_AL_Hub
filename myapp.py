@@ -1,17 +1,17 @@
-import redis
+
 import os
 
-from flask import Flask, current_app
-from app.blueprint.api.datasets_bp import datasets_bp
-from app.blueprint.api.models_bp import models_bp
-from app.blueprint.utils.JSONEncoder import CustomJSONEncoder
+from flask import Flask
+from app.blueprint.datasets_bp import datasets_bp
+from app.blueprint.models_bp import models_bp
 from app.core.redis_connection_pool import RedisConnectionPool
 from app.config import config
-from app.exception.errors import init_error_handlers
+from app.core.exception import init_error_handlers
 from app.exts import db
-from app.blueprint.api.auth_bp import auth_bp
+from app.blueprint.auth_bp import auth_bp
 from flask_migrate import Migrate
 from flask_cors import CORS
+from app.utils.json_encoder import CustomJSONEncoder
 
 
 def create_app():
@@ -62,13 +62,10 @@ def create_app():
     app.config['REDIS_POOL'] = redis_pool
 
     # 检查 Redis 连接是否正常
-    try:
-        redis_client = redis_pool.get_redis_client('default')  # 获取默认 Redis 客户端
-        redis_client.ping()
+    with redis_pool.get_redis_connection('default') as redis_client:  # 使用上下文管理器获取连接
+        redis_client.ping()  # 执行 ping 操作来检查连接是否正常
         print("Connected to Redis successfully!")
-    except redis.exceptions.ConnectionError as e:
-        print("Failed to connect to Redis:", e)
-        current_app.logger.error(f"Failed to connect to Redis: {str(e)}")
+
 
     # # 使用Swagger Editor, 动态加载 swagger.yaml 文件并提供 JSON 接口
     # @app.route('/swagger.json')

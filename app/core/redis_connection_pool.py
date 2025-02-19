@@ -1,4 +1,8 @@
+from contextlib import contextmanager
+
 import redis
+
+from app.core.exception import RedisConnectionError
 
 
 class RedisConnectionPool:
@@ -43,5 +47,27 @@ class RedisConnectionPool:
         """获取 Redis 客户端，根据传入的 db 参数选择不同的数据库"""
         if db not in self.pool:
             raise ValueError(f"Invalid Redis database: {db}")
-        #self.logger.info(f"Getting Redis client for database: {db}")
-        return redis.Redis(connection_pool=self.pool[db])
+        try:
+            return redis.Redis(connection_pool=self.pool[db])
+        except redis.exceptions.ConnectionError as e:
+            # 连接错误处理
+            raise RedisConnectionError(f"Failed to connect to Redis: {str(e)}")
+        except redis.exceptions.TimeoutError as e:
+            # 超时错误处理
+            raise RedisConnectionError(f"Redis connection timeout: {str(e)}")
+        except Exception as e:
+            # 其他异常
+            raise RedisConnectionError(f"Unexpected Redis error: {str(e)}")
+
+    @contextmanager
+    def get_redis_connection(self, db='default'):
+        """
+        上下文管理器，提供 Redis 连接，并确保连接会被正确释放。
+        """
+        try:
+            client = self.get_redis_client(db)
+            yield client
+        except redis.exceptions.RedisError as e:
+            raise RedisConnectionError(f"Redis connection failed for db {db}: {str(e)}")
+        finally:
+            pass  # 不需要手动释放连接，因为 Redis 客户端会自动管理连接池

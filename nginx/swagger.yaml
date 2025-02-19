@@ -162,29 +162,11 @@ paths:
       security:
         - BearerAuth: [ ]
 
-  /datasets/list:
+  /datasets:
     get:
       tags:
         - datasets
-      summary: 获取所有数据集
-      description: 获取所有数据集的信息列表，包括数据集ID、名称、路径、大小等。
-      responses:
-        '200':
-          description: 模型列表
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Dataset'
-        400:
-          description: 请求无效
-
-  /datasets/search:
-    get:
-      tags:
-        - datasets
-      summary: 搜索数据集
+      summary: 获取所有数据集/搜索数据集
       description: 查询数据集，支持模糊查询和过滤条件。
       parameters:
         - name: name
@@ -230,7 +212,6 @@ paths:
           schema:
             type: string
             enum: [ stars, size, downloads, likes ]
-            default: stars
         - name: sort_order
           in: query
           description: 排序顺序，选择升序（asc）或降序（desc）
@@ -238,7 +219,6 @@ paths:
           schema:
             type: string
             enum: [ asc, desc ]
-            default: asc
         - name: page
           in: query
           description: 当前页码
@@ -489,7 +469,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Model'
+              oneOf:
+                - $ref: '#/components/schemas/Model'  # 引用 Model
+                - type: object
+                  properties:
+                    stars:
+                      type: "null"  # 如果给定，传递 null，确保不显示字段
+                      description: "This field is removed"
+                    likes:
+                      type: "null"  # 如果给定，传递 null，确保不显示字段
+                      description: "This field is removed"
+                    required: []
+
       responses:
         '201':
           description: 模型成功创建
@@ -620,6 +611,7 @@ components:
       description: >
         请提供电子邮件 (email) 或电话号码 (telephone)
 
+
     AuthLogin:
       type: object
       properties:
@@ -728,16 +720,7 @@ components:
       required:
         - name
         - description
-        - image
-        - input
-        - cuda
-        - instruction
-        - output
-        - accuracy
-        - type
-        - sales
-        - stars
-        - likes
+
 
   securitySchemes:
     BearerAuth:
