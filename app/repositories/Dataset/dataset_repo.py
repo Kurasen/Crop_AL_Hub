@@ -1,8 +1,10 @@
-import re
-
-from app.common.input_verify import process_and_filter_tags
-from app.exception.errors import ValidationError, InvalidSizeError
+from app.common.tag_filtering_utils import process_and_filter_tags
+from app.exception.errors import InvalidSizeError, ValidationError
+from app.exts import db
 from app.models.dataset import Dataset
+
+# 定义排序字段的枚举类型
+SORT_BY_CHOICES = ['stars', 'likes', 'downloads']
 
 
 class DatasetRepository:
@@ -49,7 +51,7 @@ class DatasetRepository:
             query = process_and_filter_tags(query, Dataset.type, type)
 
             # 根据 sort_by 和 sort_order 排序
-        if sort_by in ['stars', 'likes', 'downloads']:
+        if sort_by in SORT_BY_CHOICES:
             if sort_order == 'desc':
                 query = query.order_by(getattr(Dataset, sort_by).desc(), Dataset.id.asc())
             else:
@@ -90,4 +92,37 @@ class DatasetRepository:
                     raise ValueError(f"Invalid number in size: {size_str}")
 
         raise ValueError(f"Unknown size unit in: {size_str}. Use KB, MB, GB.")
+
+    @staticmethod
+    def create_dataset(data):
+        """在数据库中创建一个新的数据集"""
+        # 创建数据集对象
+        dataset = Dataset(
+            name=data["name"],
+            path=data["path"],
+            size=data.get("size"),
+            description=data.get("description"),
+            type=data.get("type")
+        )
+
+        # 将数据集添加到数据库
+        db.session.add(dataset)
+        return dataset
+
+    @staticmethod
+    def update_dataset(dataset, **updates):
+        """更新数据集的信息"""
+        # 遍历传入的更新字段，将其应用到数据集实例
+        for key, value in updates.items():
+            if hasattr(dataset, key):  # 检查数据集是否有这个字段
+                setattr(dataset, key, value)
+            else:
+                raise ValidationError(f"Field '{key}' does not exist in the dataset")
+
+        return dataset
+
+    @staticmethod
+    def delete_dataset(dataset):
+        """删除数据集"""
+        db.session.delete(dataset)
 

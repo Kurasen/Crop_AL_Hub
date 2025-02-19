@@ -284,43 +284,27 @@ paths:
         '400':
           description: 请求无效
 
-  /models/list:
-    get:
-      tags:
-        - models
-      summary: 获取所有模型
-      description: 返回系统中所有模型的列表，包括模型 ID、名称、描述等信息。
-      responses:
-        '200':
-          description: 模型列表
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Model'
-        '404':
-          description: No datasets found in the database
-
-  /models/run:
+  /models/{model_id}/run:
     get:
       tags:
         - models
       summary: 运行模型并返回准确率
       description: 使用指定的模型 ID 和数据集 ID 运行模型，并返回训练准确率。
       parameters:
-        - in: query
+        - in: path
           name: model_id
+          description: 要运行的模型 ID
           required: true
           schema:
             type: integer
-          description: 要运行的模型 ID
+            example: 1
         - in: query
           name: dataset_id
+          description: 要使用的数据集 ID
           required: true
           schema:
             type: integer
-          description: 要使用的数据集 ID
+            example: 1
       responses:
         '200':
           description: 模型的训练准确率
@@ -329,22 +313,39 @@ paths:
               schema:
                 type: object
                 properties:
+                  model_id:
+                    type: integer
+                    example: 1
+                  dataset_id:
+                    type: integer
+                    example: 4
                   accuracy:
-                    type: string
-                    description: 模型的准确率
-                    example: 'Model_Id trained on Dataset_Id has an accuracy of xx%'
+                    type: number
+                    format: float
+                    example: 0.92
+
         '400':
           description: Model ID and Dataset ID are required
         '404':
           description: Model ID or Dataset ID not found
 
-  /models/test_model:
+  /models/{model_id}/test_model:
     post:
       tags:
         - models
       summary: 测试模型并返回处理后的图片
       description: 上传图片并进行处理，返回处理后的图片和相应的模型输出 JSON 数据。
+      parameters:
+        - name: model_id
+          in: path
+          description: The ID of the model to execute
+          required: true
+          schema:
+            type: integer
+
       requestBody:
+        description: The file to be processed by the model
+        required: true
         content:
           multipart/form-data:
             schema:
@@ -354,10 +355,7 @@ paths:
                   type: string
                   format: binary
                   description: 要处理的图片文件
-                model_id:
-                  type: integer
-                  description: 用于处理的模型 ID
-                  example: 2
+
       responses:
         '200':
           description: 处理后的图片。响应头包含模型输出信息。
@@ -389,11 +387,11 @@ paths:
         '500':
           description: 服务器内部错误
 
-  /models/search:
+  /models:
     get:
       tags:
         - models
-      summary: 根据多个条件搜索模型
+      summary: List/Search models
       description: 根据模型名称、输入类型、是否支持 CUDA 等条件来搜索模型，并支持分页查询。
       parameters:
         - in: query
@@ -481,7 +479,6 @@ paths:
         '400':
           description: 查询参数无效
 
-  /models/create:
     post:
       tags:
         - models
@@ -512,7 +509,32 @@ paths:
         '500':
           description: Internal server error
 
-  /models/update/{model_id}:
+  /models/{model_id}:
+    get:
+      tags:
+        - models
+      summary: 获取单个模型详情
+      description: 返回系统中所有模型的列表，包括模型 ID、名称、描述等信息。
+      operationId: getModelById
+      parameters:
+        - name: model_id
+          in: path
+          required: true
+          description: The unique ID of the model to retrieve.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 模型列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Model'
+        '404':
+          description: No datasets found in the database
+
     put:
       tags:
         - models
@@ -552,7 +574,6 @@ paths:
         '500':
           description: Internal server error
 
-  /models/delete/{model_id}:
     delete:
       tags:
         - models
@@ -598,6 +619,7 @@ components:
           example: "13345678906"
       description: >
         请提供电子邮件 (email) 或电话号码 (telephone)
+
     AuthLogin:
       type: object
       properties:
@@ -663,7 +685,6 @@ components:
     Model:
       type: object
       properties:
-
         name:
           type: string
           example: '基于近地面图像的株数识别模型'

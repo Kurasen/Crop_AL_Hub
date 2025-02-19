@@ -1,9 +1,12 @@
 import re
 
-from app.common.input_verify import process_and_filter_tags
+from app.common.tag_filtering_utils import process_and_filter_tags
 from app.exception.errors import ValidationError
 from app.exts import db
 from app.models.model import Model
+
+# 定义排序字段的枚举类型（例如：stars, size, etc.）
+SORT_BY_CHOICES = ['accuracy', 'sales', 'stars', 'likes']
 
 
 class ModelRepository:
@@ -41,15 +44,18 @@ class ModelRepository:
         if type:
             query = process_and_filter_tags(query, Model.type, type)
 
+        print(sort_by, sort_order)
         # 排序逻辑
-        if sort_by in ['accuracy', 'sales', 'stars', 'likes']:
+        if sort_by in SORT_BY_CHOICES:
             if sort_order == 'desc':
                 query = query.order_by(getattr(Model, sort_by).desc(), Model.id.asc())  # 降序
             else:
                 query = query.order_by(getattr(Model, sort_by).asc(), Model.id.asc())  # 升序
+        elif not sort_by and not sort_order:
+            # 如果没有提供排序字段和排序顺序，直接跳过排序，返回原始查询
+            pass
         else:
             raise ValidationError("Invalid sort field. Only 'accuracy', 'sales', 'stars', and 'likes' are allowed.")
-
         # 总数
         total_count = query.count()
 

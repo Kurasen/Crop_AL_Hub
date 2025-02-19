@@ -95,6 +95,10 @@ def create_app():
 
     # #配置 Flasgger 来自动生成 Swagger 文档(快速迭代)
     # Swagger(app)  # 初始化 Flasgger
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        print("Registered routes:")
+        for rule in app.url_map.iter_rules():
+            print(f"{rule.endpoint}: {rule}")
 
     return app
 

@@ -2,12 +2,6 @@ from flask import request, Blueprint
 from app.blueprint.utils.JSONEncoder import create_json_response
 from app.services.Dataset.dataset_service import DatasetService
 
-# 定义排序字段的枚举类型
-SORT_BY_CHOICES = ['stars', 'likes', 'downloads', 'size']
-
-# 定义排序顺序的枚举类型（升序或降序）
-SORT_ORDER_CHOICES = ['asc', 'desc']
-
 datasets_bp = Blueprint('datasets', __name__)
 
 
@@ -53,3 +47,37 @@ def search():
     )
 
     return create_json_response(result)
+
+
+# 创建新数据集
+@datasets_bp.route('/create', methods=['POST'])
+def create_dataset():
+    """
+    创建新数据集
+    """
+    data = request.get_json()
+
+    dataset_data, status = DatasetService.create_dataset(data)
+    return create_json_response(dataset_data, status)
+
+
+# 更新现有数据集
+@datasets_bp.route('/update/<int:dataset_id>', methods=['PUT'])
+def update_dataset(dataset_id):
+    """
+    更新现有数据集
+    """
+    data = request.get_json()
+
+    updated_dataset, status = DatasetService.update_dataset(dataset_id, data)
+    return create_json_response(updated_dataset, status)
+
+
+# 删除现有数据集
+@datasets_bp.route('/delete/<int:dataset_id>', methods=['DELETE'])
+def delete_dataset(dataset_id):
+    """
+    删除现有数据集
+    """
+    response, status = DatasetService.delete_dataset(dataset_id)
+    return create_json_response(response, status)

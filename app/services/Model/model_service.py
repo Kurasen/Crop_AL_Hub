@@ -22,12 +22,16 @@ class ModelService:
     def _convert_to_dict(model):
         """将数据集转换为字典格式"""
         # 假设 dataset 是一个模型对象，转换为字典
-        return model.to_dict()  # 假设你有一个 to_dict 方法
+        return model.to_dict()
 
     @staticmethod
     def get_model_by_id(model_id: int):
         # 获取指定ID的模型
-        return ModelRepository.get_model_by_id(model_id)
+        model = ModelRepository.get_model_by_id(model_id)
+
+        if not model:
+            raise NotFoundError(f"Model with id {model_id} not found.")
+        return model.to_dict()
 
     @staticmethod
     def search_models(name=None, input=None, cuda=None, description=None, type=None, page=1, per_page=10,
@@ -71,8 +75,7 @@ class ModelService:
                     "instruction": "命令不能为空"
                 }
             )
-            validator.validate(data)  # 确保此处传递了 data
-
+            validator.validate(data)
             model = ModelRepository.create_model(data)
             db.session.commit()
             return model.to_dict(), 201
@@ -189,19 +192,22 @@ class ModelService:
 
             # 校验模型和数据集是否存在
             if not model:
-                raise ValidationError(f"Model with ID {model_id} not found")
+                raise NotFoundError(f"Model with ID {model_id} not found")
             if not dataset:
-                raise ValidationError(f"Dataset with ID {dataset_id} not found")
+                raise NotFoundError(f"Dataset with ID {dataset_id} not found")
 
-            accuracy = model_id * dataset_id  # 模拟准确率，实际应用中应使用模型的真实准确率
+            accuracy = ((model_id * dataset_id) % 100) / 100 # 模拟准确率，实际应用中应使用模型的真实准确率
             return {
                 "model_id": model_id,
                 "dataset_id": dataset_id,
                 "accuracy": accuracy
             }
         except ValidationError as ve:
-            logger.error(f"Validation error: {ve.message}")
+            current_app.logger.error(f"Validation error: {ve.message}")
             raise ve
+        except NotFoundError as ne:
+            current_app.logger.error(f"Model with ID {model_id} not found: {str(ne)}")
+            raise ne
         except Exception as e:
-            logger.error(f"Database error occurred while retrieving model accuracy: {str(e)}")
+            current_app.logger.error(f"Database error occurred while retrieving model accuracy: {str(e)}")
             raise e
