@@ -28,10 +28,9 @@ class ModelService:
     def get_model_by_id(model_id: int):
         # 获取指定ID的模型
         model = ModelRepository.get_model_by_id(model_id)
-
         if not model:
-            raise NotFoundError(f"Model with id {model_id} not found.")
-        return model.to_dict()
+            raise NotFoundError(f"Dataset with ID {model_id} not found")
+        return model
 
     @staticmethod
     def search_models(name=None, input=None, cuda=None, description=None, type=None, page=1, per_page=10,
@@ -89,17 +88,14 @@ class ModelService:
         """更新模型"""
         try:
             # 获取模型对象
-            model = ModelRepository.get_model_by_id(model_id)
+            model = ModelService.get_model_by_id(model_id)
             if not model:
                 raise NotFoundError(f"Model with ID {model_id} not found")
 
-            # 更新模型
             updated_model = ModelRepository.update_model(model, **updates)
-
             db.session.commit()
             return updated_model.to_dict(), 200
         except NotFoundError as ne:
-            db.session.rollback()  # 回滚事务
             current_app.logger.error(f"Validation error while updating model {model_id}: {str(ne)}")
             raise ne
         except Exception as e:
@@ -111,26 +107,20 @@ class ModelService:
     def delete_model(model_id):
         """删除模型"""
         try:
-            # 获取模型对象
             model = ModelRepository.get_model_by_id(model_id)
             if not model:
-                raise NotFoundError(f"Model with ID {model_id} not found")  # 使用 NotFound 异常
+                raise NotFoundError(f"Model with ID {model_id} not found")
 
-            # 删除模型
             ModelRepository.delete_model(model)
 
-            # 提交事务
             db.session.commit()
-
             return {"message": "Model deleted successfully"}, 200
 
         except NotFoundError as ne:
-            # 处理模型未找到的异常
             current_app.logger.error(f"Model with ID {model_id} not found: {str(ne)}")
             raise ne
         except Exception as e:
-            # 捕获其他异常
-            db.session.rollback()  # 回滚事务
+            db.session.rollback()
             current_app.logger.error(f"Error occurred while deleting model {model_id}: {str(e)}")
             raise e
 

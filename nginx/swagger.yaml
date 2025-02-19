@@ -172,7 +172,6 @@ paths:
         - name: name
           in: query
           description: 数据集名称
-          required: false
           schema:
             type: string
         - name: description
@@ -263,6 +262,161 @@ paths:
                     example: 2
         '400':
           description: 请求无效
+
+    post:
+      summary: 创建新数据集
+      operationId: createDataset
+      tags:
+        - datasets
+      requestBody:
+        description: Data for the new dataset.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: The name of the dataset.
+                  example: "雄穗面积计算测试集"
+                path:
+                  type: string
+                  description: The path to the dataset files.
+                  example: "segmentation-tassel/dataset/test"
+                size:
+                  type: integer
+                  description: The size of the dataset in bytes.
+                  example: "24.9MB"
+                description:
+                  type: string
+                  description: A brief description of the dataset.
+                  example: "用来测试雄穗面积计算模型"
+                type:
+                  type: string
+                  description: The type of the dataset.
+                  example: "玉米；面积"
+      responses:
+        '201':
+          description: Dataset successfully created
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Dataset'
+        '400':
+          description: Invalid input data
+        '500':
+          description: Internal server error
+
+  /datasets/{dataset_id}:
+    get:
+      tags:
+        - datasets
+      summary: 获取单个数据集详情
+      description: 返回系统中单个数据集的详细数据，包括模型 ID、名称、描述等信息。
+      operationId: getDatasetById
+      parameters:
+        - name: dataset_id
+          in: path
+          required: true
+          description: The unique ID of the dataset to retrieve.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 模型列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dataset'
+        '404':
+          description: No datasets found in the database
+
+    put:
+      summary: 更新现有数据集
+      operationId: updateDataset
+      tags:
+        - datasets
+      parameters:
+        - in: path
+          name: dataset_id
+          required: true
+          description: The ID of the dataset to update.
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        description: The updated data for the dataset.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: The name of the dataset.
+                  example: "基于近地面图像的叶龄识别测试集"
+                path:
+                  type: string
+                  description: The new path to the dataset files.
+                  example: "detetcion-seed-leaf/dataset/test/uav"
+                size:
+                  type: string
+                  description: The new size of the dataset in bytes.
+                  example: "7.5MB"
+                description:
+                  type: string
+                  description: A new description of the dataset.
+                  example: "用来测试基于无人机图像的株数识别模型"
+                type:
+                  type: string
+                  description: The type of the dataset.
+                  example: "玉米；无人机；数量"
+      responses:
+        '200':
+          description: Dataset successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dataset'
+        '400':
+          description: Invalid input data
+        '404':
+          description: Dataset not found
+        '500':
+          description: Internal server error
+
+    delete:
+      summary: Delete a dataset
+      operationId: deleteDataset
+      tags:
+        - datasets
+      parameters:
+        - in: path
+          name: dataset_id
+          required: true
+          description: The ID of the dataset to delete.
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Dataset successfully deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Dataset deleted successfully"
+        '404':
+          description: Dataset not found
+        '500':
+          description: Internal server error
 
   /models/{model_id}/run:
     get:
@@ -469,17 +623,36 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-                - $ref: '#/components/schemas/Model'  # 引用 Model
-                - type: object
-                  properties:
-                    stars:
-                      type: "null"  # 如果给定，传递 null，确保不显示字段
-                      description: "This field is removed"
-                    likes:
-                      type: "null"  # 如果给定，传递 null，确保不显示字段
-                      description: "This field is removed"
-                    required: []
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: '基于近地面图像的株数识别模型'
+                description:
+                  type: string
+                  example: '通过数量除以面积可以计算密度'
+                image:
+                  type: string
+                  example: 'detetcion-seed-leaf'
+                input:
+                  type: string
+                  example: '*.JPG'
+                cuda:
+                  type: boolean
+                  example: false
+                instruction:
+                  type: string
+                  example: '-m ngp'
+                output:
+                  type: string
+                  example: 'plant_detection_summary.csv'
+                accuracy:
+                  type: number
+                  format: float
+                  example: 0.98
+                type:
+                  type: string
+                  example: '玉米；近地面；数量'
 
       responses:
         '201':
@@ -487,14 +660,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - type: object
-                    properties:
-                      id:
-                        type: integer
-                        format: int32
-                        example: 1
-                  - $ref: '#/components/schemas/Model'
+                $ref: '#/components/schemas/Model'
         '400':
           description: 请求数据无效
         '500':
@@ -505,7 +671,7 @@ paths:
       tags:
         - models
       summary: 获取单个模型详情
-      description: 返回系统中所有模型的列表，包括模型 ID、名称、描述等信息。
+      description: 返回系统中单个模型的详细数据，包括模型 ID、名称、描述等信息。
       operationId: getModelById
       parameters:
         - name: model_id
@@ -539,25 +705,48 @@ paths:
           schema:
             type: integer
       requestBody:
+        description: The updated data for the model.
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Model'
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: '基于近地面图像的株数识别模型'
+                description:
+                  type: string
+                  example: '通过数量除以面积可以计算密度'
+                image:
+                  type: string
+                  example: 'detetcion-seed-leaf'
+                input:
+                  type: string
+                  example: '*.JPG'
+                cuda:
+                  type: boolean
+                  example: false
+                instruction:
+                  type: string
+                  example: '-m ngp'
+                output:
+                  type: string
+                  example: 'plant_detection_summary.csv'
+                accuracy:
+                  type: number
+                  format: float
+                  example: 0.98
+                type:
+                  type: string
+                  example: '玉米；近地面；数量'
       responses:
         '200':
           description: 模型成功更新
           content:
             application/json:
               schema:
-                allOf:
-                  - type: object
-                    properties:
-                      id:
-                        type: integer
-                        format: int32
-                        example: 1
-                  - $ref: '#/components/schemas/Model'
+                $ref: '#/components/schemas/Model'
         '400':
           description: 请求数据无效
         '404':
@@ -610,6 +799,7 @@ components:
           example: "13345678906"
       description: >
         请提供电子邮件 (email) 或电话号码 (telephone)
+
 
 
     AuthLogin:
@@ -671,12 +861,16 @@ components:
           type: integer
           format: int32
           example: 3
-      xml:
-        name: dataset
+      required:
+        - name
 
     Model:
       type: object
       properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
         name:
           type: string
           example: '基于近地面图像的株数识别模型'
@@ -719,7 +913,6 @@ components:
           example: 0
       required:
         - name
-        - description
 
 
   securitySchemes:

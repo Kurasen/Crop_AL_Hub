@@ -5,6 +5,15 @@ from app.dataset.dataset_service import DatasetService
 datasets_bp = Blueprint('datasets', __name__)
 
 
+@datasets_bp.route('/<int:dataset_id>', methods=['GET'])
+def get_model(dataset_id):
+    """
+    获取特定模型的详细信息
+    """
+    dataset = DatasetService.get_dataset_by_id(dataset_id)
+    return create_json_response(dataset.to_dict())
+
+
 @datasets_bp.route('', methods=['GET'])
 def search():
     """
@@ -46,7 +55,6 @@ def create_dataset():
     创建新数据集
     """
     data = request.get_json()
-
     dataset_data, status = DatasetService.create_dataset(data)
     return create_json_response(dataset_data, status)
 

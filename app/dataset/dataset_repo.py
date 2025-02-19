@@ -109,7 +109,6 @@ class DatasetRepository:
             type=data.get("type")
         )
 
-        # 将数据集添加到数据库
         db.session.add(dataset)
         return dataset
 
@@ -118,11 +117,10 @@ class DatasetRepository:
         """更新数据集的信息"""
         # 遍历传入的更新字段，将其应用到数据集实例
         for key, value in updates.items():
-            if hasattr(dataset, key):  # 检查数据集是否有这个字段
+            if hasattr(dataset, key):
                 setattr(dataset, key, value)
             else:
                 raise ValidationError(f"Field '{key}' does not exist in the dataset")
-
         return dataset
 
     @staticmethod

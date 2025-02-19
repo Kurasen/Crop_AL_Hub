@@ -1,5 +1,8 @@
-from app.core.exception import DatabaseError
+from flask import current_app
+
+from app.core.exception import DatabaseError, ValidationError, NotFoundError
 from app.dataset.dataset_repo import DatasetRepository
+from app.exts import db
 
 
 class DatasetService:
@@ -14,7 +17,11 @@ class DatasetService:
     @staticmethod
     def get_dataset_by_id(dataset_id: int):
         # 获取指定ID的模型
-        return DatasetRepository.get_dataset_by_id(dataset_id)
+        dataset = DatasetRepository.get_dataset_by_id(dataset_id)
+        if not dataset:
+            raise NotFoundError(f"Dataset with ID {dataset_id} not found")
+
+        return dataset
 
     @staticmethod
     def search_datasets(name=None, path=None, size_min=None, size_max=None, description=None,
@@ -49,6 +56,68 @@ class DatasetService:
             "per_page": per_page,
             "total_pages": (total_count + per_page - 1) // per_page  # 计算总页数
         }
+
+    @staticmethod
+    def create_dataset(data):
+        """
+        在数据库中创建一个新的数据集
+        :param data: 数据字典，包含数据集的相关信息
+        :return: 创建的数据集对象
+        """
+        try:
+            # 进行数据验证（如果需要）
+            if not data.get("name"):
+                raise ValidationError("Dataset name is required.")
+
+            dataset = DatasetRepository.create_dataset(data)
+            db.session.commit()
+            return dataset.to_dict(), 201
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error occurred while creating model: {str(e)}")
+            raise e
+
+    @staticmethod
+    def update_dataset(dataset_id, updates):
+        """
+        更新指定数据集的信息
+        :param dataset_id: 数据集 ID
+        :param updates: 需要更新的字段和值
+        :return: 更新后的数据集对象
+        """
+        try:
+            dataset = DatasetService.get_dataset_by_id(dataset_id)
+            if not dataset:
+                raise NotFoundError(f"Dataset with ID {dataset_id} not found.")
+            updated_dataset = DatasetRepository.update_dataset(dataset, **updates)
+            db.session.commit()
+            return updated_dataset.to_dict(), 201
+        except NotFoundError as ne:
+            current_app.logger.error(f"Validation error while updating model {dataset_id}: {str(ne)}")
+            raise ne
+        except Exception as e:
+            db.session.rollback()  # 回滚事务
+            current_app.logger.error(f"Unexpected error while updating model {dataset_id}: {str(e)}")
+            raise e
+
+    @staticmethod
+    def delete_dataset(dataset_id):
+        """删除模型"""
+        try:
+            # 获取模型对象
+            dataset = DatasetService.get_dataset_by_id(dataset_id)
+
+            DatasetRepository.delete_dataset(dataset)
+
+            db.session.commit()
+            return {"message": "Dataset deleted successfully"}, 200
+        except NotFoundError as ne:
+            current_app.logger.error(f"Dataset with ID {dataset_id} not found: {str(ne)}")
+            raise ne
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error occurred while deleting model {dataset_id}: {str(e)}")
+            raise e
 
     @staticmethod
     def _convert_to_dict(dataset):

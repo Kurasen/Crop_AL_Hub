@@ -107,7 +107,7 @@ def get_model(model_id):
     获取特定模型的详细信息
     """
     model = ModelService.get_model_by_id(model_id)
-    return create_json_response(model)
+    return create_json_response(model.to_dict())
 
 
 @models_bp.route('/<int:model_id>', methods=['PUT'])
