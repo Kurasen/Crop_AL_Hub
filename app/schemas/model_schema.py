@@ -9,24 +9,34 @@ class ModelBaseSchema(BaseSchema):
     name = fields.Str(
         required=True,
         validate=[
-            validate.Length(min=1, max=30, error="Name must be between 1 and 30 characters"),
-            # 确保去除前后空格后仍有非空内容
-            validate.Regexp(r'^\s*.*?\S+.*\s*$', error="Name cannot be empty or just spaces")
-        ]
+            validate.Length(min=1, max=30),  # 移除 error 参数
+            validate.Regexp(r'^\s*.*?\S+.*\s*$')  # 移除 error 参数
+        ],
+        error_messages={
+            "too_short": "Name must be between 1 and 30 characters",
+            "too_long": "Name must be between 1 and 30 characters",
+            "regexp": "Name cannot be empty or just spaces"
+        }
     )
+
     input = fields.Str(
         allow_none=True,
         # validate=validate.OneOf(['image'], error="Input must be 'image'"),
     )
     output = fields.Str(
         allow_none=True,
-        validate=validate.Regexp(r'.*\.(csv|txt|json)$', error="Output must be a CSV, TXT, or JSON file"),
+        validate=validate.Regexp(r'.*\.(csv|txt|json)$'),
+        error_messages={"required": "Output must be a CSV, TXT, or JSON file"}
     )
-    description = fields.Str(validate=validate.Length(max=500), description="模型描述")
-    image = fields.Str(validate=validate.Length(max=50, error="Image should be less than 500 characters"))
+    description = fields.Str(validate=validate.Length(max=50),
+                             error_messages={"required": "Description must be longer than 50 characters"})
+    image = fields.Str(validate=validate.Length(max=50),
+                       error_messages={"required": "Image should be less than 500 characters"})
     cuda = fields.Bool(default=False, description="是否支持CUDA")
-    size = fields.Str(validate=validate.Regexp(r'^\d+(\.\d+)?(MB|GB|TB)$', error="Invalid size format"),
-                      description="模型文件大小")
+    size = fields.Str(validate=validate.Regexp(r'^\d+(\.\d+)?(MB|GB|TB)$'),
+                      error_messages={"required": "Invalid size format"})
+    instruction = fields.Str(validate=validate.Length(max=50),
+                              error_messages={"required": "Instructions should be less than 50 characters"})
 
     @pre_load
     def trim_name(self, data, **kwargs):
@@ -51,18 +61,18 @@ class ModelUpdateSchema(ModelBaseSchema):
     pass
 
 
-class ModelRunSchema(Schema):
+class ModelRunSchema(BaseSchema):
     """
     用于验证模型运行接口的请求参数
     """
-    dataset_id = fields.Int(required=True, description="数据集ID")
+    dataset_id = fields.Int(required=True, error_messages={"required": "Dataset_id is required"})
 
 
-class ModelTestSchema(Schema):
+class ModelTestSchema(BaseSchema):
     """
     用于验证测试模型接口请求中的文件和其他参数
     """
-    file = fields.Raw(required=True, description="上传的文件")
+    file = fields.Raw(required=True, error_messages={"required": "未上传文件或未选择文件"})
 
     @validates_schema
     def validate_file(self, data, **kwargs):
@@ -73,7 +83,3 @@ class ModelTestSchema(Schema):
         if file:
             if not file.filename.lower().endswith(('.jpg', '.jpeg', '.png')):
                 raise ValidationError("Only image files (.jpg, .jpeg, .png) are allowed")
-
-
-class ModelSearchSchema(Schema):
-    pass

@@ -3,7 +3,7 @@ import os
 
 from flask import request, send_file, Blueprint, make_response
 
-from app.schemas.model_schema import ModelCreateSchema, ModelUpdateSchema
+from app.schemas.model_schema import ModelCreateSchema, ModelUpdateSchema, ModelRunSchema, ModelTestSchema
 from app.utils.json_encoder import create_json_response
 from app.core.exception import ValidationError
 from app.model.model_service import ModelService
@@ -23,7 +23,7 @@ def run(model_id):
     参数：模型ID和数据集ID
     """
     # 获取请求参数中的模型编号和数据集编号
-    dataset_id = request.args.get('dataset_id', type=int)
+    dataset_id = ModelRunSchema().load(request.args).get('dataset_id')
 
     model_accuracy_info = ModelService.get_model_accuracy(model_id, dataset_id)
     return create_json_response(model_accuracy_info)
@@ -36,9 +36,8 @@ def test_model(model_id):
     上传一张图片，进行处理并返回处理后的图片和相应的 JSON 数据。
     """
     # 文件校验
-    uploaded_file = request.files.get('file')
-    if not uploaded_file or uploaded_file.filename == '':
-        raise ValidationError("未上传文件或未选择文件")
+
+    uploaded_file = ModelTestSchema().load(request.files).get('file')
 
     # 处理模型和文件，获取图像处理路径和模型信息
     processed_image_path, model_info = ModelService.process_model_and_file(model_id, uploaded_file)
