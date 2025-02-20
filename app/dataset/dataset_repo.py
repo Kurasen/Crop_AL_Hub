@@ -103,7 +103,7 @@ class DatasetRepository:
         # 创建数据集对象
         dataset = Dataset(
             name=data["name"],
-            path=data["path"],
+            path=data.get("path"),
             size=data.get("size"),
             description=data.get("description"),
             type=data.get("type")

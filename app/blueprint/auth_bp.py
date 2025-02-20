@@ -1,5 +1,6 @@
 from flask import request, Blueprint, current_app
-
+from marshmallow import ValidationError as MarshmallowValidationError
+from app.schemas.user_schema import UserCreateSchema, UserLoginSchema, GenerateCodeSchema
 from app.token.token_service import TokenService
 from app.utils.json_encoder import create_json_response
 from app.token.JWT import token_required, add_to_blacklist, get_jwt_identity, verify_token
@@ -8,19 +9,18 @@ from app.token.token_repo import TokenRepository
 from app.auth.auth_service import AuthService
 from app.auth.verify_code_service import VerificationCodeService
 
-
 auth_bp = Blueprint('auth', __name__)
 
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    """
-    用户注册 API
-    """
-    data = request.get_json()
-
-    response, status = AuthService.register(data)
+    """用户注册 API（使用Schema验证）"""
+    # 使用Schema进行数据加载和验证
+    validated_data = UserCreateSchema().load(request.get_json())
+    # 调用服务层（传递已验证数据）
+    response, status = AuthService.register(validated_data)
     return create_json_response(response, status)
+
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -28,9 +28,8 @@ def login():
     """
     用户登录 API
     """
-    data = request.get_json()
-
-    response, status = AuthService.login(data)
+    validated_data = UserLoginSchema().load(request.get_json())
+    response, status = AuthService.login(validated_data)
     return create_json_response(response, status)
 
 
@@ -104,18 +103,9 @@ def generate_code():
     """
     生成验证码并发送给用户（通过手机号或邮箱）
     """
-    data = request.get_json()
-    login_type = data.get('login_type')  # 'telephone' 或 'email'
-    login_identifier = data.get('login_identifier')
-
-    if not login_type or not login_identifier:
-        raise ValidationError("Missing 'login_type' or 'login_identifier'")
-
-    if login_type not in ['telephone', 'email']:
-        raise ValidationError("Invalid 'login_type'. Should be 'telephone' or 'email'.")
-
+    validated_data = GenerateCodeSchema().load(request.get_json())
     # 调用 AuthService 生成验证码
-    code = VerificationCodeService.generate_verification_code(login_type, login_identifier)
+    code = VerificationCodeService.generate_verification_code(validated_data)
 
     response_data = {
         "message": "Verification code sent successfully.",
@@ -123,3 +113,4 @@ def generate_code():
     }
 
     return create_json_response(response_data, status_code=200)
+

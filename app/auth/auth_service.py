@@ -9,7 +9,6 @@ from app.token.token_repo import TokenRepository
 from app.auth.auth_repo import AuthRepository
 from app.auth.login_attempt_repo import LoginAttemptsRepository
 from flask import current_app
-from app.auth.input_format import InputFormatService
 from app.auth.passwd_service import PasswordService
 from app.auth.verify_code_service import VerificationCodeService
 
@@ -17,85 +16,48 @@ redis_pool = RedisConnectionPool()
 
 
 class AuthService:
-
     @staticmethod
-    def register(data):
-        """
-        用户注册接口：检查手机号/邮箱是否已注册，验证码是否正确，并注册新用户
-        """
+    def register(validated_data):
+        """使用已验证数据执行注册逻辑"""
         try:
-            # Step 1: 输入验证，确保必填字段存在
-            required_fields = ['login_type', 'login_identifier', 'username', 'password', 'code']
-            InputFormatService.validate_required_fields(data, required_fields)
+            # 直接使用已验证数据（无需再次格式检查）
+            login_type = validated_data['login_type']
+            login_identifier = validated_data['login_identifier']
 
-            login_type = data.get('login_type')  # 注册方式，'telephone' 或 'email'
-            login_identifier = data.get('login_identifier')
-            username = data.get('username')
-            password = data.get('password')
-            code = data.get("code")  # 用户输入的验证码
-
-            # Step 1: 验证格式（手机号或邮箱）,密码。校验login_type是否为电话或邮箱
-            if login_type not in ['telephone', 'email']:
-                raise ValidationError("Invalid login type. Only 'telephone' or 'email' are allowed.")
-            InputFormatService.validate_credentials_format(login_type, login_identifier, password)
-
-            # Step 2: 验证验证码
-            VerificationCodeService.validate_code(login_type, login_identifier, code)
-
-            # Step 3: 检查是否已注册（根据 login_type）
+            # 验证码检查
+            VerificationCodeService.validate_code(login_type, login_identifier, validated_data['code'])
+            # 检查用户是否存在
             if AuthRepository.get_user_by_identifier(login_identifier, login_type):
-                raise ValidationError(f"{login_type.capitalize()} is already registered.")
+                raise ValidationError(f"{login_type} already registered")
+            # 创建用户模型
+            user = User(
+                username=validated_data['username'],
+                password=PasswordService.hashed_password(validated_data['password']),
+                email=validated_data['login_identifier'] if validated_data['login_type'] == 'email' else None,
+                telephone=validated_data['login_identifier'] if validated_data['login_type'] == 'telephone' else None
+            )
 
-            # Step 4: 创建用户名
-            hashed_password = PasswordService.hashed_password(password)
-            user = User(username=username, password=hashed_password,
-                        email=login_identifier if login_type == 'email' else None,
-                        telephone=login_identifier if login_type == 'telephone' else None)
-            AuthRepository.save_user(user)  # 保存到数据库
-
-            # Step 5: 显示提交事务
+            AuthRepository.save_user(user)
             db.session.commit()
-
-            # Step 6: 生成 Token
-            access_token = generate_access_token(user.id, user.username)
-            refresh_token = generate_refresh_token(user.id, user.username)
-
+            # 生成令牌
             return {
-                "message": "Auth registered successfully",
-                "access_token": access_token,
-                "refresh_token": refresh_token
+                "access_token": generate_access_token(user.id, user.username),
+                "refresh_token": generate_refresh_token(user.id, user.username)
             }, 201
-        except ValidationError as e:
-            current_app.logger.error(f"Validation Error during registration: {str(e)}")
-            raise e
-        except SQLAlchemyError as e:
-            db.session.rollback()  # 事务回滚
-            current_app.logger.error(f"Database Error during registration: {str(e)}")
-            raise ValidationError("Database error occurred, please try again.")
-        except Exception as e:
-            # 捕获其他未处理的异常
-            current_app.logger.error(f"Unexpected Error during registration: {str(e)}")
-            raise ValidationError("An unexpected error occurred during registration.")
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise ValidationError("Database operation failed")
+
 
     @staticmethod
-    def login(data):
+    def login(validated_data):
         """
         登录服务：处理用户登录并生成 Token。
         """
-        # Step 1: 确保必填字段存在
-        required_fields = ['login_type', 'login_identifier', 'password']
-        InputFormatService.validate_required_fields(data, required_fields)
 
-        login_identifier = data.get('login_identifier')
-        login_type = data.get('login_type')
-        password = data.get('password')
-
-        # Step 1: 校验login_type是否为电话或邮箱
-        if login_type not in ['telephone', 'email']:
-            raise ValidationError("Invalid login type. Only 'telephone' or 'email' are allowed.")
-
-        # Step 2: 验证登录信息格式（手机号/邮箱 和 密码）
-        InputFormatService.validate_credentials_format(login_type, login_identifier, password)
+        login_identifier = validated_data.get('login_identifier')
+        login_type = validated_data.get('login_type')
+        password = validated_data.get('password')
 
         # Step 3: 检查登录失败次数
         if not LoginAttemptsRepository.check_login_attempts(login_identifier):

@@ -3,7 +3,7 @@ from werkzeug.utils import secure_filename
 
 from app.core.exception import ValidationError
 
-UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'test')
+UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../test')
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
 
 

@@ -7,7 +7,7 @@ import redis
 
 from flask import current_app
 from app.core.redis_connection_pool import RedisConnectionPool
-from app.core.exception import ValidationError
+from app.core.exception import ValidationError, NotFoundError
 
 redis_pool = RedisConnectionPool()
 
@@ -41,13 +41,13 @@ class VerificationCodeService:
         self.redis_connection_pool = RedisConnectionPool()
 
     @staticmethod
-    def generate_verification_code(login_type, login_identifier):
+    def generate_verification_code(validated_data):
         """
         生成验证码，并将其存入缓存中
-        :param login_identifier: 电话或邮箱
-        :param login_type: 'telephone' 或 'email'
         :return: 生成的验证码
         """
+        login_identifier = validated_data.get('login_identifier')
+        login_type = validated_data.get('login_type')
         # 生成一个6位数的验证码
         code = ''.join(secrets.choice(string.digits) for _ in range(6))
 
@@ -132,12 +132,17 @@ class VerificationCodeService:
 
             # 明确处理返回值
             stored_code = result[0] if len(result) > 0 else None
-            delete_count = result[1] if len(result) > 1 else 0
+            ttl = cache_client.ttl(redis_key)
 
-            print(stored_code, delete_count)
             if stored_code is None:
-                current_app.logger.warning(f"验证码不存在或已过期: {redis_key}")
-                raise ValidationError("验证码已过期或未发送")
+                # 如果没有找到验证码，抛出验证码不存在的异常
+                current_app.logger.warning(f"验证码不存在: {redis_key}")
+                raise NotFoundError("验证码未发送")
+
+            if ttl <= 0:
+                # 如果验证码已经被删除，说明验证码已过期
+                current_app.logger.warning(f"验证码已过期: {redis_key}")
+                raise ValidationError("验证码已过期")
 
             if stored_code != code:
                 current_app.logger.warning(f"验证码不匹配: 输入={code}, 存储={stored_code}")

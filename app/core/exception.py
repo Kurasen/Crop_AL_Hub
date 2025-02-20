@@ -1,7 +1,7 @@
 import logging
 from flask import request, current_app
 from werkzeug.exceptions import HTTPException, UnsupportedMediaType
-
+from marshmallow import ValidationError as MarshmallowValidationError
 from app.utils import create_json_response
 
 # 初始化日志配置，设置错误日志级别
@@ -140,6 +140,16 @@ def init_error_handlers(app):
         if isinstance(error, HTTPException):  # Flask 内置的 HTTP 错误
             response = {"error": {"code": error.code, "message": error.description}}
             status_code = error.code
+        elif isinstance(error, MarshmallowValidationError):  # 捕获 marshmallow 的 ValidationError
+            # marshmallow 异常包含字段错误信息，我们可以提取这些信息
+            response = {
+                "error": {
+                    "code": 400,
+                    "message": "Validation failed",
+                    "details": error.messages  # marshmallow 错误信息
+                }
+            }
+            status_code = 400
         elif isinstance(error, CustomError):  # 自定义异常
             response = {"error": {"code": error.status_code, "message": error.message}}
             status_code = error.status_code

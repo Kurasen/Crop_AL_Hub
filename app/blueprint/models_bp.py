@@ -3,6 +3,7 @@ import os
 
 from flask import request, send_file, Blueprint, make_response
 
+from app.schemas.model_schema import ModelCreateSchema, ModelUpdateSchema
 from app.utils.json_encoder import create_json_response
 from app.core.exception import ValidationError
 from app.model.model_service import ModelService
@@ -12,9 +13,6 @@ ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
 
 # 定义命名空间：模型
 models_bp = Blueprint('models', __name__, url_prefix='/models')
-
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
-UPLOAD_FOLDER = os.path.join(project_root, 'test')  # 定位到 'test' 文件夹
 
 
 # 定义 run_model 接口，接收模型编号和数据集编号
@@ -96,8 +94,8 @@ def create_model():
     创建新模型
     """
     # 获取请求数据
-    data = request.get_json()
-    model_data, status = ModelService.create_model(data)
+    validated_data = ModelCreateSchema().load(request.get_json())
+    model_data, status = ModelService.create_model(validated_data)
     return create_json_response(model_data, status)
 
 
@@ -115,9 +113,8 @@ def update_model(model_id):
     """
     更新现有模型
     """
-    data = request.get_json()
-
-    updated_model, status = ModelService.update_model(model_id, data)
+    validated_data = ModelUpdateSchema().load(request.get_json())
+    updated_model, status = ModelService.update_model(model_id, validated_data)
     return create_json_response(updated_model, status)
 
 

@@ -1,7 +1,6 @@
 from flask import current_app
 
 from app.utils.upload_file import save_uploaded_file
-from app.utils.Validator import Validator
 from app.core.exception import DatabaseError, ValidationError, FileUploadError, ImageProcessingError, \
     NotFoundError
 from app.exts import db
@@ -64,17 +63,6 @@ class ModelService:
     def create_model(data):
         """创建模型"""
         try:
-            # 校验数据是否合法
-            validator = Validator()
-            validator.required(
-                fields=["name", "input", "instruction"],
-                custom_messages={  # 确保键名与字段名完全一致
-                    "name": "名称不能为空",
-                    "input": "输入图片类型不能为空",
-                    "instruction": "命令不能为空"
-                }
-            )
-            validator.validate(data)
             model = ModelRepository.create_model(data)
             db.session.commit()
             return model.to_dict(), 201

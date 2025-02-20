@@ -1,4 +1,3 @@
-from flask import current_app
 
 from app.core.redis_connection_pool import RedisConnectionPool
 

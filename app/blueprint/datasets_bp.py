@@ -1,4 +1,6 @@
 from flask import request, Blueprint
+
+from app.schemas.dataset_shema import DatasetCreateSchema, DatasetUpdateSchema
 from app.utils.json_encoder import create_json_response
 from app.dataset.dataset_service import DatasetService
 
@@ -54,8 +56,8 @@ def create_dataset():
     """
     创建新数据集
     """
-    data = request.get_json()
-    dataset_data, status = DatasetService.create_dataset(data)
+    validated_data = DatasetCreateSchema().load(request.get_json())
+    dataset_data, status = DatasetService.create_dataset(validated_data)
     return create_json_response(dataset_data, status)
 
 
@@ -65,9 +67,9 @@ def update_dataset(dataset_id):
     """
     更新现有数据集
     """
-    data = request.get_json()
+    validated_data = DatasetUpdateSchema().load(request.get_json())
 
-    updated_dataset, status = DatasetService.update_dataset(dataset_id, data)
+    updated_dataset, status = DatasetService.update_dataset(dataset_id, validated_data)
     return create_json_response(updated_dataset, status)
 
 

@@ -20,7 +20,6 @@ class DatasetService:
         dataset = DatasetRepository.get_dataset_by_id(dataset_id)
         if not dataset:
             raise NotFoundError(f"Dataset with ID {dataset_id} not found")
-
         return dataset
 
     @staticmethod
@@ -58,18 +57,14 @@ class DatasetService:
         }
 
     @staticmethod
-    def create_dataset(data):
+    def create_dataset(validated_data):
         """
         在数据库中创建一个新的数据集
-        :param data: 数据字典，包含数据集的相关信息
+        :param validated_data: 数据字典，包含数据集的相关信息
         :return: 创建的数据集对象
         """
         try:
-            # 进行数据验证（如果需要）
-            if not data.get("name"):
-                raise ValidationError("Dataset name is required.")
-
-            dataset = DatasetRepository.create_dataset(data)
+            dataset = DatasetRepository.create_dataset(validated_data)
             db.session.commit()
             return dataset.to_dict(), 201
         except Exception as e:
