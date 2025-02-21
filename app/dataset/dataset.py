@@ -16,6 +16,13 @@ class Dataset(db.Model):
     stars = db.Column(db.Integer, default=0)  # 收藏数
     likes = db.Column(db.Integer, default=0)  # 点赞数
 
+    def __init__(self, **kwargs):
+        """
+        :param kwargs: 数据集的各个字段参数
+        """
+        # 使用父类的初始化方法来处理字段初始化
+        super().__init__(**kwargs)
+
     def __repr__(self):
         return f"<Dataset {self.name}>"
 

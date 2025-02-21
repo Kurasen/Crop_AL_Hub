@@ -9,7 +9,7 @@ from app.token.JWT import token_required, add_to_blacklist, get_jwt_identity, ve
 from app.core.exception import ValidationError, AuthenticationError, logger
 from app.token.token_repo import TokenRepository
 from app.auth.auth_service import AuthService
-from app.auth.verify_code_service import VerificationCodeService
+from app.core.verify_code_service import VerificationCodeService
 
 auth_bp = Blueprint('auth', __name__)
 

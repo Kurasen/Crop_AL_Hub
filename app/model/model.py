@@ -19,20 +19,12 @@ class Model(db.Model):
     stars = db.Column(db.Integer, default=0)  # 收藏字段
     likes = db.Column(db.Integer, default=0)  # 点赞数字段
 
-    def __init__(self, name, image, input, description=None, cuda=False, instruction=None, output=None, accuracy=None,
-                 type=None, sales=None, stars=None, likes=None):
-        self.name = name
-        self.image = image
-        self.input = input
-        self.description = description
-        self.cuda = cuda
-        self.instruction = instruction
-        self.output = output
-        self.accuracy = accuracy
-        self.type = type
-        self.sales = sales
-        self.stars = stars
-        self.likes = likes
+    def __init__(self, **kwargs):
+        """
+        :param kwargs: 模型的各个字段参数
+        """
+        # 使用父类的初始化方法来处理字段初始化
+        super().__init__(**kwargs)
 
     def __repr__(self):
         return f'<Model {self.name}>'

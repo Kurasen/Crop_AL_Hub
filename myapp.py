@@ -62,6 +62,9 @@ def create_app():
     from app.blueprint.models_bp import models_bp
     app.register_blueprint(models_bp, url_prefix='/models')
 
+    from app.blueprint.user_bp  import user_bp
+    app.register_blueprint(user_bp, url_prefix='/user')
+
     # 将 Redis 连接池管理器存入 app 配置
     app.config['REDIS_POOL'] = redis_pool
 

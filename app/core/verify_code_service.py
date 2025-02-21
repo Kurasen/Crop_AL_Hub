@@ -34,7 +34,6 @@ class VerificationCodeService:
     # return 1  -- 操作成功
     # """
 
-
     @staticmethod
     def generate_verification_code(validated_data):
         """

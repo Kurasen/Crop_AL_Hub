@@ -10,8 +10,8 @@ from app.token.token_repo import TokenRepository
 from app.auth.auth_repo import AuthRepository
 from app.auth.login_attempt_repo import LoginAttemptsRepository
 from flask import current_app
-from app.auth.passwd_service import PasswordService
-from app.auth.verify_code_service import VerificationCodeService
+from app.core.passwd_service import PasswordService
+from app.core.verify_code_service import VerificationCodeService
 
 
 class AuthService:
