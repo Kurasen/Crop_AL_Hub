@@ -6,7 +6,7 @@ class Model(db.Model):
     __tablename__ = 'model_table'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 主键
-    name = db.Column(db.String(100), nullable=False)  # 模型名称
+    name = db.Column(db.String(100), nullable=False, index=True)  # 模型名称
     image = db.Column(db.String(255), default="")  # 模型图片路径，长度改为 255
     input = db.Column(db.String(100), default="")  # 输入类型
     description = db.Column(db.Text, default="")  # 描述字段改为 Text 类型

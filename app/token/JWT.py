@@ -2,16 +2,14 @@ import uuid
 
 import jwt
 from datetime import datetime, timedelta
-from flask import  request
+from flask import request
 from functools import wraps
 from app.config import Config  # 载入配置
 from app.core.exception import AuthenticationError
-from app.core.redis_connection_pool import RedisConnectionPool
+from app.core.redis_connection_pool import redis_pool
 
 SECRET_KEY = Config.SECRET_KEY
 BLACKLIST_REDIS_KEY = "jwt_blacklist"
-
-redis_pool = RedisConnectionPool()
 
 
 # 生成 access_token（15 分钟有效）
@@ -69,9 +67,9 @@ def add_to_blacklist(jti):
     将 JWT 的 jti 添加到黑名单。
     使用 Redis 连接池来获取 Redis 连接，以提高效率。
     """
-    with redis_pool.get_redis_connection(db='user') as conn:
+    with redis_pool.get_redis_connection(pool_name='user') as redis_client:
         # 设置 Redis 中 jti 键的过期时间（例如 7 天）
-        conn.setex(f"jwt_blacklist:{jti}", 604800, "revoked")
+        redis_client.setex(f"jwt_blacklist:{jti}", 604800, "revoked")
 
 
 # 验证 JWT
@@ -87,7 +85,7 @@ def verify_token(token, check_blacklist=True):
 
         # 检查黑名单（只对 access_token 做黑名单检查）
         if check_blacklist and token_type == 'access':
-            with redis_pool.get_redis_client('user') as redis_client:
+            with redis_pool.get_redis_connection(pool_name='user') as redis_client:
                 if redis_client.exists(f"{BLACKLIST_REDIS_KEY}:{jti}"):
                     print(f"Token with jti {jti} is in the blacklist.")  # 输出黑名单信息
                     raise AuthenticationError("Token has been revoked")

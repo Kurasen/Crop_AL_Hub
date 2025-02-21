@@ -1,15 +1,7 @@
-from flask import current_app
-
-from app.core.redis_connection_pool import RedisConnectionPool
-
-redis_pool = RedisConnectionPool()
+from app.core.redis_connection_pool import redis_pool
 
 
 class TokenRepository:
-    @staticmethod
-    def get_redis_client(db='user'):
-        """ 获取 Redis 客户端，根据传入的 db 参数选择不同的数据库 """
-        return redis_pool.get_redis_client(db)
 
     @staticmethod
     def set_user_token(user_id, token, token_type='access'):
@@ -19,7 +11,7 @@ class TokenRepository:
         :param token: JWT token
         :param token_type: 'access' 或 'refresh'
         """
-        with redis_pool.get_redis_connection() as redis_client:
+        with redis_pool.get_redis_connection(pool_name='user') as redis_client:
             # 为了避免重复，存储时附加 'user_{user_id}_token:{token_type}'
             token_key = f"user_{user_id}_token:{token_type}"
             if token_type == 'access':
@@ -37,7 +29,7 @@ class TokenRepository:
         :param token_type: 'access' 或 'refresh'
         :return: 返回存储的 token 或 None
         """
-        with redis_pool.get_redis_connection() as redis_client:
+        with redis_pool.get_redis_connection(pool_name='user') as redis_client:
             token_key = f"user_{user_id}_token:{token_type}"
             return redis_client.get(token_key)
 
@@ -48,7 +40,7 @@ class TokenRepository:
         :param user_id: 用户 ID
         :param token_type: 'access' 或 'refresh'
         """
-        with redis_pool.get_redis_connection() as redis_client:
+        with redis_pool.get_redis_connection(pool_name='user') as redis_client:
             token_key = f"user_{user_id}_token:{token_type}"
             redis_client.delete(token_key)
 
@@ -60,9 +52,6 @@ class TokenRepository:
         :param token_type: 'access' 或 'refresh'
         :return: True 如果存在，False 如果不存在
         """
-        # redis_client = TokenRepository.get_redis_client()
-        # token_key = f"user_{user_id}_token:{token_type}"
-        # return redis_client.exists(token_key)
-        with redis_pool.get_redis_connection() as redis_client:
+        with redis_pool.get_redis_connection(pool_name='user') as redis_client:
             token_key = f"user_{user_id}_token:{token_type}"
             return redis_client.exists(token_key)

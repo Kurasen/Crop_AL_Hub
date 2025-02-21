@@ -6,10 +6,8 @@ import time
 import redis
 
 from flask import current_app
-from app.core.redis_connection_pool import RedisConnectionPool
 from app.core.exception import ValidationError, NotFoundError
-
-redis_pool = RedisConnectionPool()
+from app.core.redis_connection_pool import redis_pool
 
 
 # 使用 Redis 缓存验证码的服务
@@ -36,9 +34,6 @@ class VerificationCodeService:
     # return 1  -- 操作成功
     # """
 
-    def __init__(self):
-        # 初始化时传递 Redis 配置信息
-        self.redis_connection_pool = RedisConnectionPool()
 
     @staticmethod
     def generate_verification_code(validated_data):
@@ -51,8 +46,8 @@ class VerificationCodeService:
         # 生成一个6位数的验证码
         code = ''.join(secrets.choice(string.digits) for _ in range(6))
 
-        # 获取 Redis 客户端（选择缓存数据库 db=2）
-        with redis_pool.get_redis_client(db='cache') as cache_client:
+        # 获取 Redis 客户端
+        with redis_pool.get_redis_connection(pool_name='cache') as cache_client:
 
             # 设置缓存，存储验证码并设置过期时间
             cache_key = VerificationCodeService._generate_redis_key(login_type, login_identifier)
@@ -82,6 +77,7 @@ class VerificationCodeService:
             current_app.logger.info(f"Sending {login_type} verification code to {login_identifier}: {code}")
 
             return code
+
     #
     # @staticmethod
     # def generate_verification_code(login_type, login_identifier):
@@ -124,35 +120,35 @@ class VerificationCodeService:
         """
         redis_key = VerificationCodeService._generate_redis_key(login_type, login_identifier)
 
-        cache_client = RedisConnectionPool().get_redis_client(db='cache')
         try:
-            pipe = cache_client.pipeline()
-            pipe.get(redis_key)
-            result = pipe.execute()  # 返回格式 [stored_code, delete_count]
+            with redis_pool.get_redis_connection(pool_name='cache') as cache_client:
+                pipe = cache_client.pipeline()
+                pipe.get(redis_key)
+                result = pipe.execute()  # 返回格式 [stored_code, delete_count]
 
-            # 明确处理返回值
-            stored_code = result[0] if len(result) > 0 else None
-            ttl = cache_client.ttl(redis_key)
+                # 明确处理返回值
+                stored_code = result[0] if len(result) > 0 else None
+                ttl = cache_client.ttl(redis_key)
 
-            if stored_code is None:
-                # 如果没有找到验证码，抛出验证码不存在的异常
-                current_app.logger.warning(f"验证码不存在: {redis_key}")
-                raise NotFoundError("验证码未发送")
+                if stored_code is None:
+                    # 如果没有找到验证码，抛出验证码不存在的异常
+                    current_app.logger.warning(f"验证码不存在: {redis_key}")
+                    raise NotFoundError("验证码未发送")
 
-            if ttl <= 0:
-                # 如果验证码已经被删除，说明验证码已过期
-                current_app.logger.warning(f"验证码已过期: {redis_key}")
-                raise ValidationError("验证码已过期")
+                if ttl <= 0:
+                    # 如果验证码已经被删除，说明验证码已过期
+                    current_app.logger.warning(f"验证码已过期: {redis_key}")
+                    raise ValidationError("验证码已过期")
 
-            if stored_code != code:
-                current_app.logger.warning(f"验证码不匹配: 输入={code}, 存储={stored_code}")
-                raise ValidationError("验证码错误")
+                if stored_code != code:
+                    current_app.logger.warning(f"验证码不匹配: 输入={code}, 存储={stored_code}")
+                    raise ValidationError("验证码错误")
 
-            # 验证成功后删除验证码
-            pipe.delete(redis_key)
-            pipe.execute()  # 执行删除操作
+                # 验证成功后删除验证码
+                pipe.delete(redis_key)
+                pipe.execute()  # 执行删除操作
 
-            return True
+                return True
         except redis.exceptions.RedisError as e:
             current_app.logger.error(f"Redis操作失败: {str(e)}")
             raise ValidationError("验证服务暂时不可用")

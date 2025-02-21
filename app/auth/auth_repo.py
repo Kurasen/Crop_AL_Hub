@@ -1,20 +1,12 @@
-from app.core.redis_connection_pool import RedisConnectionPool
+from app.core.redis_connection_pool import redis_pool
 from app.exts import db
 from app.user.user import User
-from flask import current_app
-
-redis_pool = RedisConnectionPool()
 
 
 class AuthRepository:
     """
     认证服务层，负责处理用户的登录验证、密码校验等业务逻辑。
     """
-
-    @staticmethod
-    def get_redis_client(db='user'):
-        """获取 Redis 客户端，默认使用 db=1"""
-        return redis_pool.get_redis_client(db)   # 获取用户登录相关数据的 Redis 连接（db=1）
 
     # 根据用户提供的登录类型查询用户
     @staticmethod

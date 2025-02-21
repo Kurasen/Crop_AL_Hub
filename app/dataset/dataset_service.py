@@ -1,6 +1,6 @@
 from flask import current_app
 
-from app.core.exception import DatabaseError, ValidationError, NotFoundError
+from app.core.exception import DatabaseError, NotFoundError
 from app.dataset.dataset_repo import DatasetRepository
 from app.exts import db
 

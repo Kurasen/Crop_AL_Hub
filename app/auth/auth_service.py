@@ -1,8 +1,9 @@
+
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.core.redis_connection_pool import RedisConnectionPool
+from app.core.redis_connection_pool import redis_pool
 from app.token.JWT import generate_access_token, generate_refresh_token, verify_token
-from app.core.exception import ValidationError, AuthenticationError, DatabaseError
+from app.core.exception import ValidationError, AuthenticationError, DatabaseError, RedisConnectionError
 from app.exts import db
 from app.user.user import User
 from app.token.token_repo import TokenRepository
@@ -11,8 +12,6 @@ from app.auth.login_attempt_repo import LoginAttemptsRepository
 from flask import current_app
 from app.auth.passwd_service import PasswordService
 from app.auth.verify_code_service import VerificationCodeService
-
-redis_pool = RedisConnectionPool()
 
 
 class AuthService:
@@ -48,7 +47,6 @@ class AuthService:
             db.session.rollback()
             raise ValidationError("Database operation failed")
 
-
     @staticmethod
     def login(validated_data):
         """
@@ -59,19 +57,21 @@ class AuthService:
         login_type = validated_data.get('login_type')
         password = validated_data.get('password')
 
-        # Step 3: 检查登录失败次数
+        # Step 1: 检查登录失败次数
         if not LoginAttemptsRepository.check_login_attempts(login_identifier):
             raise AuthenticationError("Too many login attempts. Please try again later.")
 
-        # Step 4: 使用 Redis 锁来防止并发请求
-        with redis_pool.get_redis_connection(db='user') as redis_client:
+        # Step 2: 使用 Redis 锁来防止并发请求
+        with redis_pool.get_redis_connection(pool_name='user') as redis_client:
             lock_key = f"lock:{login_identifier}"
             lock = redis_client.set(lock_key, 'locked', nx=True, ex=5)  # 5 秒锁
             if not lock:
+                current_ttl = redis_client.ttl(lock_key)
+                current_app.logger.info(f"Login lock contention for {login_identifier},TTL: {current_ttl}s")
                 raise AuthenticationError("Too many users, please try again later.")
 
             try:
-                # Step 5: 验证用户身份
+                # Step 3: 验证用户身份
                 user = AuthRepository.get_user_by_identifier(login_identifier, login_type)
                 if not user:  # 添加用户存在性检查
                     raise AuthenticationError("User does not exist")
@@ -79,7 +79,7 @@ class AuthService:
                     LoginAttemptsRepository.increment_login_attempts(login_identifier)
                     raise AuthenticationError("Invalid username or password")
 
-                # Step 6: 检查用户是否已有有效的 Access Token
+                # Step 4: 检查用户是否已有有效的 Access Token
                 stored_access_token = TokenRepository.get_user_token(user.id, "access")
                 stored_refresh_token = TokenRepository.get_user_token(user.id, "refresh")
 
@@ -111,11 +111,11 @@ class AuthService:
                         if str(e) == "Token has expired" or str(e) == "Token has been revoked":
                             pass  # 继续生成新的 token
 
-                # Step 7: Access Token 过期，生成新的 Token，并存储新的 Access Token
+                # Step 5: Access Token 过期，生成新的 Token，并存储新的 Access Token
                 new_access_token = generate_access_token(user.id, user.username)
                 TokenRepository.set_user_token(user.id, new_access_token, "access")
 
-                # Step 8: 登录成功后，重置登录失败次数
+                # Step 6: 登录成功后，重置登录失败次数
                 LoginAttemptsRepository.reset_login_attempts(login_identifier)
 
                 current_app.logger.info(f"Login successful for {login_identifier}, generated new tokens.")
@@ -128,6 +128,8 @@ class AuthService:
             except AuthenticationError as e:
                 current_app.logger.error(f"Authentication failed for {login_identifier}: {str(e)}")
                 raise e
+            except RedisConnectionError as e:
+                current_app.logger.error(f"Redis connection failed during login: {str(e)}")
             except Exception as e:
                 current_app.logger.error(f"Unexpected error during login for {login_identifier}: {str(e)}")
                 raise DatabaseError("Internal error occurred while logging in.")

@@ -10,7 +10,7 @@ class User(db.Model):
                         name='check_email_or_telephone'),
     )
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 个人id
-    username = db.Column(db.String(100), nullable=False)  # 用户昵称
+    username = db.Column(db.String(100), nullable=False, index=True)  # 用户昵称
     password = db.Column(db.String(200), nullable=False)  # 密码字段
     email = db.Column(db.String(100), unique=True)  # 邮箱
     telephone = db.Column(db.String(15), unique=True)  # 手机号

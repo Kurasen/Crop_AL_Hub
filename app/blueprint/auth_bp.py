@@ -1,5 +1,7 @@
+
 from flask import request, Blueprint, current_app
-from marshmallow import ValidationError as MarshmallowValidationError
+
+from app.schemas.base import apply_rate_limit
 from app.schemas.user_schema import UserCreateSchema, UserLoginSchema, GenerateCodeSchema
 from app.token.token_service import TokenService
 from app.utils.json_encoder import create_json_response
@@ -13,6 +15,7 @@ auth_bp = Blueprint('auth', __name__)
 
 
 @auth_bp.route('/register', methods=['POST'])
+@apply_rate_limit("5 per minute")
 def register():
     """用户注册 API（使用Schema验证）"""
     # 使用Schema进行数据加载和验证
@@ -22,8 +25,8 @@ def register():
     return create_json_response(response, status)
 
 
-
 @auth_bp.route('/login', methods=['POST'])
+@apply_rate_limit("5 per minute")
 def login():
     """
     用户登录 API
@@ -62,7 +65,8 @@ def protected_route(current_user):
 
 
 @auth_bp.route('/refresh_token', methods=['POST'])
-def refresh_token():
+@token_required
+def refresh_token(current_user):
     """刷新 Token"""
 
     token = request.headers.get('Authorization')
@@ -99,6 +103,7 @@ def refresh_token():
 
 
 @auth_bp.route('/generate_code', methods=['POST'])
+@apply_rate_limit("5 per minute")
 def generate_code():
     """
     生成验证码并发送给用户（通过手机号或邮箱）
@@ -113,4 +118,3 @@ def generate_code():
     }
 
     return create_json_response(response_data, status_code=200)
-

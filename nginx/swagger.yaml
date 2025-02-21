@@ -390,7 +390,7 @@ paths:
           description: Internal server error
 
     delete:
-      summary: Delete a dataset
+      summary: 删除单个数据集
       operationId: deleteDataset
       tags:
         - datasets
