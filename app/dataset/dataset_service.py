@@ -24,9 +24,8 @@ class DatasetService:
         return dataset
 
     @staticmethod
-    def search_datasets(request_args: dict):
+    def search_datasets(search_params: dict):
         """根据过滤条件获取数据集"""
-        search_params = DatasetSearchSchema().load(request_args)
 
         total_count, datasets = DatasetRepository.search(search_params)
 
@@ -52,14 +51,12 @@ class DatasetService:
         }
 
     @staticmethod
-    def create_dataset(data):
+    def create_dataset(dataset_instance):
         """
         在数据库中创建一个新的数据集
         :return: 创建的数据集对象
         """
         try:
-            # schema 自动验证并生成实例
-            dataset_instance = DatasetCreateSchema().load(data, session=db.session)
             DatasetRepository.save_dataset(dataset_instance)
             db.session.commit()
             return dataset_instance.to_dict(), 201
@@ -69,29 +66,16 @@ class DatasetService:
             raise e
 
     @staticmethod
-    def update_dataset(dataset_id, updates):
+    def update_dataset(dataset_instance):
         """
         更新指定数据集的信息
-        :param dataset_id: 数据集 ID
-        :param updates: 需要更新的字段和值
+        :param dataset_instance:
         :return: 更新后的数据集对象
         """
         try:
-            dataset = DatasetService.get_dataset_by_id(dataset_id)
-            dataset_instance = DatasetUpdateSchema().load(
-                updates,
-                instance=dataset,  # 传入现有实例
-                partial=True,  # 允许部分更新
-                session=db.session
-            )
-
             DatasetRepository.save_dataset(dataset_instance)
             db.session.commit()
             return dataset_instance.to_dict(), 200
-        except NotFoundError as ne:
-            db.session.rollback()
-            current_app.logger.error(f"Dataset not found: {str(ne)}")
-            raise
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error updating dataset: {str(e)}")

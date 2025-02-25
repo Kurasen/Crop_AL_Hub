@@ -33,10 +33,9 @@ class ModelService:
         return model
 
     @staticmethod
-    def search_models(request_args: dict):
+    def search_models(search_params: dict):
         """查询模型，调用Repository层"""
         try:
-            search_params = ModelSearchSchema().load(request_args)
             total_count, models = ModelRepository.search_models(search_params)
 
             return {
@@ -51,10 +50,9 @@ class ModelService:
             raise e
 
     @staticmethod
-    def create_model(data):
+    def create_model(model_instance):
         """创建模型"""
         try:
-            model_instance = ModelCreateSchema().load(data, session=db.session)
             ModelRepository.save_model(model_instance)
             db.session.commit()
             return model_instance.to_dict(), 201
@@ -64,24 +62,16 @@ class ModelService:
             raise e
 
     @staticmethod
-    def update_model(model_id, updates):
+    def update_model(model_instance):
         """更新模型"""
         try:
             # 获取模型对象
-            model = ModelService.get_model_by_id(model_id)
-            model_instance = ModelUpdateSchema().load(
-                updates,
-                instance=model,  # 传入现有实例
-                partial=True,  # 允许部分更新
-                session=db.session
-            )
-
             ModelRepository.save_model(model_instance)
             db.session.commit()
             return model_instance.to_dict(), 200
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Unexpected error while updating model {model_id}: {str(e)}")
+            current_app.logger.error(f"Unexpected error while updating model : {str(e)}")
             raise e
 
     @staticmethod

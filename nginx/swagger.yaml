@@ -519,7 +519,7 @@ paths:
     get:
       tags:
         - models
-      summary: List/Search models
+      summary: 获取所有模型/搜索模型数据
       description: 根据模型名称、输入类型、是否支持 CUDA 等条件来搜索模型，并支持分页查询。
       parameters:
         - in: query

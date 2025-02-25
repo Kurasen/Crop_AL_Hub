@@ -2,7 +2,9 @@ import json
 
 from flask import request, send_file, Blueprint, make_response
 
-from app.schemas.model_schema import ModelRunSchema, ModelTestSchema
+from app.exts import db
+from app.schemas.model_schema import ModelRunSchema, ModelTestSchema, ModelSearchSchema, ModelCreateSchema, \
+    ModelUpdateSchema
 from app.utils.json_encoder import create_json_response
 from app.model.model_service import ModelService
 
@@ -58,7 +60,8 @@ def search():
     示例请求：
     ?name=example&input=image&cuda=true&describe=good&size_min=100MB&size_max=1GB&page=1&per_page=10
     """
-    result = ModelService.search_models(request.args.to_dict())
+    search_params = ModelSearchSchema().load(request.args.to_dict())
+    result = ModelService.search_models(search_params)
     return create_json_response(result)
 
 
@@ -68,7 +71,8 @@ def create_model():
     创建新模型
     """
     # 获取请求数据
-    result, status = ModelService.create_model(request.get_json())
+    model_instance = ModelCreateSchema().load(request.get_json(), session=db.session)
+    result, status = ModelService.create_model(model_instance)
     return create_json_response(result, status)
 
 
@@ -86,7 +90,15 @@ def update_model(model_id):
     """
     更新现有模型
     """
-    updated_model, status = ModelService.update_model(model_id, request.get_json())
+    model = ModelService.get_model_by_id(model_id)
+    updates = request.get_json()
+    model_instance = ModelUpdateSchema().load(
+        updates,
+        instance=model,  # 传入现有实例
+        partial=True,  # 允许部分更新
+        session=db.session,
+    )
+    updated_model, status = ModelService.update_model(model_instance)
     return create_json_response(updated_model, status)
 
 

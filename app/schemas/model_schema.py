@@ -11,6 +11,7 @@ class ModelBaseSchema(BaseSchema):
     class Meta:
         model = Model
         load_instance = True
+        include_fk = True
 
     name = fields.Str(
         required=True,

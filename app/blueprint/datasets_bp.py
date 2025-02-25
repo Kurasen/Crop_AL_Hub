@@ -1,5 +1,7 @@
 from flask import request, Blueprint
 
+from app.exts import db
+from app.schemas.dataset_shema import DatasetSearchSchema, DatasetCreateSchema, DatasetUpdateSchema
 from app.utils.json_encoder import create_json_response
 from app.dataset.dataset_service import DatasetService
 
@@ -22,8 +24,8 @@ def search():
     示例请求参数：
     ?name=
     """
-    result = DatasetService.search_datasets(request.args.to_dict())
-
+    search_params = DatasetSearchSchema().load(request.args.to_dict())
+    result = DatasetService.search_datasets(search_params)
     return create_json_response(result)
 
 
@@ -33,7 +35,8 @@ def create_dataset():
     """
     创建新数据集
     """
-    result, status = DatasetService.create_dataset(request.get_json())
+    dataset_instance = DatasetCreateSchema().load(request.get_json(), session=db.session)
+    result, status = DatasetService.create_dataset(dataset_instance)
     return create_json_response(result, status)
 
 
@@ -43,7 +46,15 @@ def update_dataset(dataset_id):
     """
     更新现有数据集
     """
-    result, status = DatasetService.update_dataset(dataset_id, request.get_json())
+    dataset = DatasetService.get_dataset_by_id(dataset_id)
+    updates = request.get_json()
+    dataset_instance = DatasetUpdateSchema().load(
+        updates,
+        instance=dataset,  # 传入现有实例
+        partial=True,  # 允许部分更新
+        session=db.session
+    )
+    result, status = DatasetService.update_dataset(dataset_instance)
     return create_json_response(result, status)
 
 

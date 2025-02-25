@@ -72,6 +72,7 @@ class VerificationCodeService:
             except redis.exceptions.RedisError as e:
                 current_app.logger.error(f"Redis存储失败: {str(e)}")
                 raise
+
             # 发送验证码到用户（这里只是打印，实际应通过邮件或短信发送）
             current_app.logger.info(f"Sending {login_type} verification code to {login_identifier}: {code}")
 
