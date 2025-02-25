@@ -17,7 +17,7 @@ tags:
     description: ''
 
 paths:
-  /auth/register:
+  /api/v1/auth/register:
     post:
       tags:
         - auth
@@ -60,7 +60,7 @@ paths:
         '500':
           description: Internal server error
 
-  /auth/login:
+  /api/v1/auth/login:
     post:
       tags:
         - auth
@@ -94,7 +94,7 @@ paths:
         '422':
           description: Validation failed, invalid login identifier format
 
-  /auth/logout:
+  /api/v1/auth/logout:
     post:
       tags:
         - auth
@@ -108,7 +108,7 @@ paths:
       security:
         - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
-  /auth/protected:
+  /api/v1/auth/protected:
     get:
       tags:
         - auth
@@ -120,7 +120,7 @@ paths:
       security:
         - BearerAuth: [ ]
 
-  /auth/refresh_token:
+  /api/v1/auth/refresh_token:
     post:
       tags:
         - auth
@@ -134,7 +134,7 @@ paths:
       security:
         - BearerAuth: [ ]
 
-  /auth/generate_code:
+  /api/v1/auth/generate_code:
     post:
       tags:
         - auth
@@ -162,7 +162,7 @@ paths:
       security:
         - BearerAuth: [ ]
 
-  /datasets:
+  /api/v1/datasets:
     get:
       tags:
         - datasets
@@ -195,12 +195,6 @@ paths:
         - name: size_max
           in: query
           description: 最大大小筛选
-          required: false
-          schema:
-            type: string
-        - name: path
-          in: query
-          description: 数据集路径
           required: false
           schema:
             type: string
@@ -308,7 +302,7 @@ paths:
         '500':
           description: Internal server error
 
-  /datasets/{dataset_id}:
+  /api/v1/datasets/{dataset_id}:
     get:
       tags:
         - datasets
@@ -418,7 +412,7 @@ paths:
         '500':
           description: Internal server error
 
-  /models/{model_id}/run:
+  /api/v1/models/{model_id}/run:
     get:
       tags:
         - models
@@ -463,7 +457,7 @@ paths:
         '404':
           description: Model ID or Dataset ID not found
 
-  /models/{model_id}/test_model:
+  /api/v1/models/{model_id}/test-model:
     post:
       tags:
         - models
@@ -521,7 +515,7 @@ paths:
         '500':
           description: 服务器内部错误
 
-  /models:
+  /api/v1/models:
     get:
       tags:
         - models
@@ -666,7 +660,7 @@ paths:
         '500':
           description: Internal server error
 
-  /models/{model_id}:
+  /api/v1/models/{model_id}:
     get:
       tags:
         - models
@@ -799,8 +793,7 @@ components:
           example: "13345678906"
       description: >
         请提供电子邮件 (email) 或电话号码 (telephone)
-
-
+        
 
     AuthLogin:
       type: object

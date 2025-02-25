@@ -54,16 +54,16 @@ def create_app():
 
     # 延迟导入注册蓝图
     from app.blueprint.auth_bp import auth_bp
-    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(auth_bp, url_prefix='/api/v1/auth')
 
     from app.blueprint.datasets_bp import datasets_bp
-    app.register_blueprint(datasets_bp, url_prefix='/datasets')
+    app.register_blueprint(datasets_bp, url_prefix='/api/v1/datasets')
 
     from app.blueprint.models_bp import models_bp
-    app.register_blueprint(models_bp, url_prefix='/models')
+    app.register_blueprint(models_bp, url_prefix='/api/v1/models')
 
-    from app.blueprint.user_bp  import user_bp
-    app.register_blueprint(user_bp, url_prefix='/user')
+    from app.blueprint.users_bp  import user_bp
+    app.register_blueprint(user_bp, url_prefix='/api/v1/users')
 
     # 将 Redis 连接池管理器存入 app 配置
     app.config['REDIS_POOL'] = redis_pool

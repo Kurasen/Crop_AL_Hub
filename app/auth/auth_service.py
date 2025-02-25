@@ -27,7 +27,7 @@ class AuthService:
             VerificationCodeService.validate_code(login_type, login_identifier, validated_data['code'])
             # 检查用户是否存在
             if AuthRepository.get_user_by_identifier(login_identifier, login_type):
-                raise ValidationError(f"{login_type} already registered")
+                raise ValidationError(f"{login_type} already registered", 409)
             # 创建用户模型
             user = User(
                 username=validated_data['username'],

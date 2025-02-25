@@ -1,18 +1,16 @@
 import json
-import os
 
 from flask import request, send_file, Blueprint, make_response
 
-from app.schemas.model_schema import ModelCreateSchema, ModelUpdateSchema, ModelRunSchema, ModelTestSchema
+from app.schemas.model_schema import ModelRunSchema, ModelTestSchema
 from app.utils.json_encoder import create_json_response
-from app.core.exception import ValidationError
 from app.model.model_service import ModelService
 
 # 设置允许的文件格式
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
 
 # 定义命名空间：模型
-models_bp = Blueprint('models', __name__, url_prefix='/models')
+models_bp = Blueprint('models', __name__, url_prefix='/api/v1/models')
 
 
 # 定义 run_model 接口，接收模型编号和数据集编号
@@ -30,7 +28,7 @@ def run(model_id):
 
 
 # 接收图片并返回处理后的图片和 JSON
-@models_bp.route('/<int:model_id>/test_model', methods=['POST'])
+@models_bp.route('/<int:model_id>/test-model', methods=['POST'])
 def test_model(model_id):
     """
     上传一张图片，进行处理并返回处理后的图片和相应的 JSON 数据。
@@ -60,30 +58,7 @@ def search():
     示例请求：
     ?name=example&input=image&cuda=true&describe=good&size_min=100MB&size_max=1GB&page=1&per_page=10
     """
-    # 获取查询参数
-    name = request.args.get('name')
-    input = request.args.get('input')
-    cuda = request.args.get('cuda', type=lambda v: v.lower() == 'true')  # Properly handle 'cuda' param
-    description = request.args.get('description')
-    type = request.args.get('type')
-    sort_by = request.args.get('sort_by')
-    sort_order = request.args.get('sort_order')
-    page = int(request.args.get('page', 1))
-    per_page = int(request.args.get('per_page', 5))
-
-    # 调用 ModelService 的 search_models 方法
-    result = ModelService.search_models(
-        name=name,
-        input=input,
-        cuda=cuda,
-        description=description,
-        type=type,
-        sort_by=sort_by,
-        sort_order=sort_order,
-        page=page,
-        per_page=per_page
-    )
-
+    result = ModelService.search_models(request.args.to_dict())
     return create_json_response(result)
 
 
@@ -93,9 +68,8 @@ def create_model():
     创建新模型
     """
     # 获取请求数据
-    validated_data = ModelCreateSchema().load(request.get_json())
-    model_data, status = ModelService.create_model(validated_data)
-    return create_json_response(model_data, status)
+    result, status = ModelService.create_model(request.get_json())
+    return create_json_response(result, status)
 
 
 @models_bp.route('/<int:model_id>', methods=['GET'])
@@ -112,8 +86,7 @@ def update_model(model_id):
     """
     更新现有模型
     """
-    validated_data = ModelUpdateSchema().load(request.get_json())
-    updated_model, status = ModelService.update_model(model_id, validated_data)
+    updated_model, status = ModelService.update_model(model_id, request.get_json())
     return create_json_response(updated_model, status)
 
 

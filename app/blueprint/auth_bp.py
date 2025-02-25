@@ -2,7 +2,7 @@
 from flask import request, Blueprint, current_app
 
 from app.schemas.base import apply_rate_limit
-from app.schemas.user_schema import UserCreateSchema, UserLoginSchema, GenerateCodeSchema
+from app.schemas.auth_schema import UserCreateSchema, UserLoginSchema, GenerateCodeSchema
 from app.token.token_service import TokenService
 from app.utils.json_encoder import create_json_response
 from app.token.JWT import token_required, add_to_blacklist, get_jwt_identity, verify_token
@@ -11,7 +11,7 @@ from app.token.token_repo import TokenRepository
 from app.auth.auth_service import AuthService
 from app.core.verify_code_service import VerificationCodeService
 
-auth_bp = Blueprint('auth', __name__)
+auth_bp = Blueprint('auth', __name__, url_prefix='/api/v1/auth')
 
 
 @auth_bp.route('/register', methods=['POST'])

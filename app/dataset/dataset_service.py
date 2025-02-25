@@ -1,8 +1,9 @@
 from flask import current_app
 
-from app.core.exception import DatabaseError, NotFoundError
+from app.core.exception import DatabaseError, NotFoundError, ValidationError
 from app.dataset.dataset_repo import DatasetRepository
 from app.exts import db
+from app.schemas.dataset_shema import DatasetCreateSchema, DatasetUpdateSchema, DatasetSearchSchema
 
 
 class DatasetService:
@@ -23,25 +24,19 @@ class DatasetService:
         return dataset
 
     @staticmethod
-    def search_datasets(name=None, path=None, size_min=None, size_max=None, description=None,
-                        type=None, sort_by=None, sort_order=None, page=1, per_page=5):
+    def search_datasets(request_args: dict):
         """根据过滤条件获取数据集"""
-        total_count, datasets = DatasetRepository.search(
-            name=name,
-            path=path,
-            description=description,
-            type=type,
-            sort_by=sort_by,
-            sort_order=sort_order,
-            page=page,
-            per_page=per_page
-        )
+        search_params = DatasetSearchSchema().load(request_args)
+
+        total_count, datasets = DatasetRepository.search(search_params)
 
         # 转换大小为字节（None 代表不限制）
-        min_size_value = DatasetRepository.convert_size_to_bytes(size_min) if size_min else None
-        max_size_value = DatasetRepository.convert_size_to_bytes(size_max) if size_max else None
+        min_size_value = DatasetRepository.convert_size_to_bytes(search_params.get('size_min')) if search_params.get(
+            'size_min') else None
+        max_size_value = DatasetRepository.convert_size_to_bytes(search_params.get('size_max')) if search_params.get(
+            'size_max') else None
 
-        if size_min or size_max:
+        if search_params.get('size_min') or search_params.get('size_max'):
             datasets = [
                 dataset for dataset in datasets
                 if DatasetService._is_size_in_range(dataset.size, min_size_value, max_size_value)
@@ -51,22 +46,23 @@ class DatasetService:
         return {
             "data": [DatasetService._convert_to_dict(dataset) for dataset in datasets],
             "total_count": total_count,
-            "page": page,
-            "per_page": per_page,
-            "total_pages": (total_count + per_page - 1) // per_page  # 计算总页数
+            "page": search_params.get("page", 1),
+            "per_page": search_params.get("per_page", 5),
+            "total_pages": (total_count + search_params.get("per_page", 5) - 1) // search_params.get("per_page", 5)  # 计算总页数
         }
 
     @staticmethod
-    def create_dataset(validated_data):
+    def create_dataset(data):
         """
         在数据库中创建一个新的数据集
-        :param validated_data: 数据字典，包含数据集的相关信息
         :return: 创建的数据集对象
         """
         try:
-            dataset = DatasetRepository.create_dataset(validated_data)
+            # schema 自动验证并生成实例
+            dataset_instance = DatasetCreateSchema().load(data, session=db.session)
+            DatasetRepository.save_dataset(dataset_instance)
             db.session.commit()
-            return dataset.to_dict(), 201
+            return dataset_instance.to_dict(), 201
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error occurred while creating model: {str(e)}")
@@ -82,18 +78,24 @@ class DatasetService:
         """
         try:
             dataset = DatasetService.get_dataset_by_id(dataset_id)
-            if not dataset:
-                raise NotFoundError(f"Dataset with ID {dataset_id} not found.")
-            updated_dataset = DatasetRepository.update_dataset(dataset, **updates)
+            dataset_instance = DatasetUpdateSchema().load(
+                updates,
+                instance=dataset,  # 传入现有实例
+                partial=True,  # 允许部分更新
+                session=db.session
+            )
+
+            DatasetRepository.save_dataset(dataset_instance)
             db.session.commit()
-            return updated_dataset.to_dict(), 201
+            return dataset_instance.to_dict(), 200
         except NotFoundError as ne:
-            current_app.logger.error(f"Validation error while updating model {dataset_id}: {str(ne)}")
-            raise ne
+            db.session.rollback()
+            current_app.logger.error(f"Dataset not found: {str(ne)}")
+            raise
         except Exception as e:
-            db.session.rollback()  # 回滚事务
-            current_app.logger.error(f"Unexpected error while updating model {dataset_id}: {str(e)}")
-            raise e
+            db.session.rollback()
+            current_app.logger.error(f"Error updating dataset: {str(e)}")
+            raise
 
     @staticmethod
     def delete_dataset(dataset_id):
@@ -105,7 +107,7 @@ class DatasetService:
             DatasetRepository.delete_dataset(dataset)
 
             db.session.commit()
-            return {"message": "Dataset deleted successfully"}, 200
+            return {"message": "Dataset deleted successfully"}, 204
         except NotFoundError as ne:
             current_app.logger.error(f"Dataset with ID {dataset_id} not found: {str(ne)}")
             raise ne

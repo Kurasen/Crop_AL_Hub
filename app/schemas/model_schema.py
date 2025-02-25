@@ -1,11 +1,17 @@
 import re
 
-from marshmallow import Schema, fields, validate, validates_schema, ValidationError, pre_load, validates
+from marshmallow import fields, validate, validates_schema, ValidationError, validates
+from marshmallow_sqlalchemy import auto_field
 
-from app.schemas.base import BaseSchema
+from app.model.model import Model
+from app.schemas.base import BaseSchema, SortBaseSchema
 
 
 class ModelBaseSchema(BaseSchema):
+    class Meta:
+        model = Model
+        load_instance = True
+
     name = fields.Str(
         required=True,
         validate=[
@@ -13,37 +19,54 @@ class ModelBaseSchema(BaseSchema):
             validate.Regexp(r'^\s*.*?\S+.*\s*$')  # 移除 error 参数
         ],
         error_messages={
+            "required": "Name is required",
             "too_short": "Name must be between 1 and 30 characters",
             "too_long": "Name must be between 1 and 30 characters",
             "regexp": "Name cannot be empty or just spaces"
         }
     )
 
-    input = fields.Str(
-        allow_none=True,
-        # validate=validate.OneOf(['image'], error="Input must be 'image'"),
+    input = auto_field(
+        allow_none=True
     )
-    output = fields.Str(
+
+    output = auto_field(
         allow_none=True,
         validate=validate.Regexp(r'.*\.(csv|txt|json)$'),
         error_messages={"required": "Output must be a CSV, TXT, or JSON file"}
     )
-    description = fields.Str(validate=validate.Length(max=50),
-                             error_messages={"required": "Description must be longer than 50 characters"})
-    image = fields.Str(validate=validate.Length(max=50),
-                       error_messages={"required": "Image should be less than 500 characters"})
-    cuda = fields.Bool(default=False, description="是否支持CUDA")
-    size = fields.Str(validate=validate.Regexp(r'^\d+(\.\d+)?(MB|GB|TB)$'),
-                      error_messages={"required": "Invalid size format"})
-    instruction = fields.Str(validate=validate.Length(max=50),
-                              error_messages={"required": "Instructions should be less than 50 characters"})
 
-    @pre_load
-    def trim_name(self, data, **kwargs):
-        """预处理：去除 name 字段的前后空格"""
-        if 'name' in data:
-            data['name'] = data['name'].strip()
-        return data
+    description = auto_field(
+        validate=validate.Length(max=50),
+        error_messages={"required": "Description must be less than 50 characters"}
+    )
+
+    image = auto_field(
+        validate=validate.Length(max=50),
+        error_messages={"required": "Image should be less than 500 characters"}
+    )
+
+    cuda = auto_field(
+        default=False,
+        description="是否支持CUDA"
+    )
+
+    instruction = auto_field(
+        validate=validate.Length(max=50),
+        error_messages={"required": "Instructions should be less than 50 characters"}
+    )
+
+    accuracy = auto_field(
+        validate=validate.Range(min=0, max=99.99),
+        error_messages={"required": "Accuracy should be between 0 and 99.9 characters"}
+    )
+
+    type = auto_field(
+        validate=validate.Length(
+            max=100,
+            error="Type must be less than 100 characters"
+        )
+    )
 
     @validates('input')
     def validate_input(self, value):
@@ -59,6 +82,53 @@ class ModelCreateSchema(ModelBaseSchema):
 
 class ModelUpdateSchema(ModelBaseSchema):
     pass
+
+
+class ModelBaseFieldsMixin:
+    name = fields.Str(
+        required=False,
+        validate=[
+            validate.Length(min=1, max=30),  # 移除 error 参数
+            validate.Regexp(r'^\s*.*?\S+.*\s*$')  # 移除 error 参数
+        ],
+        error_messages={
+            "too_short": "Name must be between 1 and 30 characters",
+            "too_long": "Name must be between 1 and 30 characters",
+            "regexp": "Name cannot be empty or just spaces"
+        }
+    )
+
+    description = auto_field(
+        validate=validate.Length(max=50),
+        error_messages={"required": "Description must be less than 50 characters"}
+    )
+
+    input = auto_field(
+        validate=validate.OneOf(
+            ["jpg", "jpeg", "png"],
+            error="input must be jpg, jpeg, png"
+        )
+    )
+
+    cuda = auto_field(
+        validate=validate.OneOf(
+            [True, False],
+            error="cuda must be true/false"
+        )
+    )
+
+
+class ModelSearchSchema(ModelBaseFieldsMixin, SortBaseSchema):
+    class Meta:
+        model = Model
+        ordered = True
+    # 排序控制
+    sort_by = fields.String(
+        validate=validate.OneOf(
+            ["stars", "likes", "accuracy", "sales"],
+            error="排序字段只能是 stars/likes/like/accuracy"
+        )
+    )
 
 
 class ModelRunSchema(BaseSchema):

@@ -1,14 +1,73 @@
 from flask_limiter import Limiter
-from flask_marshmallow.sqla import SQLAlchemyAutoSchema
-from marshmallow import Schema, EXCLUDE
+
+from marshmallow import EXCLUDE, pre_load, fields, validate
 from functools import wraps
+
+from marshmallow.fields import String
+from marshmallow_sqlalchemy import SQLAlchemySchema, SQLAlchemyAutoSchema
 from webargs.flaskparser import parser
 from flask import g, request, current_app
 
+from app.core.exception import ValidationError
 
-class BaseSchema(Schema):
+
+class BaseSchema(SQLAlchemySchema):
     class Meta:
         unknown = EXCLUDE  # 禁止未知字段
+
+        # 自动去除字符串两端空格，空字符串会变成 ""
+        string_trim = True
+
+    @pre_load
+    def _validate_string_fields(self, data, **kwargs):
+        """核心预处理逻辑：拦截空字符串和纯空格"""
+        errors = {}
+
+        # 1. 先校验必填字段是否存在
+        for field_name, field in self.fields.items():
+            if field.required and field_name not in data:
+                errors[field_name] = ["This field is required"]
+
+        # 2. 再校验所有传入的字符串字段（无论是否必填）
+        for field_name, value in data.items():
+            field = self.fields.get(field_name)
+
+            if isinstance(field, String):
+                # 关键逻辑：如果传了值，则必须是非空内容
+                if value.strip() == "":
+                    errors.setdefault(field_name, []).append(
+                        f"{field_name.capitalize()} cannot be empty or whitespace"
+                    )
+
+        if errors:
+            raise ValidationError(errors)
+
+        return data
+
+
+class SortBaseSchema(BaseSchema):
+    # 排序控制
+    sort_by = fields.String(
+        validate=validate.OneOf(
+            ["stars", "likes"],
+            error="排序字段只能是 stars/likes"
+        )
+    )
+    sort_order = fields.String(
+        validate=validate.OneOf(
+            ["asc", "desc"],
+            error="排序顺序只能是 asc/desc")
+    )
+
+    # 分页控制
+    page = fields.Integer(
+        validate=validate.Range(min=1, max=1000),
+        metadata={"default": 1, "description": "页码 (1-based)"}
+    )
+    per_page = fields.Integer(
+        validate=validate.Range(min=1, max=100),
+        metadata={"default": 5, "description": "每页数量"}
+    )
 
 
 class AutoSchema(SQLAlchemyAutoSchema):
@@ -35,11 +94,10 @@ def apply_rate_limit(rule):
 
             # 返回装饰后的函数
             return limiter.limit(rule)(func)(*args, **kwargs)  # 不再调用装饰器
+
         return wrapper
 
     return decorator
-
-
 
 
 def validate_request(schema_cls, content_type="json"):

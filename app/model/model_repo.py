@@ -24,73 +24,50 @@ class ModelRepository:
         return Model.query.filter_by(cuda=cuda_support).all()
 
     @staticmethod
-    def search_models(name=None, input=None, cuda=None, description=None, type=None, page=1, per_page=10,
-                      sort_by='accuracy', sort_order='asc'):
+    def search_models(params: dict):
         query = Model.query
-        if name:
-            query = query.filter(Model.name.like(f"%{name}%"))
+        if params.get('name'):
+            query = query.filter(Model.name.ilike(f"%{params.get('name')}%"))
 
-        if input:
-            query = query.filter(Model.input.like(f"%{input}"))
+        if params.get('input'):
+            query = query.filter(Model.input.like(f"%{params.get('input')}"))
 
-        if cuda is not None:
-            query = query.filter(Model.cuda == cuda)
+        if params.get('cuda'):
+            query = query.filter(Model.cuda == params.get('cuda'))
 
-        if description:
-            query = query.filter(Model.description.like(f"%{description}%"))
+        if params.get('description'):
+            query = query.filter(Model.description.ilike(f"%{params.get('description')}%"))
 
-        if type:
-            query = process_and_filter_tags(query, Model.type, type)
+        if params.get('type'):
+            query = process_and_filter_tags(query, Model.type, params.get('type'))
 
         # 排序逻辑
-        if sort_by in SORT_BY_CHOICES:
-            if sort_order == 'desc':
-                query = query.order_by(getattr(Model, sort_by).desc(), Model.id.asc())  # 降序
+        if params.get('sort_by') in SORT_BY_CHOICES:
+            if params.get('sort_order')  == 'desc':
+                query = query.order_by(getattr(Model, params.get('sort_by')).desc(), Model.id.asc())  # 降序
             else:
-                query = query.order_by(getattr(Model, sort_by).asc(), Model.id.asc())  # 升序
-        elif not sort_by and not sort_order:
+                query = query.order_by(getattr(Model, params.get('sort_by')).asc(), Model.id.asc())  # 升序
+        elif not params.get('sort_by') and not params.get('sort_order'):
             # 如果没有提供排序字段和排序顺序，直接跳过排序，返回原始查询
             pass
         else:
             raise ValidationError("Invalid sort field. Only 'accuracy', 'sales', 'stars', and 'likes' are allowed.")
+
         # 总数
         total_count = query.count()
 
         # 分页查询
-        models = query.offset((page - 1) * per_page).limit(per_page).all()
+        models = query.offset((params.get('page', 1) - 1) * params.get('per_page', 5)).limit(params.get('per_page', 5)).all()
+
+        print(f"SQL Query: {str(query)}")
 
         return total_count, models
 
     @staticmethod
-    def create_model(data):
-        """在数据库中创建一个新的模型"""
-        # 创建模型对象
-        model = Model(
-            name=data["name"],
-            image=data.get("image"),
-            input=data["input"],
-            description=data["description"],
-            cuda=data.get("cuda", False),
-            instruction=data.get("instruction"),
-            output=data.get("output"),
-            accuracy=data.get("accuracy"),
-            type=data.get("type"),
-        )
-
-        # 将模型添加到数据库
-        db.session.add(model)
-        return model
-
-    @staticmethod
-    def update_model(model, **updates):
-        """更新模型信息"""
-        # 遍历传入的更新字段，将其应用到模型实例
-        for key, value in updates.items():
-            if hasattr(model, key):  # 检查模型是否有这个字段
-                setattr(model, key, value)
-            else:
-                raise ValidationError(f"Field '{key}' does not exist in the model")
-        return model
+    def save_model(model_instance):
+        """通用保存方法，用于创建和更新"""
+        db.session.add(model_instance)
+        return model_instance
 
     @staticmethod
     def delete_model(model):

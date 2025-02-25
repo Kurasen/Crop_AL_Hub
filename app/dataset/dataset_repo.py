@@ -1,3 +1,4 @@
+
 from app.utils.tag_filtering_utils import process_and_filter_tags
 from app.core.exception import InvalidSizeError, ValidationError
 from app.exts import db
@@ -29,52 +30,46 @@ class DatasetRepository:
         return Dataset.query.filter(Dataset.path.ilike(f"%{path}%")).all()
 
     @staticmethod
-    def search(name=None, path=None, description=None, type=None,
-               page=1, per_page=10, sort_by=None, sort_order=None):
+    def search(params: dict):
         """支持多条件查询"""
         query = Dataset.query
 
         # 模糊查询数据集名称
-        if name:
-            query = query.filter(Dataset.name.ilike(f"%{name}%"))
-
-        # 模糊查询数据集路径
-        if path:
-            query = query.filter(Dataset.path.ilike(f"%{path}%"))
+        if params.get('name'):
+            query = query.filter(Dataset.name.ilike(f"%{params.get('name')}%"))
 
         # 添加描述字段的查询条件
-        if description:
-            query = query.filter(Dataset.description.ilike(f"%{description}%"))
+        if params.get('description'):
+            query = query.filter(Dataset.description.ilike(f"%{params.get('description')}%"))
 
-        print(sort_by, sort_order)
         # 精确查询多个标签（支持多标签模糊查询）
-        if type:
-            query = process_and_filter_tags(query, Dataset.type, type)
+        if params.get('type'):
+            query = process_and_filter_tags(query, Dataset.type, params.get('type'))
 
             # 根据 sort_by 和 sort_order 排序
-        if sort_by in SORT_BY_CHOICES:
-            if sort_order == 'desc':
-                query = query.order_by(getattr(Dataset, sort_by).desc(), Dataset.id.asc())
+        if params.get('sort_by') in SORT_BY_CHOICES:
+            if params.get('sort_order') == 'desc':
+                query = query.order_by(getattr(Dataset, params.get('sort_by')).desc(), Dataset.id.asc())
             else:
-                query = query.order_by(getattr(Dataset, sort_by).asc(), Dataset.id.asc())
-        elif sort_by == 'size':
+                query = query.order_by(getattr(Dataset, params.get('sort_by')).asc(), Dataset.id.asc())
+        elif params.get('sort_by') == 'size':
             # 获取所有数据集
             datasets = query.all()
 
             # 进行大小转换和排序
             datasets.sort(key=lambda dataset: DatasetRepository.convert_size_to_bytes(dataset.size),
-                          reverse=(sort_order == 'desc'))
+                          reverse=(params.get('sort_order') == 'desc'))
 
             # 返回排序后的数据集
             return len(datasets), datasets
-
-        elif not sort_by and not sort_order:
+        elif not params.get("page", 1) and not params.get('sort_order', 5):
             pass
+
         # 计算总数
         total_count = query.count()
 
         # 分页查询
-        datasets = query.offset((page - 1) * per_page).limit(per_page).all()
+        datasets = query.offset((params.get('page', 1) - 1) * params.get('per_page', 5)).limit(params.get('per_page', 5)).all()
 
         print(f"SQL Query: {str(query)}")
         return total_count, datasets
@@ -98,33 +93,12 @@ class DatasetRepository:
         raise ValueError(f"Unknown size unit in: {size_str}. Use KB, MB, GB.")
 
     @staticmethod
-    def create_dataset(data):
-        """在数据库中创建一个新的数据集"""
-        # 创建数据集对象
-        dataset = Dataset(
-            name=data["name"],
-            path=data.get("path"),
-            size=data.get("size"),
-            description=data.get("description"),
-            type=data.get("type")
-        )
-
-        db.session.add(dataset)
-        return dataset
-
-    @staticmethod
-    def update_dataset(dataset, **updates):
-        """更新数据集的信息"""
-        # 遍历传入的更新字段，将其应用到数据集实例
-        for key, value in updates.items():
-            if hasattr(dataset, key):
-                setattr(dataset, key, value)
-            else:
-                raise ValidationError(f"Field '{key}' does not exist in the dataset")
-        return dataset
+    def save_dataset(dataset_instance):
+        """通用保存方法，用于创建和更新"""
+        db.session.add(dataset_instance)
+        return dataset_instance
 
     @staticmethod
     def delete_dataset(dataset):
         """删除数据集"""
         db.session.delete(dataset)
-

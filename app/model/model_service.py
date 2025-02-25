@@ -1,5 +1,6 @@
 from flask import current_app
 
+from app.schemas.model_schema import ModelUpdateSchema, ModelCreateSchema, ModelSearchSchema
 from app.utils.upload_file import save_uploaded_file
 from app.core.exception import DatabaseError, ValidationError, FileUploadError, ImageProcessingError, \
     NotFoundError
@@ -32,28 +33,18 @@ class ModelService:
         return model
 
     @staticmethod
-    def search_models(name=None, input=None, cuda=None, description=None, type=None, page=1, per_page=10,
-                      sort_by='accuracy', sort_order='asc'):
+    def search_models(request_args: dict):
         """查询模型，调用Repository层"""
         try:
-            total_count, models = ModelRepository.search_models(
-                name=name,
-                input=input,
-                cuda=cuda,
-                description=description,
-                type=type,
-                sort_by=sort_by,
-                sort_order=sort_order,
-                page=page,
-                per_page=per_page
-            )
+            search_params = ModelSearchSchema().load(request_args)
+            total_count, models = ModelRepository.search_models(search_params)
 
             return {
                 "data": [model.to_dict() for model in models],
                 "total_count": total_count,
-                "page": page,
-                "per_page": per_page,
-                "total_pages": (total_count + per_page - 1) // per_page
+                "page": search_params.get("page", 1),
+                "per_page": search_params.get("per_page", 5),
+                "total_pages": (total_count + search_params.get("per_page", 5) - 1) // search_params.get("per_page", 5)  # 计算总页数
             }
         except Exception as e:
             current_app.logger.error(f"Error occurred while searching models: {str(e)}")
@@ -63,9 +54,10 @@ class ModelService:
     def create_model(data):
         """创建模型"""
         try:
-            model = ModelRepository.create_model(data)
+            model_instance = ModelCreateSchema().load(data, session=db.session)
+            ModelRepository.save_model(model_instance)
             db.session.commit()
-            return model.to_dict(), 201
+            return model_instance.to_dict(), 201
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error occurred while creating model: {str(e)}")
@@ -77,17 +69,18 @@ class ModelService:
         try:
             # 获取模型对象
             model = ModelService.get_model_by_id(model_id)
-            if not model:
-                raise NotFoundError(f"Model with ID {model_id} not found")
+            model_instance = ModelUpdateSchema().load(
+                updates,
+                instance=model,  # 传入现有实例
+                partial=True,  # 允许部分更新
+                session=db.session
+            )
 
-            updated_model = ModelRepository.update_model(model, **updates)
+            ModelRepository.save_model(model_instance)
             db.session.commit()
-            return updated_model.to_dict(), 200
-        except NotFoundError as ne:
-            current_app.logger.error(f"Validation error while updating model {model_id}: {str(ne)}")
-            raise ne
+            return model_instance.to_dict(), 200
         except Exception as e:
-            db.session.rollback()  # 回滚事务
+            db.session.rollback()
             current_app.logger.error(f"Unexpected error while updating model {model_id}: {str(e)}")
             raise e
 
@@ -95,18 +88,10 @@ class ModelService:
     def delete_model(model_id):
         """删除模型"""
         try:
-            model = ModelRepository.get_model_by_id(model_id)
-            if not model:
-                raise NotFoundError(f"Model with ID {model_id} not found")
-
+            model = ModelService.get_model_by_id(model_id)
             ModelRepository.delete_model(model)
-
             db.session.commit()
             return {"message": "Model deleted successfully"}, 200
-
-        except NotFoundError as ne:
-            current_app.logger.error(f"Model with ID {model_id} not found: {str(ne)}")
-            raise ne
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error occurred while deleting model {model_id}: {str(e)}")
@@ -122,7 +107,6 @@ class ModelService:
     def process_model_and_file(model_id, uploaded_file):
         try:
             try:
-                # 尝试将 model_id 转换为整数
                 model_id = int(model_id)
             except ValueError:
                 raise ValidationError("model_id 应该是整数类型")
@@ -174,7 +158,7 @@ class ModelService:
             if not dataset:
                 raise NotFoundError(f"Dataset with ID {dataset_id} not found")
 
-            accuracy = ((model_id * dataset_id) % 100) / 100 # 模拟准确率，实际应用中应使用模型的真实准确率
+            accuracy = ((model_id * dataset_id) % 100) / 100  # 模拟准确率，实际应用中应使用模型的真实准确率
             return {
                 "model_id": model_id,
                 "dataset_id": dataset_id,

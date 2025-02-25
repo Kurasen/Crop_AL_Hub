@@ -8,10 +8,10 @@ class Dataset(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 主键
     name = db.Column(db.String(100), nullable=False, index=True)  # 数据集名称
-    path = db.Column(db.String(255), default="")  # 数据集文件路径
-    size = db.Column(db.String(50), default="")  # 数据集大小 (例如 MB 或 GB)
-    description = db.Column(db.Text, default="")  # 数据集描述
-    type = db.Column(db.String(100), default="")  # 数据集类型
+    path = db.Column(db.String(255))  # 数据集文件路径
+    size = db.Column(db.String(50))  # 数据集大小 (例如 MB 或 GB)
+    description = db.Column(db.Text)  # 数据集描述
+    type = db.Column(db.String(100))  # 数据集类型
     downloads = db.Column(db.Integer, default=0)  # 下载次数
     stars = db.Column(db.Integer, default=0)  # 收藏数
     likes = db.Column(db.Integer, default=0)  # 点赞数
