@@ -1,8 +1,8 @@
 # 数据
-id,user_id,order_type,model_id,dataset_id,order_date,status
-1,2,"model",3,,2025-01-19 03:14:07,"finish"
-2,2,"dataset",,3,2025-01-19 03:14:07,"finish"
-3,3,"model",6,,2024-01-19 08:14:07,"canseled"
+id,user_id,order_type,model_id,dataset_id,order_date,status,price
+1,2,"model",3,,2025-01-19 03:14:07,"finish",2.0
+2,2,"dataset",,3,2025-01-19 03:14:07,"finish",0.0
+3,3,"model",6,,2024-01-19 08:14:07,"canseled",1.0
 
 
 # 创建统一的订单表
@@ -14,13 +14,14 @@ CREATE TABLE orders_table (
     dataset_id INT,
     order_date TIMESTAMP NOT NULL,
     status VARCHAR(50) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user_table(id),
     FOREIGN KEY (model_id) REFERENCES model_table(id),
     FOREIGN KEY (dataset_id) REFERENCES dataset_table(id)
 );
 
-INSERT INTO orders_table (user_id, order_type, model_id, dataset_id, order_date, status)
+INSERT INTO orders_table (user_id, order_type, model_id, dataset_id, order_date, status, price)
 VALUES 
-(2, 'model', 3, NULL, '2025-01-19 03:14:07', 'finish'),
-(2, 'dataset', NULL, 3, '2025-01-19 03:14:07', 'finish'),
-(3, 'model', 6, NULL, '2024-01-19 08:14:07', 'canceled');
+(2, 'model', 3, NULL, '2025-01-19 03:14:07', 'finish', 2.0),
+(2, 'dataset', NULL, 3, '2025-01-19 03:14:07', 'finish', 0.0),
+(3, 'model', 6, NULL, '2024-01-19 08:14:07', 'canceled', 1.0);
