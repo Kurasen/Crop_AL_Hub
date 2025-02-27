@@ -28,6 +28,7 @@ def create_app():
         app=app,
         key_func=lambda: get_remote_address(),
         default_limits=['200 per day', '50 per hour'],
+        storage_uri="redis://redis:6379"
     )
 
     # 配置转码

@@ -3,7 +3,7 @@ import os
 import logging
 from contextlib import contextmanager
 import redis
-from typing import Dict, Any
+from typing import Dict
 from app.core.exception import RedisConnectionError
 
 # 配置日志

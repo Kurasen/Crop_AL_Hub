@@ -14,6 +14,7 @@ class User(db.Model):
     password = db.Column(db.String(200), nullable=False)  # 密码字段
     email = db.Column(db.String(100), unique=True)  # 邮箱
     telephone = db.Column(db.String(15), unique=True)  # 手机号
+    role_id = db.Column(db.Integer, default=0)  # 用户角色
 
     def __init__(self, **kwargs):
         # 确保可为空字段都有默认值

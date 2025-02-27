@@ -68,3 +68,5 @@ class UserLoginSchema(AuthWithPasswordSchema):
 
 class GenerateCodeSchema(AuthBaseSchema):
     pass
+
+

@@ -45,3 +45,4 @@ class Model(db.Model):
             'stars': self.stars,
             'likes': self.likes
         }
+

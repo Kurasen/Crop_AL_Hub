@@ -1,5 +1,6 @@
 version: '3'
 services:
+  # 主系统 （flask）
   flask:
     build: .
     image: crop_al_hub-master_flask:latest
@@ -44,6 +45,16 @@ services:
     networks:
       - app-network
 
+#  seed-calculator:
+#    build: ./algorithms/seed_calc
+#    container_name: seed_calculator
+#    ports:
+#      - "5050:5000"
+#    networks:
+#      - app-network
+
 networks:
   app-network:
     driver: bridge
+
+
