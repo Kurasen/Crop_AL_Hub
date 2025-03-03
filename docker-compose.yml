@@ -18,8 +18,7 @@ services:
     volumes:
       - .:/app  # 映射代码到容器，确保容器能看到最新的文件
     working_dir: /app  # 确保工作目录为项目根目录
-    #command: flask run --host=0.0.0.0 --port=5000  # 让 Flask 在容器外部也能访问
-    command: python myapp.py
+    command: flask run --host=0.0.0.0 --port=5000  # 让 Flask 在容器外部也能访问
     tty: true  # 保持容器活跃
     networks:
       - app-network
