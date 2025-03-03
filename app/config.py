@@ -16,6 +16,9 @@ class Config:
     LOCK_KEY = os.getenv('LOCK_KEY', 'user_login_lock')  # 默认值为 'user_login_lock'
     LOCK_EXPIRE = int(os.getenv('LOCK_EXPIRE', 300))  # 默认过期时间为 300 秒
 
+    LIMITER_STORAGE_URI = "redis://redis:6379"
+    LIMITER_DEFAULT_LIMITS = ['200 per day', '50 per hour']
+
     # 数据库配置
     @staticmethod
     def get_sqlalchemy_uri():

@@ -1,0 +1,32 @@
+# 数据
+id,user_id,order_type,model_id,dataset_id,order_date,status,price
+1,2,"model",3,,2025-01-19 03:14:07,"finish",2.0
+2,2,"dataset",,3,2025-01-19 03:14:07,"finish",0.0
+3,3,"model",6,,2024-01-19 08:14:07,"canseled",1.0
+
+
+# 创建统一的订单表
+CREATE TABLE orders_table (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    order_type VARCHAR(50) NOT NULL,
+    model_id INT,
+    dataset_id INT,
+    order_date TIMESTAMP NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user_table(id),
+    FOREIGN KEY (model_id) REFERENCES model_table(id),
+    FOREIGN KEY (dataset_id) REFERENCES dataset_table(id)
+);
+
+# 添加索引
+CREATE INDEX idx_order_model ON orders_table (model_id, status);
+CREATE INDEX idx_order_dataset ON orders_table (dataset_id, status);
+CREATE INDEX idx_order_status ON orders_table (status);
+
+INSERT INTO orders_table (user_id, order_type, model_id, dataset_id, order_date, status, price)
+VALUES 
+(2, 'model', 5, NULL, '2025-01-19 03:14:07', 'pending', 2.0),
+(2, 'dataset', NULL, 5, '2025-01-19 03:14:07', 'completed', 0.0),
+(3, 'model', 6, NULL, '2024-01-19 08:14:07', 'cancelled', 1.0);

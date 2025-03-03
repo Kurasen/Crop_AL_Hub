@@ -1,4 +1,19 @@
+
+
+from sqlalchemy.ext.hybrid import hybrid_property
+
+
 from app.exts import db
+from app.order.order import OrderStatus
+
+"""
+    graph TD
+    A[Model 模型层] -->|定义 hybrid_property| B(ORM 查询能力)
+    C[Service 服务层] -->|处理缓存| D(Redis 连接池)
+    A -->|被 Service 调用| C
+    B -->|生成高效SQL| E[数据库]
+    D -->|缓存加速| F[高并发访问]
+    """
 
 
 # 定义数据库模型
@@ -15,9 +30,11 @@ class Model(db.Model):
     output = db.Column(db.String(100), default="")  # 输出字段
     accuracy = db.Column(db.Numeric(4, 2), default=0)  # 精度字段，DECIMAL(4, 2) 对应 Numeric(4, 2)
     type = db.Column(db.String(100), default="")  # 模型类型
-    sales = db.Column(db.Integer, default=0)  # 销售字段
-    stars = db.Column(db.Integer, default=0)  # 收藏字段
     likes = db.Column(db.Integer, default=0)  # 点赞数字段
+    price = db.Column(db.Numeric(10, 2))
+
+    stars = db.relationship("Star", back_populates="model", lazy="dynamic")
+    orders = db.relationship("Order", back_populates="model", lazy="dynamic")
 
     def __init__(self, **kwargs):
         """
@@ -41,8 +58,38 @@ class Model(db.Model):
             'output': self.output,
             'accuracy': self.accuracy,
             'type': self.type,
-            'sales': self.sales,
-            'stars': self.stars,
-            'likes': self.likes
+            'likes': self.likes,
+            'price': self.price
+
         }
 
+    @hybrid_property
+    def sales_count(self):
+        """访问时触发服务层逻辑"""
+        from app.order.order_service import OrderService
+        return OrderService.get_model_sales_count()
+
+    @sales_count.expression
+    def sales_count(cls):
+        """生成SQL表达式（用于查询排序/过滤）"""
+        from app.order.order import Order
+        return (
+            db.select(db.func.count(Order.id))
+            .where(Order.model_id == cls.id)
+            .where(Order.status == OrderStatus.COMPLETED)
+            .correlate(cls)
+            .scalar_subquery()
+            .label("sales_count")
+        )
+
+    # def update_star_count(mapper, connection, target):
+    #     """收藏变动时自动更新缓存"""
+    #     model = target.model
+    #     connection.execute(
+    #         Model.__table__.update()
+    #         .values(star_count=Model.star_count + (1 if target.is_add else -1))
+    #         .where(Model.id == model.id)
+    #     )
+    # # 监听Star表的插入和删除事件
+    # event.listen(Star, 'after_insert', update_star_count)
+    # event.listen(Star, 'after_delete', update_star_count)

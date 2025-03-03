@@ -19,4 +19,6 @@ ENV FLASK_RUN_HOST=0.0.0.0
 # 启动 Flask 应用
 #CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
 
-CMD ["tail", "-f", "/dev/null"]
+#CMD ["tail", "-f", "/dev/null"]
+
+CMD ["python", "myapp.py"]
