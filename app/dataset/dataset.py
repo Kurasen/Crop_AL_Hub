@@ -20,8 +20,8 @@ class Dataset(db.Model):
     likes = db.Column(db.Integer, default=0)  # 点赞数
     price = db.Column(db.Numeric(10, 2))
 
-    stars = db.relationship("Star", back_populates="dataset")
-    orders = db.relationship("Order", back_populates="dataset")
+    # stars = db.relationship("Star", back_populates="dataset", lazy="dynamic")
+    # orders = db.relationship("Order", back_populates="dataset", lazy="dynamic")
 
     def __init__(self, **kwargs):
         """
@@ -41,8 +41,7 @@ class Dataset(db.Model):
             "size": self.size,
             "description": self.description,
             "type": self.type,
-            "downloads": self.downloads,
-            "stars": self.stars,
+            # "stars": self.stars,
             "likes": self.likes
         }
 

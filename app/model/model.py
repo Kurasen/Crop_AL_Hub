@@ -2,7 +2,7 @@
 
 from sqlalchemy.ext.hybrid import hybrid_property
 
-
+from app import Star
 from app.exts import db
 from app.order.order import OrderStatus
 
@@ -64,6 +64,23 @@ class Model(db.Model):
         }
 
     @hybrid_property
+    def stars_count(self):
+        """直接获取该模型的收藏数（适用于单个对象）"""
+        return self.stars.filter_by(star_type=Star.StarType.MODEL).count()
+
+    @stars_count.expression
+    def stars_count(cls):
+        """生成 SQL 表达式（适用于查询排序/过滤）"""
+        return (
+            db.select(db.func.count(Star.id))
+            .where(Star.model_id == cls.id)
+            .where(Star.star_type == Star.StarType.MODEL)
+            .correlate(cls)
+            .scalar_subquery()
+            .label("stars_count")
+        )
+
+    @hybrid_property
     def sales_count(self):
         """访问时触发服务层逻辑"""
         from app.order.order_service import OrderService
@@ -81,6 +98,8 @@ class Model(db.Model):
             .scalar_subquery()
             .label("sales_count")
         )
+
+
 
     # def update_star_count(mapper, connection, target):
     #     """收藏变动时自动更新缓存"""

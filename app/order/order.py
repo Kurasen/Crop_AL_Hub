@@ -38,9 +38,9 @@ class Order(UserInteractionBase):
     price = db.Column(db.Numeric(10, 2), nullable=False)
 
     # 关系定义
-    user = db.relationship("User", back_populates="orders")
-    model = db.relationship("Model", back_populates="orders")
-    dataset = db.relationship("Dataset", back_populates="orders")
+    user = db.relationship("User", back_populates="orders", lazy="joined")
+    model = db.relationship("Model", back_populates="orders", lazy="select")
+    # dataset = db.relationship("Dataset", back_populates="orders", lazy="select")
 
     def __repr__(self):
         return f"<Order(id={self.id}, type={self.order_type}, price={self.price})>"

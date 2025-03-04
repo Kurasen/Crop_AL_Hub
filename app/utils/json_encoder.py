@@ -5,13 +5,11 @@ from decimal import Decimal
 from flask import Response
 
 
-
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Decimal):
             return float(obj)  # 将 Decimal 转换为 float
         return super().default(obj)
-
 
 
 # 创建一个通用的 JSON 响应方法

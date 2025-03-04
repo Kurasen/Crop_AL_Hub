@@ -1,8 +1,7 @@
 import os
-from flask import Flask
+from flask import Flask, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-
 
 from app.config import config
 from app.core.exception import init_error_handlers
@@ -11,8 +10,7 @@ from app.exts import db
 from flask_migrate import Migrate
 from flask_cors import CORS
 
-
-from app.utils.json_encoder import CustomJSONEncoder
+from app.utils.json_encoder import CustomJSONEncoder, create_json_response
 from flask.app import Flask as FlaskApp
 
 
@@ -22,6 +20,9 @@ def create_app(env=None):
 
     # 获取环境配置
     configure_app(app, env)
+
+    # 注册全局check_json钩子
+    configure_global_checks(app)
 
     # 初始化扩展
     init_extensions(app)
@@ -103,6 +104,30 @@ def register_blueprints(app: FlaskApp):
     app.register_blueprint(orders_bp, url_prefix='/api/v1/orders')
 
 
+def configure_global_checks(app):
+    @app.before_request
+    def check_json():
+        if request.method == 'OPTIONS':
+            return
+
+        allowed_content_types = ['application/json', 'multipart/form-data']
+
+        # 仅检查非 GET/HEAD 请求
+        if request.method not in ['GET', 'HEAD']:
+            content_type = request.headers.get('Content-Type', '')
+            content_length = request.content_length or 0
+
+            # 仅当请求体非空时检查Content-Type, 允许Json或表单上传
+            if content_length > 0 and not any(content_type for ct in allowed_content_types):
+                if 'application/json' not in content_type:
+                    return create_json_response({"error": "Content-Type 必须是 application/json"}, 415)
+
+                # 验证非空请求体的 JSON 有效性
+                try:
+                    request.get_json()
+                except Exception as e:
+                    app.logger.error("JSON 解析失败: 错误=%s", str(e))
+                    return create_json_response({"error": "请求体必须是有效的 JSON"}, 400)
 
 
 app = create_app()
@@ -126,5 +151,3 @@ if __name__ == '__main__':
 
     # 启动应用
     app.run(host='0.0.0.0', port=8080, debug=True)
-
-

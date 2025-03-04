@@ -25,8 +25,9 @@ def search():
     ?name=
     """
     search_params = DatasetSearchSchema().load(request.args.to_dict())
-    result = DatasetService.search_datasets(search_params)
-    return create_json_response(result)
+    result, status = DatasetService.search_datasets(search_params)
+    print(result)
+    return create_json_response(result, status)
 
 
 # 创建新数据集

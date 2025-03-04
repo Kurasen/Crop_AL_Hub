@@ -1,9 +1,8 @@
 from flask import current_app
 
-from app.core.exception import DatabaseError, NotFoundError, ValidationError
+from app.core.exception import DatabaseError, NotFoundError
 from app.dataset.dataset_repo import DatasetRepository
 from app.exts import db
-from app.schemas.dataset_shema import DatasetCreateSchema, DatasetUpdateSchema, DatasetSearchSchema
 
 
 class DatasetService:
@@ -48,7 +47,7 @@ class DatasetService:
             "page": search_params.get("page", 1),
             "per_page": search_params.get("per_page", 5),
             "total_pages": (total_count + search_params.get("per_page", 5) - 1) // search_params.get("per_page", 5)  # 计算总页数
-        }
+        }, 200
 
     @staticmethod
     def create_dataset(dataset_instance):

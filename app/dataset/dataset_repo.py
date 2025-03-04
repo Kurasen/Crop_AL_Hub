@@ -5,7 +5,7 @@ from app.exts import db
 from app.dataset.dataset import Dataset
 
 # 定义排序字段的枚举类型
-SORT_BY_CHOICES = ['stars', 'likes', 'downloads']
+SORT_BY_CHOICES = ['stars', 'likes']
 
 
 class DatasetRepository:

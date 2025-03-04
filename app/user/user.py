@@ -16,8 +16,8 @@ class User(db.Model):
     telephone = db.Column(db.String(15), unique=True)  # 手机号
     role_id = db.Column(db.Integer, default=0)  # 用户角色
 
-    stars = db.relationship("Star", back_populates="user")
-    orders = db.relationship("Order", back_populates="user")
+    stars = db.relationship("Star", back_populates="user", lazy="dynamic")
+    orders = db.relationship("Order", back_populates="user", lazy="dynamic")
 
     def __init__(self, **kwargs):
         # 确保可为空字段都有默认值

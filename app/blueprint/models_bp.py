@@ -36,7 +36,6 @@ def test_model(model_id):
     上传一张图片，进行处理并返回处理后的图片和相应的 JSON 数据。
     """
     # 文件校验
-
     uploaded_file = ModelTestSchema().load(request.files).get('file')
 
     # 处理模型和文件，获取图像处理路径和模型信息
@@ -47,6 +46,7 @@ def test_model(model_id):
         processed_image_path,
         mimetype='image/jpeg'
     ))
+
     response.headers['X-Model-Output'] = json.dumps(model_info)
 
     return response

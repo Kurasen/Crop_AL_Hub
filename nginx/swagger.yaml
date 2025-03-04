@@ -15,6 +15,8 @@ tags:
     description: ''
   - name: models
     description: ''
+  - name: stars
+    description: ''
 
 paths:
   /api/v1/auth/register:
@@ -767,6 +769,71 @@ paths:
           description: 模型未找到
         '500':
           description: Internal server error
+
+  /api/v1/stars/{target_id}/{star_type}:
+    post:
+      tags:
+        - stars
+      summary: 增加收藏
+      description: 根据当前用户及收藏的数据type和id来增加收藏
+      operationId: createStar
+      parameters:
+        - name: target_id
+          in: path
+          required: true
+          description: 要增加收藏的数据id
+          schema:
+            type: integer
+            format: int64
+        - name: star_type
+          in: path
+          required: true
+          description: 要增加收藏的数据type
+          schema:
+            type: string
+            enum: [model, dataset]
+      responses:
+        '200':
+          description: 增加成功
+        '404':
+          description: 数据异常
+        '500':
+          description: Internal server error
+      security:
+        - BearerAuth: []  # 需要 Bearer Token 进行认证
+
+    delete:
+      tags:
+        - stars
+      summary: 取消收藏
+      description: 根据当前用户及收藏的数据type和id来取消收藏
+      operationId: deleteStar
+      parameters:
+        - name: target_id
+          in: path
+          required: true
+          description: 要取消收藏的数据id
+          schema:
+            type: integer
+            format: int64
+        - name: star_type
+          in: path
+          required: true
+          description: 要取消收藏的数据type
+          schema:
+            type: string
+            enum: [ model, dataset ]
+      responses:
+        '200':
+          description: 取消成功
+        '404':
+          description: 数据异常
+        '500':
+          description: Internal server error
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
+
+
 
 components:
   schemas:

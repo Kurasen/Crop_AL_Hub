@@ -1,6 +1,5 @@
 from flask import current_app
 
-from app.schemas.model_schema import ModelUpdateSchema, ModelCreateSchema, ModelSearchSchema
 from app.utils.upload_file import save_uploaded_file
 from app.core.exception import DatabaseError, ValidationError, FileUploadError, ImageProcessingError, \
     NotFoundError
@@ -29,7 +28,7 @@ class ModelService:
         # 获取指定ID的模型
         model = ModelRepository.get_model_by_id(model_id)
         if not model:
-            raise NotFoundError(f"Dataset with ID {model_id} not found")
+            raise NotFoundError(f"Model with ID {model_id} not found")
         return model
 
     @staticmethod
@@ -102,8 +101,7 @@ class ModelService:
                 raise ValidationError("model_id 应该是整数类型")
 
             # 检查 model_id 是否有效
-            if not ModelService.get_model_by_id(model_id):
-                raise ValidationError("无效的 model_id")
+            ModelService.get_model_by_id(model_id)
 
             # 处理文件上传
             file_path = save_uploaded_file(uploaded_file)
@@ -141,12 +139,6 @@ class ModelService:
 
             model = ModelService.get_model_by_id(model_id)
             dataset = DatasetService.get_dataset_by_id(dataset_id)
-
-            # 校验模型和数据集是否存在
-            if not model:
-                raise NotFoundError(f"Model with ID {model_id} not found")
-            if not dataset:
-                raise NotFoundError(f"Dataset with ID {dataset_id} not found")
 
             accuracy = ((model_id * dataset_id) % 100) / 100  # 模拟准确率，实际应用中应使用模型的真实准确率
             return {

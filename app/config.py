@@ -17,7 +17,7 @@ class Config:
     LOCK_EXPIRE = int(os.getenv('LOCK_EXPIRE', 300))  # 默认过期时间为 300 秒
 
     LIMITER_STORAGE_URI = "redis://redis:6379"
-    LIMITER_DEFAULT_LIMITS = ['200 per day', '50 per hour']
+    LIMITER_DEFAULT_LIMITS = ['200 per day', '200 per hour']
 
     # 数据库配置
     @staticmethod
