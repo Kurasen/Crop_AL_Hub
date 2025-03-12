@@ -31,7 +31,7 @@ class RedisConnectionPool:
             return
         self.__class__._initialized = True
         # 从环境变量读取配置
-        self.redis_host = os.getenv('REDIS_HOST', 'redis')
+        self.redis_host = os.getenv('REDIS_HOST', '127.0.0.1')
         self.redis_port = int(os.getenv('REDIS_PORT', 6379))
         self.redis_password = os.getenv('REDIS_PASSWORD', None)
         # 初始化连接池
