@@ -6,6 +6,7 @@ from flask_limiter.util import get_remote_address
 from app.config import config
 from app.core.exception import init_error_handlers
 from app.core.redis_connection_pool import redis_pool
+# from app.docker.docker_service import INPUT_IMAGES_DIR, OUTPUT_DIR
 from app.exts import db
 from flask_migrate import Migrate
 from flask_cors import CORS
@@ -32,6 +33,10 @@ def create_app(env=None):
 
     # 配置Redis连接池
     app.config['REDIS_POOL'] = redis_pool
+
+    # # 创建输入输出目录  #%
+    # INPUT_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+    # OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     return app
 
@@ -149,5 +154,5 @@ if __name__ == '__main__':
             # db.session.commit()
             # OrderService.invalidate_sales_cache(model_id=1)
 
-    # 启动应用
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    # docekr化启动应用
+    app.run(host='0.0.0.0', port=5000, debug=True)

@@ -6,7 +6,7 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   version: 1.0.11
 servers:
-  - url: http://localhost:5000
+  - url: http://localhost:8080
     description: 本地开发服务器
 tags:
   - name: auth
@@ -29,38 +29,16 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                login_type:
-                  type: string
-                  description: 用户注册方式，选择 "email" 或 "telephone"
-                  example: "telephone"
-                login_identifier:
-                  type: string
-                  description: 电话或邮箱信息
-                  example: "13345678906"
-                username:
-                  type: string
-                  description: 用户名(昵称)
-                  example: "test004"
-                password:
-                  type: string
-                  description: 用户密码，密码长度应为8-20字符，包含至少一个大写字母、一个小写字母、一个数字和一个特殊字符。
-                  example: "Www1111@"
-                code:
-                  type: string
-                  description: 注册时的验证码，手机号或邮箱发送的验证码。
-                  example: "123456"
-
+              $ref: '#/components/schemas/AuthRegister'
       responses:
         '400':
-          description: Invalid input, missing fields or incorrect format
+          description: 输入无效、字段缺失或格式不正确
         '422':
-          description: Validation failed, invalid input format
+          description: 验证失败，输入格式无效
         '409':
-          description: Username, email or telephone already registered
+          description: 用户名、电子邮件或电话已注册
         '500':
-          description: Internal server error
+          description: 内部服务器错误
 
   /api/v1/auth/login:
     post:
@@ -90,7 +68,7 @@ paths:
                   refresh_token:
                     type: string
         '400':
-          description: Invalid input, missing fields or incorrect format
+          description: 输入无效、字段缺失或格式不正确
         '401':
           description: Authentication failed, invalid credentials
         '422':
@@ -302,7 +280,7 @@ paths:
         '400':
           description: Invalid input data
         '500':
-          description: Internal server error
+          description: 内部服务器错误
 
   /api/v1/datasets/{dataset_id}:
     get:
@@ -383,7 +361,7 @@ paths:
         '404':
           description: Dataset not found
         '500':
-          description: Internal server error
+          description: 内部服务器错误
 
     delete:
       summary: 删除单个数据集
@@ -412,7 +390,7 @@ paths:
         '404':
           description: Dataset not found
         '500':
-          description: Internal server error
+          description: 内部服务器错误
 
   /api/v1/models/{model_id}/run:
     get:
@@ -660,7 +638,7 @@ paths:
         '400':
           description: 请求数据无效
         '500':
-          description: Internal server error
+          description: 内部服务器错误
 
   /api/v1/models/{model_id}:
     get:
@@ -748,7 +726,7 @@ paths:
         '404':
           description: 模型未找到
         '500':
-          description: Internal server error
+          description: 内部服务器错误
 
     delete:
       tags:
@@ -768,7 +746,7 @@ paths:
         '404':
           description: 模型未找到
         '500':
-          description: Internal server error
+          description: 内部服务器错误
 
   /api/v1/stars/{target_id}/{star_type}:
     post:
@@ -798,7 +776,7 @@ paths:
         '404':
           description: 数据异常
         '500':
-          description: Internal server error
+          description: 内部服务器错误
       security:
         - BearerAuth: []  # 需要 Bearer Token 进行认证
 
@@ -829,10 +807,9 @@ paths:
         '404':
           description: 数据异常
         '500':
-          description: Internal server error
+          description: 内部服务器错误
       security:
         - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
-
 
 
 components:
@@ -840,27 +817,34 @@ components:
     AuthRegister:
       type: object
       required:
+        - login_type
+        - login_identifier
+        - username
         - password
+        - code
       properties:
+        login_type:
+          type: string
+          example: "telephone"
+          description: 用户注册方式，选择 "email" 或 "telephone"
+        login_identifier:
+          type: string
+          example: "13345678906"
+          description: 电话或邮箱信息
         username:
           type: string
-          description: 用户名
-          example: "john_doe"
+          example: "test004"
+          description: 用户名(昵称)
         password:
           type: string
-          description: 用户密码
-          example: "password123"
-        email:
-          type: string
-          description: 用户邮箱
-          example: "john.doe@example.com"
-        telephone:
-          type: string
-          description: 用户电话号码
-          example: "13345678906"
+          example: "Www1111@"
+          description: 用户密码，密码长度应为8-20字符，包含至少一个大写字母、一个小写字母、一个数字和一个特殊字符。
+        code:
+          type: integer
+          example: "123456"
+          description: 注册时的验证码，手机号或邮箱发送的验证码。
       description: >
         请提供电子邮件 (email) 或电话号码 (telephone)
-        
 
     AuthLogin:
       type: object

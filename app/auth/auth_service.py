@@ -77,7 +77,7 @@ class AuthService:
                     raise AuthenticationError("User does not exist")
                 if not PasswordService.check_password(user, password):  # 密码校验
                     LoginAttemptsRepository.increment_login_attempts(login_identifier)
-                    raise AuthenticationError("Invalid username or password")
+                    raise AuthenticationError("Invalid password")
 
                 # Step 4: 检查用户是否已有有效的 Access Token
                 stored_access_token = TokenRepository.get_user_token(user.id, "access")

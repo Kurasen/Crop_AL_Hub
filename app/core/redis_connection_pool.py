@@ -102,5 +102,6 @@ class RedisConnectionPool:
                 logger.debug(f"{pool_name} 连接已释放")
 
 
+
 # 初始化单例（全局唯一）
 redis_pool = RedisConnectionPool()

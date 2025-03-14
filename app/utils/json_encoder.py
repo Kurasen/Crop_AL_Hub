@@ -1,5 +1,6 @@
 # 自定义 JSONEncoder，处理 Decimal 类型
 import json
+import uuid
 from decimal import Decimal
 
 from flask import Response
@@ -12,7 +13,6 @@ class CustomJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-# 创建一个通用的 JSON 响应方法
 def create_json_response(data, status_code=200):
     """
     创建标准的 JSON 响应
@@ -20,11 +20,31 @@ def create_json_response(data, status_code=200):
     :param status_code: HTTP 状态码，默认是 200
     :return: Flask Response 对象
     """
-    # 如果 data 是字典，则保证返回 {"message": ...} 结构
-    if isinstance(data, str):  # 如果传入的是字符串
-        response_data = {"message": data, "status_code": status_code}
+    if isinstance(data, dict) and "error" in data:
+        # 如果是错误响应，格式化成 message 和 status_code
+        error_details = data["error"].get("details", {})
+        error_message = data["error"].get("message", "")
+
+        # 合并所有错误详情到 message 中
+        if error_details:
+            # 将错误详情内容合并为一个易于前端处理的字符串
+            error_message += " " + " ".join([f"{key}: {', '.join(errors)}" for key, errors in error_details.items()])
+
+        response_data = {
+            "data": None,
+            "msg": error_message,
+            "requestId": str(uuid.uuid4()),
+            "success": status_code  # 使用 HTTP 状态码作为自定义状态码
+        }
     else:
-        response_data = data  # 如果是字典或其他类型，直接返回
+        # 正常响应，保持原样
+        response_data = {
+            "data": data,
+            "msg": "success",
+            "requestId": str(uuid.uuid4()),
+            "success": status_code
+        }
+
     # 使用自定义 JSONEncoder 来序列化 JSON
     response = json.dumps(response_data, ensure_ascii=False, sort_keys=False, cls=CustomJSONEncoder)
 

@@ -157,7 +157,7 @@ def init_error_handlers(app):
             response = {"error": {"code": error.status_code, "message": f"Redis Error: {error.message}"}}
             status_code = error.status_code
         else:  # 其他未知错误
-            response = {"status": "error", "code": 500, "message": "Internal Server Error"}
+            response = {"status": "error", "code": 500, "message": "内部服务器错误"}
             status_code = 500
 
         # 记录错误日志，包括错误信息和请求信息

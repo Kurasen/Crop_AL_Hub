@@ -5,9 +5,10 @@ RUN python -m pip install --upgrade pip
 # 设置工作目录
 WORKDIR /app
 
-# 复制 requirements.txt 和安装依赖
+# 复制 requirements.txt 和安装依赖el
 COPY requirements.txt /app/
 RUN pip install --progress-bar off -r requirements.txt
+
 
 # 复制整个应用程序到容器中
 COPY . /app/

@@ -54,7 +54,7 @@ class AuthWithPasswordSchema(AuthBaseSchema):
 
 
 class UserCreateSchema(AuthWithPasswordSchema):
-    code = fields.Str(required=True, validate=validate.Regexp(r'^\d{6}$', error="验证码格式不对"))
+    code = fields.Int(required=True, validate=validate.Range(min=100000, max=999999, error="验证码格式不对"))
     username = fields.Str(required=True, validate=validate.Length(min=3))
 
     @validates_schema

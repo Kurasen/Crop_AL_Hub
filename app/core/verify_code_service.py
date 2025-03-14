@@ -43,7 +43,8 @@ class VerificationCodeService:
         login_identifier = validated_data.get('login_identifier')
         login_type = validated_data.get('login_type')
         # 生成一个6位数的验证码
-        code = ''.join(secrets.choice(string.digits) for _ in range(6))
+        #code = ''.join(secrets.choice(string.digits) for _ in range(6))
+        code = secrets.randbelow(900000) + 100000
 
         # 获取 Redis 客户端
         with redis_pool.get_redis_connection(pool_name='cache') as cache_client:
@@ -58,7 +59,7 @@ class VerificationCodeService:
                 # 如果验证码已经生成并且未超过一分钟
                 time_diff = time.time() - float(last_generated_time)
                 if time_diff < VerificationCodeService.RATE_LIMIT_TIME:
-                    raise ValidationError("请在一分钟后重试获取验证码")
+                    raise ValidationError("请在一分钟后重试获取验证码", 429)
 
             try:
                 # 设置验证码缓存，确保 cache_key 是 bytes 类型
@@ -119,7 +120,7 @@ class VerificationCodeService:
         :return: True 如果验证码正确，否则抛出 ValidationError
         """
         redis_key = VerificationCodeService._generate_redis_key(login_type, login_identifier)
-
+        print(code)
         try:
             with redis_pool.get_redis_connection(pool_name='cache') as cache_client:
                 pipe = cache_client.pipeline()
@@ -128,6 +129,7 @@ class VerificationCodeService:
 
                 # 明确处理返回值
                 stored_code = result[0] if len(result) > 0 else None
+                print(type(stored_code))
                 ttl = cache_client.ttl(redis_key)
 
                 if stored_code is None:
@@ -140,9 +142,12 @@ class VerificationCodeService:
                     current_app.logger.warning(f"验证码已过期: {redis_key}")
                     raise ValidationError("验证码已过期")
 
+                # 将存储的 code 从字节转为整数类型
+                stored_code = int(stored_code)  # 确保从 Redis 获取的 code 是整数
+
                 if stored_code != code:
                     current_app.logger.warning(f"验证码不匹配: 输入={code}, 存储={stored_code}")
-                    raise ValidationError("验证码错误")
+                    raise ValidationError("验证码错误", 422)
 
                 # 验证成功后删除验证码
                 pipe.delete(redis_key)
@@ -151,7 +156,7 @@ class VerificationCodeService:
                 return True
         except redis.exceptions.RedisError as e:
             current_app.logger.error(f"Redis操作失败: {str(e)}")
-            raise ValidationError("验证服务暂时不可用")
+            raise ValidationError("验证服务暂时不可用", 404)
 
     @staticmethod
     def _generate_redis_key(login_type, login_identifier):

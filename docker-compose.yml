@@ -45,13 +45,27 @@ services:
     networks:
       - app-network
 
-#  seed-calculator:
-#    build: ./algorithms/seed_calc
-#    container_name: seed_calculator
-#    ports:
-#      - "5050:5000"
+#  ##
+#  rice-maize-plant-counter:
+#    image: rice-maize-plant-counter:latest
 #    networks:
 #      - app-network
+#    environment:
+#      - REDIS_HOST=redis
+#      - IMAGE_TAG=latest
+#  ##
+#  seed_calc:
+#    image: seed_calc:latest
+#    networks:
+#      - app-network
+#    environment:
+#      - REDIS_HOST=redis
+#      - IMAGE_TAG=latest
+
+
+volumes:
+  redis_data:
+
 
 networks:
   app-network:
