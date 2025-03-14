@@ -18,9 +18,9 @@ class Config:
     LOCK_EXPIRE = int(os.getenv('LOCK_EXPIRE', 300))  # 默认过期时间为 300 秒
 
     # Docker化的limiter 配置
-    LIMITER_STORAGE_URI = "redis://redis:6379"
+    #LIMITER_STORAGE_URI = "redis://redis:6379"
     # 本地
-    #LIMITER_STORAGE_URI = "redis://127.0.0.1:6379"
+    LIMITER_STORAGE_URI = "redis://127.0.0.1:6379"
     LIMITER_DEFAULT_LIMITS = ['200 per day', '200 per hour']
 
     # 算法基础路径

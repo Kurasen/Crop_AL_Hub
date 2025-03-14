@@ -6,3 +6,4 @@ migrations
 test
 algorithm
 docker
+.venv
