@@ -27,7 +27,7 @@ class AuthService:
             VerificationCodeService.validate_code(login_type, login_identifier, validated_data['code'])
             # 检查用户是否存在
             if AuthRepository.get_user_by_identifier(login_identifier, login_type):
-                raise ValidationError(f"{login_type} already registered", 409)
+                raise ValidationError(f"{login_type} 该用户已注册，请登录", 409)
             # 创建用户模型
             user = User(
                 username=validated_data['username'],
@@ -40,12 +40,15 @@ class AuthService:
             db.session.commit()
             # 生成令牌
             return {
-                "access_token": generate_access_token(user.id, user.username),
-                "refresh_token": generate_refresh_token(user.id, user.username)
+                "data": {
+                    "access_token": generate_access_token(user.id, user.username),
+                    "refresh_token": generate_refresh_token(user.id, user.username)
+                },
+                "message": "注册成功",
             }, 201
         except SQLAlchemyError:
             db.session.rollback()
-            raise ValidationError("Database operation failed")
+            raise ValidationError("数据库操作失败")
 
     @staticmethod
     def login(validated_data):
@@ -74,10 +77,10 @@ class AuthService:
                 # Step 3: 验证用户身份
                 user = AuthRepository.get_user_by_identifier(login_identifier, login_type)
                 if not user:  # 添加用户存在性检查
-                    raise AuthenticationError("User does not exist")
+                    raise AuthenticationError("用户不存在")
                 if not PasswordService.check_password(user, password):  # 密码校验
                     LoginAttemptsRepository.increment_login_attempts(login_identifier)
-                    raise AuthenticationError("Invalid password")
+                    raise AuthenticationError("密码错误")
 
                 # Step 4: 检查用户是否已有有效的 Access Token
                 stored_access_token = TokenRepository.get_user_token(user.id, "access")

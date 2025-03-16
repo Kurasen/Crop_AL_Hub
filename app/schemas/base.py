@@ -8,8 +8,7 @@ from marshmallow_sqlalchemy import SQLAlchemySchema, SQLAlchemyAutoSchema
 from webargs.flaskparser import parser
 from flask import g, request, current_app
 
-from app.core.exception import ValidationError
-
+from marshmallow import ValidationError as MarshmallowValidationError
 
 class BaseSchema(SQLAlchemySchema):
     class Meta:
@@ -26,7 +25,7 @@ class BaseSchema(SQLAlchemySchema):
         # 1. 先校验必填字段是否存在
         for field_name, field in self.fields.items():
             if field.required and field_name not in data:
-                errors[field_name] = ["This field is required"]
+                errors[field_name] = [f"'{field_name}' 字段必须存在"]
 
         # 2. 再校验所有传入的字符串字段（无论是否必填）
         for field_name, value in data.items():
@@ -36,11 +35,11 @@ class BaseSchema(SQLAlchemySchema):
                 # 关键逻辑：如果传了值，则必须是非空内容
                 if value.strip() == "":
                     errors.setdefault(field_name, []).append(
-                        f"{field_name.capitalize()} cannot be empty or whitespace"
+                        f"{field_name.capitalize()} 不能为空或空白"
                     )
 
         if errors:
-            raise ValidationError(errors)
+            raise MarshmallowValidationError(errors)
 
         return data
 
@@ -86,11 +85,11 @@ def apply_rate_limit(rule):
             # 获取 limiter
             limiter_set = current_app.extensions.get('limiter', set())
             if not limiter_set:
-                raise ValueError("Limiter not found in current_app.extensions")
+                raise ValueError("在current_app.extensions中找不到限制器")
             limiter = next(iter(limiter_set))  # 获取第一个元素
 
             if not isinstance(limiter, Limiter):
-                raise ValueError("limiter is not of type Limiter.")
+                raise ValueError("限制器不是限制器类型")
 
             # 返回装饰后的函数
             return limiter.limit(rule)(func)(*args, **kwargs)  # 不再调用装饰器
@@ -117,7 +116,7 @@ def validate_request(schema_cls, content_type="json"):
             elif content_type == "form":
                 locations = ("form",)
             else:
-                raise ValueError("Unsupported content type")
+                raise ValueError("不支持的内容类型")
 
             # 执行webargs解析验证
             parsed_data = parser.parse(

@@ -3,7 +3,7 @@ import re
 from marshmallow import validate, fields, validates_schema
 from marshmallow_sqlalchemy import auto_field
 
-from app.core.exception import ValidationError
+from marshmallow import ValidationError as MarshmallowValidationError
 from app.dataset.dataset import Dataset
 from app.dataset.dataset_repo import DatasetRepository
 from app.schemas.base import BaseSchema, SortBaseSchema
@@ -19,7 +19,7 @@ def validate_size_format(value):
     match = re.match(pattern, value.strip(), re.IGNORECASE)
 
     if not match:
-        raise ValidationError("无效的大小格式，示例: 100MB, 1.5GB")
+        raise MarshmallowValidationError("无效的大小格式，示例: 100MB, 1.5GB")
 
     # 提取数值和单位
     amount = float(match.group(1))
@@ -27,7 +27,7 @@ def validate_size_format(value):
 
     # 检查数值是否合法
     if amount <= 0:
-        raise ValidationError("大小必须大于零")
+        raise MarshmallowValidationError("大小必须大于零")
 
 
 class DatasetBaseSchema(BaseSchema):
@@ -144,4 +144,4 @@ class DatasetSearchSchema(DatasetBaseFieldsMixin, SortBaseSchema):
             min_bytes = DatasetRepository.convert_size_to_bytes(data["size_min"])
             max_bytes = DatasetRepository.convert_size_to_bytes(data["size_max"])
             if min_bytes > max_bytes:
-                raise ValidationError("size_min 不能大于 size_max")
+                raise MarshmallowValidationError("size_min 不能大于 size_max")

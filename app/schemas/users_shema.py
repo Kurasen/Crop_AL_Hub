@@ -1,8 +1,7 @@
 import re
 
 from app.schemas.base import BaseSchema
-from marshmallow import fields, validates, ValidationError, validate, post_load
-from marshmallow_sqlalchemy import SQLAlchemySchema
+from marshmallow import fields, validate, post_load
 
 from app.user.user import User
 

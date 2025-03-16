@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # 自定义异常基类
 class CustomError(Exception):
-    def __init__(self, message="An error occurred", status_code=400):
+    def __init__(self, message="出现了一个错误", status_code=400):
         """
         自定义异常基类，所有自定义异常都继承自此类
 
@@ -32,7 +32,7 @@ class CustomError(Exception):
 
 # 继承自 CustomError 的子类，表示验证失败
 class ValidationError(CustomError):
-    def __init__(self, message="Validation failed", status_code=400):
+    def __init__(self, message="验证失败", status_code=400):
         """
         参数验证失败的异常
 
@@ -43,7 +43,7 @@ class ValidationError(CustomError):
 
 # 继承自 CustomError 的子类，表示数据库错误
 class DatabaseError(CustomError):
-    def __init__(self, message="Database error", status_code=500):
+    def __init__(self, message="数据库错误", status_code=500):
         """
         数据库错误的异常
 
@@ -54,7 +54,7 @@ class DatabaseError(CustomError):
 
 # 继承自 CustomError 的子类，表示认证错误
 class AuthenticationError(CustomError):
-    def __init__(self, message="Authentication failed", status_code=401):
+    def __init__(self, message="认证失败", status_code=401):
         """
         认证失败的异常
 
@@ -64,7 +64,7 @@ class AuthenticationError(CustomError):
 
 
 class InvalidSizeError(CustomError):
-    def __init__(self, size_str, message="Invalid size string", status_code=422):
+    def __init__(self, size_str, message="大小字符串无效", status_code=422):
         """
         自定义异常，用于处理无效的大小字符串
         """
@@ -73,7 +73,7 @@ class InvalidSizeError(CustomError):
 
 
 class FileUploadError(CustomError):
-    def __init__(self, message="File upload failed", status_code=500):
+    def __init__(self, message="文件上传失败", status_code=500):
         """
         文件上传相关的异常
         """
@@ -81,7 +81,7 @@ class FileUploadError(CustomError):
 
 
 class ImageProcessingError(CustomError):
-    def __init__(self, message="Image processing failed", status_code=500):
+    def __init__(self, message="图片处理失败", status_code=500):
         """
         图像处理相关的异常
         """
@@ -89,7 +89,7 @@ class ImageProcessingError(CustomError):
 
 
 class NotFoundError(CustomError):
-    def __init__(self, message="Resource not found", status_code=404):
+    def __init__(self, message="资源未找到", status_code=404):
         """
         资源未找到的异常
         """
@@ -97,14 +97,23 @@ class NotFoundError(CustomError):
 
 
 class RedisConnectionError(CustomError):
-    def __init__(self, message="Redis connection failed", status_code=500):
+    def __init__(self, message="Redis连接失败", status_code=500):
         """
         Redis连接失败的异常
         """
         super().__init__(message, status_code)
 
 
-# 全局错误处理函数
+class TooManyRequests(CustomError):
+    def __init__(self, message="请求过于频繁，请稍后再试", status_code=429):
+        """
+        Redis连接失败的异常
+        """
+        super().__init__(message, status_code)
+
+    # 全局错误处理函数
+
+
 def init_error_handlers(app):
     """注册全局错误处理器，用于捕获和处理不同类型的错误"""
 
@@ -126,14 +135,14 @@ def init_error_handlers(app):
                 request_info = f"Method: {request.method}, URL: {request.url}, Data: {request.get_json()}"
             else:
                 # 如果不是 JSON 格式，记录没有请求体
-                request_info = f"Method: {request.method}, URL: {request.url}, Data: No JSON body"
+                request_info = f"Method: {request.method}, URL: {request.url}, Data: 不是json结构体"
 
         except UnsupportedMediaType:
             # 捕获 UnsupportedMediaType 异常，并返回自定义错误信息
             return create_json_response({
                 "status": "error",
                 "code": 415,
-                "message": "Unsupported Media Type, please use application/json"
+                "message": "不支持的媒体类型，请使用application/json"
             }), 415
 
         # 判断错误类型并构造响应内容
@@ -145,7 +154,7 @@ def init_error_handlers(app):
             response = {
                 "error": {
                     "code": 400,
-                    "message": "Validation failed",
+                    "message": "参数检验失败",
                     "details": error.messages  # marshmallow 错误信息
                 }
             }

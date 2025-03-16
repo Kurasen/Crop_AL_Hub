@@ -1,11 +1,11 @@
 import re
 
-from marshmallow import fields, validate, validates_schema, ValidationError, validates
+from marshmallow import fields, validate, validates_schema, validates
 from marshmallow_sqlalchemy import auto_field
 
 from app.model.model import Model
 from app.schemas.base import BaseSchema, SortBaseSchema
-
+from marshmallow import ValidationError as MarshmallowValidationError
 
 class ModelBaseSchema(BaseSchema):
     class Meta:
@@ -74,7 +74,7 @@ class ModelBaseSchema(BaseSchema):
         if value:
             # 如果不为空，检查是否是以 .JPG, .PNG, 或 .JPEG 结尾
             if not re.match(r'.*\.(jpg|png|jpeg)$', value, re.IGNORECASE):
-                raise ValidationError("Input must be a file with .JPG, .PNG, or .JPEG extension")
+                raise MarshmallowValidationError("Input must be a file with .JPG, .PNG, or .JPEG extension")
 
 
 class ModelCreateSchema(ModelBaseSchema):
@@ -153,4 +153,4 @@ class ModelTestSchema(BaseSchema):
         file = data.get('file')
         if file:
             if not file.filename.lower().endswith(('.jpg', '.jpeg', '.png')):
-                raise ValidationError("Only image files (.jpg, .jpeg, .png) are allowed")
+                raise MarshmallowValidationError("Only image files (.jpg, .jpeg, .png) are allowed")

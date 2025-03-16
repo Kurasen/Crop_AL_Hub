@@ -38,11 +38,13 @@ class ModelService:
             total_count, models = ModelRepository.search_models(search_params)
 
             return {
-                "data": [model.to_dict() for model in models],
-                "total_count": total_count,
-                "page": search_params.get("page", 1),
-                "per_page": search_params.get("per_page", 5),
-                "total_pages": (total_count + search_params.get("per_page", 5) - 1) // search_params.get("per_page", 5)  # 计算总页数
+                "data": {
+                    "items": [ModelService._convert_to_dict(model) for model in models],
+                    "total": total_count,
+                    "page": search_params.get("page", 1),
+                    "per_page": search_params.get("per_page", 5),
+                    "total_pages": (total_count + search_params.get("per_page", 5) - 1) // search_params.get("per_page", 5)  # 计算总页数
+                },
             }
         except Exception as e:
             current_app.logger.error(f"Error occurred while searching models: {str(e)}")
@@ -142,9 +144,11 @@ class ModelService:
 
             accuracy = ((model_id * dataset_id) % 100) / 100  # 模拟准确率，实际应用中应使用模型的真实准确率
             return {
-                "model_id": model_id,
-                "dataset_id": dataset_id,
-                "accuracy": accuracy
+                "data": {
+                    "model_id": model_id,
+                    "dataset_id": dataset_id,
+                    "accuracy": accuracy
+                }
             }
         except ValidationError as ve:
             current_app.logger.error(f"Validation error: {ve.message}")

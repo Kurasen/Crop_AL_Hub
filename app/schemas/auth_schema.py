@@ -4,13 +4,14 @@ from marshmallow import fields, validate, validates_schema
 
 from app.core.exception import ValidationError
 from app.schemas.base import BaseSchema
+from marshmallow import ValidationError as MarshmallowValidationError
 
 
 # 基础登录验证逻辑
 class AuthBaseSchema(BaseSchema):
     login_type = fields.Str(
         required=True,
-        validate=validate.OneOf(['telephone', 'email'], error="Login type must be 'telephone' or 'email'")
+        validate=validate.OneOf(['telephone', 'email'], error="登陆类型必须使用手机号或邮箱登录")
     )
     login_identifier = fields.Str(required=True)
 
@@ -22,12 +23,12 @@ class AuthBaseSchema(BaseSchema):
 
         if login_type == 'telephone':
             if not re.match(r'^1[3-9]\d{9}$', identifier):
-                raise ValidationError("Invalid telephone format")
+                raise MarshmallowValidationError("电话号码格式错误")
         elif login_type == 'email':
             try:
                 validate.Email()(identifier)
             except ValidationError:
-                raise ValidationError("Invalid email format")
+                raise MarshmallowValidationError("邮箱格式错误")
 
 
 class AuthWithPasswordSchema(AuthBaseSchema):
@@ -40,9 +41,9 @@ class AuthWithPasswordSchema(AuthBaseSchema):
         min_length = 6  #测试为6，生产用8
         max_length = 20
         if len(password) < min_length:
-            raise ValidationError(f"Password must be at least {min_length} characters long")
+            raise MarshmallowValidationError(f"密码长度必须至少为｛min_length｝个字符")
         if len(password) > max_length:
-            raise ValidationError(f"Password cannot be more than {max_length} characters long")
+            raise MarshmallowValidationError(f"密码长度必须至多为｛min_length｝个字符")
         # if not re.search(r'[A-Z]', password):  # 至少一个大写字母
         #     return False, "Password must contain at least one uppercase letter"
         # if not re.search(r'[a-z]', password):  # 至少一个小写字母
@@ -54,8 +55,8 @@ class AuthWithPasswordSchema(AuthBaseSchema):
 
 
 class UserCreateSchema(AuthWithPasswordSchema):
-    code = fields.Int(required=True, validate=validate.Range(min=100000, max=999999, error="验证码格式不对"))
-    username = fields.Str(required=True, validate=validate.Length(min=3))
+    code = fields.Int(required=True, validate=validate.Range(min=100000, max=999999, error="验证码格式错误"))
+    username = fields.Str(required=True, validate=validate.Length(min=3, error="用户名格式错误"))
 
     @validates_schema
     def validate_credentials(self, data, **kwargs):
@@ -68,5 +69,3 @@ class UserLoginSchema(AuthWithPasswordSchema):
 
 class GenerateCodeSchema(AuthBaseSchema):
     pass
-
-

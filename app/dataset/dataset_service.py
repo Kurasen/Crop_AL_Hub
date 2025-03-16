@@ -42,11 +42,13 @@ class DatasetService:
 
         # 将结果转换为字典格式并返回
         return {
-            "data": [DatasetService._convert_to_dict(dataset) for dataset in datasets],
-            "total_count": total_count,
-            "page": search_params.get("page", 1),
-            "per_page": search_params.get("per_page", 5),
-            "total_pages": (total_count + search_params.get("per_page", 5) - 1) // search_params.get("per_page", 5)  # 计算总页数
+            "data": {
+                "items": [DatasetService._convert_to_dict(dataset) for dataset in datasets],
+                "total": total_count,
+                "page": search_params.get("page", 1),
+                "per_page": search_params.get("per_page", 5),
+                "total_pages": (total_count + search_params.get("per_page", 5) - 1) // search_params.get("per_page", 5)  # 计算总页数
+            },
         }, 200
 
     @staticmethod

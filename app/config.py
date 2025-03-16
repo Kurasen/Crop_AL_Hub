@@ -21,7 +21,13 @@ class Config:
     #LIMITER_STORAGE_URI = "redis://redis:6379"
     # 本地
     LIMITER_STORAGE_URI = "redis://127.0.0.1:6379"
+
     LIMITER_DEFAULT_LIMITS = ['200 per day', '200 per hour']
+    # # 根据环境变量决定是否启用限制
+    # if os.getenv("FLASK_ENV") == "development":
+    #     LIMITER_DEFAULT_LIMITS = []  # 开发环境禁用限流
+    # else:
+    #     LIMITER_DEFAULT_LIMITS = ['200 per day', '200 per hour']  # 生产环境启用限流
 
     # 算法基础路径
     BASE_DIR = Path(__file__).parent.parent

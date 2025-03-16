@@ -154,5 +154,4 @@ if __name__ == '__main__':
             # db.session.commit()
             # OrderService.invalidate_sales_cache(model_id=1)
 
-    # docekr化启动应用
     app.run(host='0.0.0.0', port=5000, debug=True)

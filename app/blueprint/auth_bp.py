@@ -1,4 +1,3 @@
-
 from flask import request, Blueprint, current_app
 
 from app.schemas.base import apply_rate_limit
@@ -6,7 +5,7 @@ from app.schemas.auth_schema import UserCreateSchema, UserLoginSchema, GenerateC
 from app.token.token_service import TokenService
 from app.utils.json_encoder import create_json_response
 from app.token.JWT import token_required, add_to_blacklist, get_jwt_identity, verify_token
-from app.core.exception import ValidationError, AuthenticationError, logger
+from app.core.exception import ValidationError, AuthenticationError, logger, TooManyRequests
 from app.token.token_repo import TokenRepository
 from app.auth.auth_service import AuthService
 from app.core.verify_code_service import VerificationCodeService
@@ -50,8 +49,8 @@ def post(current_user):
     # 删除 Refresh Token
     TokenRepository.delete_user_token(user_id, token_type='refresh')
 
-    logger.info(f"User {user_id} successfully logged out.")
-    return create_json_response("Logout successful")
+    logger.info(f"用户 {user_id} 成功登出")
+    return create_json_response("登出成功", 204)
 
 
 # 受保护接口：需要使用 JWT 认证
@@ -102,7 +101,7 @@ def refresh_token(current_user):
         raise e
 
 
-@auth_bp.route('/generate_code', methods=['POST'])
+@auth_bp.route('/generate_code', methods=['POST'])  # 修正methods参数
 @apply_rate_limit("5 per minute")
 def generate_code():
     """
@@ -111,10 +110,8 @@ def generate_code():
     validated_data = GenerateCodeSchema().load(request.get_json())
     # 调用 AuthService 生成验证码
     code = VerificationCodeService.generate_verification_code(validated_data)
-
     response_data = {
-        "message": "Verification code sent successfully.",
-        "code": code
+        "data": {"code": code},  # 返回code到data字段
+        "message": "验证码发送成功",
     }
-
-    return create_json_response(response_data, status_code=200)
+    return create_json_response(response_data, 200)

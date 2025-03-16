@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Black">
-    <option name="sdkName" value="D:\App\Anaconda" />
+    <option name="sdkName" value="Remote Python 3.10.12 (sftp://zhaohonglong@10.0.4.71:22/home/zhaohonglong/workspace/Crop_AL_Hub-API/crop_env/bin/python)" />
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12 (Crop_AL_Hub)" project-jdk-type="Python SDK" />
+  <component name="PythonCompatibilityInspectionAdvertiser">
+    <option name="version" value="3" />
+  </component>
 </project>
