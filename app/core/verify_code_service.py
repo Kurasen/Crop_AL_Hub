@@ -6,7 +6,7 @@ import time
 import redis
 
 from flask import current_app
-from app.core.exception import ValidationError, NotFoundError, TooManyRequests
+from app.core.exception import ValidationError, NotFoundError, RetryAfterError
 from app.core.redis_connection_pool import redis_pool
 
 
@@ -59,7 +59,7 @@ class VerificationCodeService:
                 # 如果验证码已经生成并且未超过一分钟
                 time_diff = time.time() - float(last_generated_time)
                 if time_diff < VerificationCodeService.RATE_LIMIT_TIME:
-                    raise TooManyRequests("请在一分钟后重试获取验证码", 429)
+                    raise RetryAfterError("验证码已发送，请在一分钟后重试获取验证码", 429)
 
             try:
                 # 设置验证码缓存，确保 cache_key 是 bytes 类型

@@ -2,7 +2,7 @@ import uuid
 
 import jwt
 from datetime import datetime, timedelta
-from flask import request
+from flask import request, g
 from functools import wraps
 from app.config import Config  # 载入配置
 from app.core.exception import AuthenticationError
@@ -97,38 +97,40 @@ def verify_token(token, check_blacklist=True):
         raise AuthenticationError("Unauthorized, Invalid token")  # 抛出自定义的认证错误
 
 
-# 解析 JWT 并获取用户 ID
 def get_jwt_identity():
     """
     解析 `access_token` 并返回 `jti`，确保 logout 用的是 `access_token`
     """
-    token = request.headers.get('Authorization')
-    if not token or not token.startswith('Bearer '):
-        raise AuthenticationError("Token is missing")
+    # 优先从 g 对象获取已解析的 payload
+    if hasattr(g, 'current_user_payload'):
+        payload = g.current_user_payload
+    else:
+        # 如果 g 中没有，再解析 Token（兼容性处理）
+        token = request.headers.get('Authorization', '')
+        if not token.startswith('Bearer '):
+            raise AuthenticationError("Token is missing")
+        token = token[len('Bearer '):]
+        payload = verify_token(token)
 
-    token = token[len('Bearer '):]
-    payload = verify_token(token)
-
-    if "access" not in payload["token_type"]:
-        raise AuthenticationError("Logout must be done using access_token")
+    # 确保是 Access Token
+    if payload.get("token_type") != "access":
+        raise AuthenticationError("Logout must use access_token")
 
     return payload["jti"]
 
 
-# 装饰器：保护路由
 def token_required(f):
-    """
-    装饰器，用于保护需要认证的路由，确保请求中包含有效的 token。
-    :param f: 视图函数
-    :return: 包装后的视图函数
-    """
-
     @wraps(f)
     def decorated(*args, **kwargs):
         try:
-            payload = verify_token(request.headers.get('Authorization').split(" ")[1])
+            # 从请求头获取 Token
+            token = request.headers.get('Authorization', '').split(" ")[1]
+            # 验证 Token 并获取 payload
+            payload = verify_token(token)
+            # 将 payload 存入全局对象 g
+            g.current_user_payload = payload
+            # 传递 payload 给路由函数
             return f(current_user=payload, *args, **kwargs)
         except AuthenticationError as e:
             raise AuthenticationError(str(e))
-
     return decorated

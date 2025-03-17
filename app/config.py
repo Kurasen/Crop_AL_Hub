@@ -50,7 +50,7 @@ class Config:
     def get_sqlalchemy_uri():
         db_username = os.getenv('DB_USERNAME', 'root')
         db_password = os.getenv('DB_PASSWORD', '123123')
-        db_host = os.getenv('DB_HOST', 'host.docker.internal')
+        db_host = os.getenv('DB_HOST', '10.0.4.71')
         db_port = os.getenv('DB_PORT', '3306')
         db_name = os.getenv('DB_NAME', 'crop_al_hub')
 

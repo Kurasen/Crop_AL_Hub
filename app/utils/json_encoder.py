@@ -13,7 +13,7 @@ class CustomJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def create_json_response(data, status=200):
+def create_json_response(data=None, status=200):
     """
     创建标准的 JSON 响应
     :param status:
@@ -25,16 +25,10 @@ def create_json_response(data, status=200):
         error_details = data["error"].get("details", {})
         error_message = data["error"].get("message", "")
 
-
-
-        # 合并所有错误详情到 message 中
         if error_details:
-            # 将错误详情内容合并为一个易于前端处理的字符串
-            # error_message += " " + " ".join(f"{key}: {', '.join(errors)}" for key, errors in error_details.items())
-
             response_data = {
                 "data": None,
-                "msg":  error_message or "success",
+                "msg": error_message or "success",
                 "errorDetails": [
                     {"field": field, "message": ', '.join(messages)}
                     for field, messages in error_details.items()
@@ -45,7 +39,7 @@ def create_json_response(data, status=200):
         else:
             response_data = {
                 "data": None,
-                "message":  error_message or "success",
+                "msg": error_message or "success",
                 "requestId": str(uuid.uuid4()),
                 "status_code": status
             }
@@ -53,12 +47,13 @@ def create_json_response(data, status=200):
     else:
         # 正常响应，保持原样
         response_data = {
-            "data": data.get("data"),  # 直接提取data字段
-            "message": data.get("message") or "success",
+            "data": data.get("data"),
+            "msg": data.get("message") or "success",
             "requestId": str(uuid.uuid4()),
             "status_code": status
         }
 
+    print(response_data)
     # 使用自定义 JSONEncoder 来序列化 JSON
     response = json.dumps(response_data, ensure_ascii=False, sort_keys=False, cls=CustomJSONEncoder)
 

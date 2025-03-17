@@ -9,4 +9,5 @@ migrate = Migrate()
 limiter = Limiter(
     key_func=lambda: get_remote_address()
 )
+
 cors = CORS()

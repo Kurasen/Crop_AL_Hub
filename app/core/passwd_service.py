@@ -1,12 +1,11 @@
 import bcrypt
-from werkzeug.security import check_password_hash
 
 
 class PasswordService:
     @staticmethod
     def check_password(user, password):
         """验证密码"""
-        return check_password_hash(user.password, password)
+        return bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8'))
 
     @staticmethod
     def hashed_password(plain_password):

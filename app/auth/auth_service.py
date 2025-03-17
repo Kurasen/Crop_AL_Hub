@@ -27,7 +27,7 @@ class AuthService:
             VerificationCodeService.validate_code(login_type, login_identifier, validated_data['code'])
             # 检查用户是否存在
             if AuthRepository.get_user_by_identifier(login_identifier, login_type):
-                raise ValidationError(f"{login_type} 该用户已注册，请登录", 409)
+                raise ValidationError("该用户已注册，请登录", 409)
             # 创建用户模型
             user = User(
                 username=validated_data['username'],
@@ -104,9 +104,11 @@ class AuthService:
                         print(f"Access token for {login_identifier} is valid and not revoked.")  # 输出验证成功的信息
                         current_app.logger.info(f"Auth {login_identifier} already has a valid access token.")
                         return {
-                            "message": "Login successful",
-                            "access_token": stored_access_token,
-                            "refresh_token": stored_refresh_token if stored_refresh_token else None
+                            "data": {
+                                "access_token": stored_access_token,
+                                "refresh_token": stored_refresh_token if stored_refresh_token else None
+                            },
+                            "message": "登录成功"
                         }, 200
                     except AuthenticationError as e:
                         print(f"Error during token verification: {str(e)}")  # 输出异常信息
@@ -123,9 +125,11 @@ class AuthService:
 
                 current_app.logger.info(f"Login successful for {login_identifier}, generated new tokens.")
                 return {
-                    "message": "Login successful",
-                    "access_token": new_access_token,
-                    "refresh_token": stored_refresh_token if stored_refresh_token else None
+                    "data": {
+                        "access_token": new_access_token,
+                        "refresh_token": stored_refresh_token if stored_refresh_token else None
+                    },
+                    "message": "登录成功"
                 }, 200
 
             except AuthenticationError as e:
@@ -135,7 +139,6 @@ class AuthService:
                 current_app.logger.error(f"Redis connection failed during login: {str(e)}")
             except Exception as e:
                 current_app.logger.error(f"Unexpected error during login for {login_identifier}: {str(e)}")
-                raise DatabaseError("Internal error occurred while logging in.")
             finally:
                 # 确保 Redis 锁被释放
                 redis_client.delete(lock_key)

@@ -5,7 +5,7 @@ from app.schemas.auth_schema import UserCreateSchema, UserLoginSchema, GenerateC
 from app.token.token_service import TokenService
 from app.utils.json_encoder import create_json_response
 from app.token.JWT import token_required, add_to_blacklist, get_jwt_identity, verify_token
-from app.core.exception import ValidationError, AuthenticationError, logger, TooManyRequests
+from app.core.exception import ValidationError, AuthenticationError, logger
 from app.token.token_repo import TokenRepository
 from app.auth.auth_service import AuthService
 from app.core.verify_code_service import VerificationCodeService
@@ -48,9 +48,8 @@ def post(current_user):
 
     # 删除 Refresh Token
     TokenRepository.delete_user_token(user_id, token_type='refresh')
-
-    logger.info(f"用户 {user_id} 成功登出")
-    return create_json_response("登出成功", 204)
+    current_app.logger.info(f"用户 {user_id} 成功登出")
+    return create_json_response(204)
 
 
 # 受保护接口：需要使用 JWT 认证

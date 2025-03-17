@@ -104,14 +104,20 @@ class RedisConnectionError(CustomError):
         super().__init__(message, status_code)
 
 
-class TooManyRequests(CustomError):
-    def __init__(self, message="请求过于频繁，请稍后再试", status_code=429):
+class RetryAfterError(CustomError):
+    def __init__(self, message="验证码发送请求频繁", status_code=429):
         """
-        Redis连接失败的异常
+        验证码发送请求频繁的异常
         """
         super().__init__(message, status_code)
 
-    # 全局错误处理函数
+
+class TooManyRequests(CustomError):
+    def __init__(self, message="请求过于频繁，请稍后再试", status_code=429):
+        """
+        超过请求次数限制的异常
+        """
+        super().__init__(message, status_code)
 
 
 def init_error_handlers(app):
@@ -153,12 +159,12 @@ def init_error_handlers(app):
             # marshmallow 异常包含字段错误信息，我们可以提取这些信息
             response = {
                 "error": {
-                    "code": 400,
                     "message": "参数检验失败",
                     "details": error.messages  # marshmallow 错误信息
                 }
             }
             status_code = 400
+
         elif isinstance(error, CustomError):  # 自定义异常
             response = {"error": {"code": error.status_code, "message": error.message}}
             status_code = error.status_code

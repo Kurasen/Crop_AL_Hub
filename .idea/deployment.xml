@@ -8,6 +8,11 @@
           <mappings>
             <mapping deploy="/workspace/Crop_AL_Hub-API" local="$PROJECT_DIR$" web="/" />
           </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/crop_env" />
+            <excludedPath path="/workspace/Crop_AL_Hub-API/crop_env" />
+            <excludedPath local="true" path="$PROJECT_DIR$/.idea" />
+          </excludedPaths>
         </serverdata>
       </paths>
       <paths name="zhaohonglong@10.0.4.71:22 agent">

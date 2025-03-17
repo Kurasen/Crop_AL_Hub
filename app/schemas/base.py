@@ -10,6 +10,7 @@ from flask import g, request, current_app
 
 from marshmallow import ValidationError as MarshmallowValidationError
 
+
 class BaseSchema(SQLAlchemySchema):
     class Meta:
         unknown = EXCLUDE  # 禁止未知字段
@@ -91,9 +92,11 @@ def apply_rate_limit(rule):
             if not isinstance(limiter, Limiter):
                 raise ValueError("限制器不是限制器类型")
 
-            # 返回装饰后的函数
-            return limiter.limit(rule)(func)(*args, **kwargs)  # 不再调用装饰器
-
+            return limiter.limit(
+                rule,
+                error_message="请求过于频繁，请稍后再试",
+                override_defaults=True  # 覆盖默认行为
+            )(func)(*args, **kwargs)
         return wrapper
 
     return decorator
