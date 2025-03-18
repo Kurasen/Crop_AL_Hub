@@ -13,14 +13,17 @@ class CustomJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def create_json_response(data=None, status=200):
+def create_json_response(data=None, status=200, http_status=200):
     """
     创建标准的 JSON 响应
+    :param http_status:默认返回200
     :param status:
     :param data: 响应的数据内容（可以是字典、列表等）
     :return: Flask Response 对象
     """
-    if isinstance(data, dict) and "error" in data:
+    if status == 204:  # 204 No Content
+        response_data = {"msg": "success", "requestId": str(uuid.uuid4()), "code": status,}
+    elif isinstance(data, dict) and "error" in data:
         # 如果是错误响应，格式化成 message 和 status_code
         error_details = data["error"].get("details", {})
         error_message = data["error"].get("message", "")
@@ -41,16 +44,16 @@ def create_json_response(data=None, status=200):
                 "data": None,
                 "msg": error_message or "success",
                 "requestId": str(uuid.uuid4()),
-                "status_code": status
+                "code": status
             }
 
     else:
         # 正常响应，保持原样
         response_data = {
-            "data": data.get("data"),
+            "data": data.get("data") if data else None,
             "msg": data.get("message") or "success",
             "requestId": str(uuid.uuid4()),
-            "status_code": status
+            "code": status
         }
 
     print(response_data)
@@ -58,4 +61,4 @@ def create_json_response(data=None, status=200):
     response = json.dumps(response_data, ensure_ascii=False, sort_keys=False, cls=CustomJSONEncoder)
 
     # 返回构建好的 Response 对象，设置正确的 content_type 和 HTTP 状态码
-    return Response(response, content_type='application/json', status=status)
+    return Response(response, content_type='application/json', status=http_status)

@@ -40,7 +40,12 @@ def login():
 def post(current_user):
     """登出功能"""
     # 获取当前用户的 ID
-    user_id = current_user['user_id']
+    if current_user is None:
+        return create_json_response({"msg": "用户信息丢失"}, status=400)
+
+    user_id = current_user.get('user_id')
+    if not user_id:
+        return create_json_response({"msg": "用户ID无效"}, status=400)
     jti = get_jwt_identity()
 
     # 将 Access Token 加入黑名单
@@ -49,7 +54,7 @@ def post(current_user):
     # 删除 Refresh Token
     TokenRepository.delete_user_token(user_id, token_type='refresh')
     current_app.logger.info(f"用户 {user_id} 成功登出")
-    return create_json_response(204)
+    return create_json_response(status=204)
 
 
 # 受保护接口：需要使用 JWT 认证

@@ -1,4 +1,3 @@
-
 import os
 import logging
 from contextlib import contextmanager
@@ -69,6 +68,7 @@ class RedisConnectionPool:
                 socket_timeout=5,
                 decode_responses=True
             )
+
         }
 
     @contextmanager
@@ -100,7 +100,6 @@ class RedisConnectionPool:
             if conn:
                 conn.close()  # 显式释放连接回池（非必须但更规范）
                 logger.debug(f"{pool_name} 连接已释放")
-
 
 
 # 初始化单例（全局唯一）

@@ -76,6 +76,24 @@ def run_dataset_on_models_in_container(run_func, dataset_path, model_image, cont
     run_func(clean_cmd)
     return output
 
+# def control_running_func_nums(func, *args, **kwargs):
+#     CONCURRENT_MODELS_KEY = 'concurrent_running_models' #定义存储并发模型运行数量
+#     MAX_CONCURRENT_RUNNING_MODELS = 3 #最大同时运行的模型数量
+#
+#     redis_client = get_model_redis_client()
+#     current_models = redis_client.incr(CONCURRENT_MODELS_KEY)
+#     try:
+#         if current_models > MAX_CONCURRENT_RUNNING_MODELS:
+#             raise CustomError("当前访问人数已达到上限，请稍后再试。",503)
+#         #需要控制运行数量的方法
+#         result = func(*args, **kwargs)
+#         redis_client.decr(CONCURRENT_MODELS_KEY)
+#         return result,200
+#     except CustomError as e:
+#         # 出现异常时，减少并发用户数量
+#         redis_client.decr(CONCURRENT_MODELS_KEY)
+#         raise e
+
 
 if __name__ == "__main__":
     # output = run_dataset_on_models_in_container(run_command_remote,"detetcion-tassel/dataset/test",

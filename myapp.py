@@ -115,6 +115,10 @@ def configure_global_checks(app):
         if request.method == 'OPTIONS':
             return
 
+        # 跳过 logout 路由，避免对没有请求体的请求进行 JSON 解析
+        if request.path == '/api/v1/auth/logout':
+            return
+
         allowed_content_types = ['application/json', 'multipart/form-data']
 
         # 仅检查非 GET/HEAD 请求

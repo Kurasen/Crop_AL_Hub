@@ -88,13 +88,13 @@ def verify_token(token, check_blacklist=True):
             with redis_pool.get_redis_connection(pool_name='user') as redis_client:
                 if redis_client.exists(f"{BLACKLIST_REDIS_KEY}:{jti}"):
                     print(f"Token with jti {jti} is in the blacklist.")  # 输出黑名单信息
-                    raise AuthenticationError("Token has been revoked")
+                    raise AuthenticationError("令牌已被撤销")
 
         return payload  # 返回解码后的 Payload（有效载荷）, payload 是字典
     except jwt.ExpiredSignatureError:
-        raise AuthenticationError("Token has expired")  # 抛出自定义的认证错误
+        raise AuthenticationError("令牌已过期")  # 抛出自定义的认证错误
     except jwt.InvalidTokenError:
-        raise AuthenticationError("Unauthorized, Invalid token")  # 抛出自定义的认证错误
+        raise AuthenticationError("认证失败，错误的令牌")  # 抛出自定义的认证错误
 
 
 def get_jwt_identity():
