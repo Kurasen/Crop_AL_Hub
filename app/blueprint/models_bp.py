@@ -5,9 +5,6 @@ from flask import send_file, Blueprint, make_response
 from app.exts import db
 from app.schemas.model_schema import ModelRunSchema, ModelTestSchema, ModelSearchSchema, ModelCreateSchema, \
     ModelUpdateSchema
-from app.token.JWT import token_required
-from app.utils.json_encoder import create_json_response
-from app.model.model_service import ModelService
 
 # 设置允许的文件格式
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
@@ -126,95 +123,6 @@ def delete_model(model_id):
     return create_json_response(response, status)
 
 
-from pathlib import Path
-
-import os
-import docker
-import uuid
-import logging
-from docker.errors import NotFound, APIError
-from flask import Flask, request, jsonify, Blueprint
-from celery import Celery
-from app.config import Config
-from app.utils import create_json_response
-from flask import current_app
-
-# 配置日志记录
-logging.basicConfig(level=logging.INFO,  # 设置日志级别为 INFO
-                    format='%(asctime)s - %(levelname)s - %(message)s')  # 设置日志格式
-
-# 获取日志记录器
-logger = logging.getLogger(__name__)
-
-
-# 确保 Celery 初始化正确
-celery = Celery(__name__, broker='redis://localhost:6379/0', backend='redis://localhost:6379/0')
-celery.conf.update(
-    task_default_queue='default',  # 明确默认队列
-    broker_connection_retry_on_startup=True,
-    # task_routes={
-    #     'test_app.run_algorithm': {'queue': 'default'}  # 修正模块名为实际模块名（如 app）
-    # },
-    worker_concurrency=os.cpu_count(),  # 限制并发度为 CPU 核心数
-)
-
-# 初始化Docker客户端
-docker_client = docker.DockerClient(base_url='tcp://127.0.0.1:2375')
-#docker_client = None
-#文件存储路径配置
-UPLOAD_FOLDER = Config.UPLOAD_FOLDER
-OUTPUT_FOLDER = Config.OUTPUT_FOLDER
-
-# 确保目录存在
-UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
-OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
-
-
-# Celery任务：运行Docker容器
-@celery.task(bind=True, name='test_app.run_algorithm')
-def run_algorithm(self, input_path, task_id, image_name):
-    try:
-
-        logger.info(f"\n=== 任务启动 [{task_id}] ===")
-
-        # 宿主机输入目录（原生 Windows 路径）
-        host_input_dir = Path(input_path)
-        logger.info(f"宿主机输入目录验证 → {host_input_dir} (存在: {host_input_dir.exists()})")
-
-        # 宿主机输出目录
-        host_output_dir = OUTPUT_FOLDER / f"task_{task_id}"
-        host_output_dir.mkdir(parents=True, exist_ok=True)
-
-        # 启动容器，挂载输入和输出目录
-        container = docker_client.containers.run(
-            image_name,  # 使用参数传入的镜像名称
-            volumes={
-                str(host_input_dir): {'bind': '/data/images', 'mode': 'ro'},
-                str(host_output_dir): {'bind': '/output', 'mode': 'rw'}
-            },
-            detach=True,
-            auto_remove=True
-        )
-
-        # 获取完整容器日志
-        logs = container.logs().decode('utf-8')
-        logger.info(f"容器日志:\n{logs}")
-
-        # 等待容器退出
-        exit_status = container.wait()['StatusCode']
-        logger.info(f"容器退出状态码: {exit_status}")
-
-        # 检查输出目录（添加详细文件列表输出）
-        output_files = list(host_output_dir.glob('*'))
-        logger.info(f"输出目录内容: {[f.name for f in output_files]}")
-        if not output_files:
-            raise FileNotFoundError(f"输出目录为空: {host_output_dir}")
-
-        return {'status': 'success', 'output': str(host_output_dir)}
-    except Exception as e:
-        logger.error(f"任务失败详情: {str(e)}")
-        return {'status': 'error', 'message': str(e)}
-
 
 # Flask路由：上传文件并触发任务
 @models_bp.route('/process', methods=['POST'])
@@ -229,14 +137,11 @@ def process_image():
 
     # 查数据库，获取对应的 image_name
     model = ModelService.get_model_by_id(model_id)
-    if not model:
-        return jsonify({'error': f'未找到model_id为 {model_id} 的模型'}), 400
-
     image_name = model.image
 
     # 校验镜像是否存在
     try:
-        docker_client.images.get(image_name)
+        docker_client.client.images.get(image_name)
     except docker.errors.ImageNotFound:
         return jsonify({'error': f'镜像 {image_name} 未找到，请先拉取镜像'}), 400
     except docker.errors.APIError as e:
@@ -253,7 +158,7 @@ def process_image():
     input_subdir = f"task_{task_id}"
 
     # 使用绝对路径（关键修改）
-    host_upload_dir = Path(UPLOAD_FOLDER) / input_subdir
+    host_upload_dir = Path(Config.UPLOAD_FOLDER) / input_subdir
     host_upload_dir.mkdir(parents=True, exist_ok=True)
 
     # 保存文件
@@ -271,6 +176,20 @@ def process_image():
         },
         "message": "任务提交成功",
     }, 202)
+
+
+import uuid
+from pathlib import Path
+
+import docker
+from flask import request, jsonify
+
+from app.config import Config
+from app.docker.core.docker_clinet import docker_client
+from app.docker.core.task import logger, run_algorithm
+from app.model.model_service import ModelService
+from app.utils import create_json_response
+from docker.errors import ImageNotFound
 
 
 # Flask路由：查询任务状态

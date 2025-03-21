@@ -43,8 +43,6 @@ def create_app(env=None):
     from app.docker.core.celery_app import CeleryManager
     CeleryManager.init_celery(app)
 
-    from app.docker import task
-
     # 配置Redis连接池
     app.config['REDIS_POOL'] = redis_pool
 
@@ -121,9 +119,6 @@ def register_blueprints(app: FlaskApp):
 
     from app.blueprint.orders_bp import orders_bp
     app.register_blueprint(orders_bp, url_prefix='/api/v1/orders')
-
-    from app.docker.api.test_app import algorithm_bp
-    app.register_blueprint(algorithm_bp, url_prefix='/api/v1/algorithms')
 
 
 def configure_global_checks(app):

@@ -31,7 +31,7 @@ class ModelService:
         # 获取指定ID的模型
         model = ModelRepository.get_model_by_id(model_id)
         if not model:
-            raise NotFoundError(f"Model with ID {model_id} not found")
+            raise NotFoundError(f"未找到model_id为 {model_id} 的模型")
         return model
 
     @staticmethod

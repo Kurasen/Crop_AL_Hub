@@ -13,7 +13,6 @@
             <excludedPath path="/workspace/Crop_AL_Hub-API/crop_env" />
             <excludedPath local="true" path="$PROJECT_DIR$/.idea" />
             <excludedPath local="true" path="$PROJECT_DIR$/migrations" />
-            <excludedPath local="true" path="$PROJECT_DIR$/app/docker/data" />
             <excludedPath local="true" path="$PROJECT_DIR$/app/data" />
           </excludedPaths>
         </serverdata>

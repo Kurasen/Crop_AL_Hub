@@ -40,7 +40,7 @@ class Config:
     timezone = 'Asia/Shanghai'
 
 
-# 算法文件存储路径配置
+    # 算法文件存储路径配置
     UPLOAD_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_AL_Hub-API/app/data/input').resolve()  # 使用 Path 对象
     OUTPUT_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_AL_Hub-API/app/data/output').resolve()  # 使用 Path 对象
 
