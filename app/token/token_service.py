@@ -1,4 +1,4 @@
-from app.core.exception import AuthenticationError
+from app.core.exception import AuthenticationError, TokenError
 from app.token.JWT import verify_token, generate_access_token, generate_refresh_token
 from app.token.token_repo import TokenRepository
 
@@ -23,7 +23,7 @@ class TokenService:
 
         # 验证 refresh_token 是否一致
         if not stored_refresh_token or stored_refresh_token != old_refresh_token:
-            raise AuthenticationError("Refresh Token is invalid or has been revoked")
+            raise TokenError("Refresh Token is invalid or has been revoked")
 
         # 生成新的 Access Token 和新的 Refresh Token
         new_access_token = generate_access_token(user_id, username)

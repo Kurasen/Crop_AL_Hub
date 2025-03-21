@@ -64,3 +64,36 @@ class UserSearchSchema(BaseSchema):
             data['username'] = identity
 
         return data
+
+
+class UserSchema(BaseSchema):
+    id = fields.Int(dump_only=True)
+    username = fields.Str()
+    email = fields.Method("get_email")
+    telephone = fields.Method("get_telephone")
+
+    def get_email(self, obj):
+        if obj.email:
+            return self.mask_email(obj.email)
+        return None
+
+    def get_telephone(self, obj):
+        if obj.telephone:
+            return self.mask_telephone(obj.telephone)
+        return None
+
+    @staticmethod
+    def mask_email(email):
+        parts = email.split('@')
+        if len(parts) != 2:
+            return email
+        name = parts[0]
+        if len(name) <= 1:
+            return f"*@{parts[1]}"
+        return f"{name[0]}***@{parts[1]}"
+
+    @staticmethod
+    def mask_telephone(telephone):
+        if len(telephone) != 11:
+            return telephone
+        return telephone[:3] + "****" + telephone[-4:]

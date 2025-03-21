@@ -4,8 +4,10 @@ import jwt
 from datetime import datetime, timedelta
 from flask import request, g
 from functools import wraps
+
+from app import User
 from app.config import Config  # 载入配置
-from app.core.exception import AuthenticationError
+from app.core.exception import AuthenticationError, TokenError
 from app.core.redis_connection_pool import redis_pool
 
 SECRET_KEY = Config.SECRET_KEY
@@ -80,21 +82,18 @@ def verify_token(token, check_blacklist=True):
         jti = payload["jti"]
         token_type = payload.get('token_type', None)  # 获取 token_type
 
-        print(f"Decoded token: {payload}")
-        print(f"Token type: {token_type}")  # 打印 token 类型（'access' 或 'refresh'）
-
         # 检查黑名单（只对 access_token 做黑名单检查）
         if check_blacklist and token_type == 'access':
             with redis_pool.get_redis_connection(pool_name='user') as redis_client:
                 if redis_client.exists(f"{BLACKLIST_REDIS_KEY}:{jti}"):
                     print(f"Token with jti {jti} is in the blacklist.")  # 输出黑名单信息
-                    raise AuthenticationError("令牌已被撤销")
+                    raise TokenError("令牌已被撤销")
 
         return payload  # 返回解码后的 Payload（有效载荷）, payload 是字典
     except jwt.ExpiredSignatureError:
-        raise AuthenticationError("令牌已过期")  # 抛出自定义的认证错误
+        raise TokenError("令牌已过期")  # 抛出自定义的认证错误
     except jwt.InvalidTokenError:
-        raise AuthenticationError("认证失败，错误的令牌")  # 抛出自定义的认证错误
+        raise TokenError("认证失败，错误的令牌")  # 抛出自定义的认证错误
 
 
 def get_jwt_identity():
@@ -108,13 +107,13 @@ def get_jwt_identity():
         # 如果 g 中没有，再解析 Token（兼容性处理）
         token = request.headers.get('Authorization', '')
         if not token.startswith('Bearer '):
-            raise AuthenticationError("Token is missing")
+            raise TokenError("Token is missing")
         token = token[len('Bearer '):]
         payload = verify_token(token)
 
     # 确保是 Access Token
     if payload.get("token_type") != "access":
-        raise AuthenticationError("Logout must use access_token")
+        raise TokenError("Logout must use access_token")
 
     return payload["jti"]
 
@@ -123,14 +122,19 @@ def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         try:
-            # 从请求头获取 Token
-            token = request.headers.get('Authorization', '').split(" ")[1]
-            # 验证 Token 并获取 payload
+            # 严格处理 Authorization 头
+            auth_header = request.headers.get('Authorization', '')
+            if not auth_header:
+                raise TokenError("缺少或无效的授权标头")
+
+            token = auth_header.split(" ")[1].strip()
+            if not token:
+                raise TokenError("空令牌")            # 验证 Token 并获取 payload
             payload = verify_token(token)
             # 将 payload 存入全局对象 g
-            g.current_user_payload = payload
+            g.current_user = User.query.get(payload['user_id'])
             # 传递 payload 给路由函数
-            return f(current_user=payload, *args, **kwargs)
-        except AuthenticationError as e:
-            raise AuthenticationError(str(e))
+            return f(*args, **kwargs)
+        except TokenError as e:
+            raise TokenError(str(e))
     return decorated

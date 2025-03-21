@@ -31,7 +31,7 @@ def create_json_response(data=None, status=200, http_status=200):
         if error_details:
             response_data = {
                 "data": None,
-                "msg": error_message or "success",
+                "msg": error_message or "fail",
                 "errorDetails": [
                     {"field": field, "message": ', '.join(messages)}
                     for field, messages in error_details.items()

@@ -63,6 +63,17 @@ class AuthenticationError(CustomError):
         super().__init__(message, status_code)
 
 
+# 继承自 CustomError 的子类，表示认证错误
+class TokenError(CustomError):
+    def __init__(self, message="Token认证失败", status_code=498):
+        """
+        认证失败的异常
+
+        :param message: 错误信息
+        """
+        super().__init__(message, status_code)
+
+
 class InvalidSizeError(CustomError):
     def __init__(self, size_str, message="大小字符串无效", status_code=422):
         """

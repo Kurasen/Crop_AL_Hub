@@ -1,4 +1,3 @@
-
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.redis_connection_pool import redis_pool
@@ -25,9 +24,11 @@ class AuthService:
 
             # 验证码检查
             VerificationCodeService.validate_code(login_type, login_identifier, validated_data['code'])
+
             # 检查用户是否存在
             if AuthRepository.get_user_by_identifier(login_identifier, login_type):
                 raise ValidationError("该用户已注册，请登录", 409)
+
             # 创建用户模型
             user = User(
                 username=validated_data['username'],
@@ -37,10 +38,13 @@ class AuthService:
             )
 
             AuthRepository.save_user(user)
+            print(user.to_dict())
             db.session.commit()
+
             # 生成令牌
             return {
                 "data": {
+                    "user_info": user.to_dict(),
                     "access_token": generate_access_token(user.id, user.username),
                     "refresh_token": generate_refresh_token(user.id, user.username)
                 },
@@ -105,6 +109,7 @@ class AuthService:
                         current_app.logger.info(f"Auth {login_identifier} already has a valid access token.")
                         return {
                             "data": {
+                                "user_info": user.to_dict(),
                                 "access_token": stored_access_token,
                                 "refresh_token": stored_refresh_token if stored_refresh_token else None
                             },
@@ -126,6 +131,7 @@ class AuthService:
                 current_app.logger.info(f"Login successful for {login_identifier}, generated new tokens.")
                 return {
                     "data": {
+                        "user_info": user.to_dict(),
                         "access_token": new_access_token,
                         "refresh_token": stored_refresh_token if stored_refresh_token else None
                     },

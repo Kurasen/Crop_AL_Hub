@@ -25,7 +25,7 @@ paths:
       tags:
         - auth
       summary: 用户注册接口
-      description: 用户可以选择通过手机号或邮箱进行注册，用户名由系统自动生成并保证唯一性
+      description: 用户可以选择通过手机号或邮箱进行注册，用户id由系统自动生成并保证唯一性
       requestBody:
         content:
           application/json:
@@ -144,8 +144,6 @@ paths:
           description: Token refreshed successfully
         '400':
           description: Invalid token
-      security:
-        - BearerAuth: [ ]
 
   /api/v1/datasets:
     get:
@@ -242,6 +240,9 @@ paths:
         '400':
           description: 请求无效
 
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
+
     post:
       summary: 创建新数据集
       operationId: createDataset
@@ -287,6 +288,9 @@ paths:
         '500':
           description: 内部服务器错误
 
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
+
   /api/v1/datasets/{dataset_id}:
     get:
       tags:
@@ -312,6 +316,9 @@ paths:
                   $ref: '#/components/schemas/Dataset'
         '404':
           description: No datasets found in the database
+
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
     put:
       summary: 更新现有数据集
@@ -367,6 +374,8 @@ paths:
           description: Dataset not found
         '500':
           description: 内部服务器错误
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
     delete:
       summary: 删除单个数据集
@@ -396,6 +405,8 @@ paths:
           description: Dataset not found
         '500':
           description: 内部服务器错误
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
   /api/v1/models/{model_id}/run:
     get:
@@ -441,6 +452,9 @@ paths:
           description: Model ID and Dataset ID are required
         '404':
           description: Model ID or Dataset ID not found
+
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
   /api/v1/models/{model_id}/test-model:
     post:
@@ -499,6 +513,8 @@ paths:
           description: 没有上传文件
         '500':
           description: 服务器内部错误
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
   /api/v1/models:
     get:
@@ -517,6 +533,12 @@ paths:
           schema:
             type: string
           description: 模型描述
+        - name: type
+          in: query
+          description: 按类型筛选，多个标签可以用逗号、分号或空格分隔
+          required: false
+          schema:
+            type: string
         - in: query
           name: input
           schema:
@@ -537,8 +559,6 @@ paths:
             type: string
             enum:
               - accuracy
-              - sales
-              - stars
               - likes
           description: 排序字段
         - in: query
@@ -592,6 +612,9 @@ paths:
         '400':
           description: 查询参数无效
 
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
+
     post:
       tags:
         - models
@@ -644,6 +667,8 @@ paths:
           description: 请求数据无效
         '500':
           description: 内部服务器错误
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
   /api/v1/models/{model_id}:
     get:
@@ -670,7 +695,8 @@ paths:
                   $ref: '#/components/schemas/Model'
         '404':
           description: No datasets found in the database
-
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
     put:
       tags:
         - models
@@ -732,6 +758,8 @@ paths:
           description: 模型未找到
         '500':
           description: 内部服务器错误
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
     delete:
       tags:
@@ -752,6 +780,8 @@ paths:
           description: 模型未找到
         '500':
           description: 内部服务器错误
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
   /api/v1/stars/{target_id}/{star_type}:
     post:
@@ -857,7 +887,7 @@ components:
         login_identifier:
           type: string
           description: 用户的邮箱或电话号码具体信息
-          example: 13345678901
+          example: 13345678906
         login_type:
           type: string
           description: 登录类型（选择：邮箱或电话号码）

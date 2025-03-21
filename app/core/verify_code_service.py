@@ -129,7 +129,7 @@ class VerificationCodeService:
 
                 # 明确处理返回值
                 stored_code = result[0] if len(result) > 0 else None
-                print(type(stored_code))
+
                 ttl = cache_client.ttl(redis_key)
 
                 if stored_code is None:
@@ -140,7 +140,7 @@ class VerificationCodeService:
                 if ttl <= 0:
                     # 如果验证码已经被删除，说明验证码已过期
                     current_app.logger.warning(f"验证码已过期: {redis_key}")
-                    raise ValidationError("验证码已过期")
+                    raise ValidationError("验证码已过期", 422)
 
                 # 将存储的 code 从字节转为整数类型
                 stored_code = int(stored_code)  # 确保从 Redis 获取的 code 是整数

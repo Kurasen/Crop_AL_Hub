@@ -1,12 +1,15 @@
 import os
+
 from flask import Flask, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-from app.config import config
+from app.config import env_config, Config
 from app.core.exception import init_error_handlers
 from app.core.redis_connection_pool import redis_pool
-# from app.docker.docker_service import INPUT_IMAGES_DIR, OUTPUT_DIR
+
+from app.docker.core.celery_app import CeleryManager
+
 from app.exts import db
 from flask_migrate import Migrate
 from flask_cors import CORS
@@ -28,15 +31,25 @@ def create_app(env=None):
     # 初始化扩展
     init_extensions(app)
 
-    # 注册蓝图
-    register_blueprints(app)
+    app.config.update({
+        'broker_url': Config.broker_url,
+        'result_backend': Config.result_backend,
+        'accept_content': Config.accept_content,
+        'task_serializer': Config.task_serializer,
+        'result_serializer': Config.result_serializer,
+        'timezone': Config.timezone
+    })
+
+    from app.docker.core.celery_app import CeleryManager
+    CeleryManager.init_celery(app)
+
+    from app.docker import task
 
     # 配置Redis连接池
     app.config['REDIS_POOL'] = redis_pool
 
-    # # 创建输入输出目录  #%
-    # INPUT_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-    # OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    # 注册蓝图（需在celery后注册）
+    register_blueprints(app)
 
     return app
 
@@ -48,16 +61,17 @@ def configure_app(app: FlaskApp, env=None):
     print(f"FLASK_ENV: {os.getenv('FLASK_ENV')}")
 
     env = env or os.getenv('FLASK_ENV', 'default')
-    if env not in config:
+    if env not in env_config:
         raise ValueError(f'Invalid environment: {env}')
 
     # 加载配置
-    app.config.from_object(config[env])
-    config[env].init_app(app)
+    app.config.from_object(env_config[env])
+    env_config[env].init_app(app)
 
     # 配置跨域、转码等
     app.config["JSON_AS_ASCII"] = False
     app.json_encoder = CustomJSONEncoder
+    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
 
 def init_extensions(app):
@@ -108,6 +122,9 @@ def register_blueprints(app: FlaskApp):
     from app.blueprint.orders_bp import orders_bp
     app.register_blueprint(orders_bp, url_prefix='/api/v1/orders')
 
+    from app.docker.api.test_app import algorithm_bp
+    app.register_blueprint(algorithm_bp, url_prefix='/api/v1/algorithms')
+
 
 def configure_global_checks(app):
     @app.before_request
@@ -139,23 +156,35 @@ def configure_global_checks(app):
                     return create_json_response({"error": "请求体必须是有效的 JSON"}, 400)
 
 
-app = create_app()
+# 创建 Flask 应用
+flask_app = create_app()
+
+celery_app = CeleryManager.get_celery()
 
 if __name__ == '__main__':
+    import sys
 
-    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+    # 判断启动模式
+    if 'celery' in sys.argv:
+        # Celery worker 模式
+        celery_app.worker_main(argv=sys.argv[sys.argv.index('celery') + 1:])
+    else:
+        # 正常启动 Flask
+        if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
 
-        with app.app_context():  # 显式激活应用上下文
-            # 在此处执行需要上下文的代码（如初始化数据）
-            print("Registered routes:")
-            for rule in app.url_map.iter_rules():
-                print(f"{rule.endpoint}: {rule}")
-            print("\nSwagger UI available at: http://127.0.0.1:8080/swagger-ui/\n")
-            # # 示例：创建订单并更新缓存
-            # model_id = 1
-            # new_order = Order(model_id=1, order_type=OrderType.MODEL, status=OrderStatus.COMPLETED)
-            # db.session.add(new_order)
-            # db.session.commit()
-            # OrderService.invalidate_sales_cache(model_id=1)
+            with flask_app.app_context():  # 显式激活应用上下文
+                # 在此处执行需要上下文的代码（如初始化数据）
+                print("Registered routes:")
+                for rule in flask_app.url_map.iter_rules():
+                    print(f"{rule.endpoint}: {rule}")
 
-    app.run(host='0.0.0.0', port=5000, debug=True)
+                print("\nSwagger UI available at: http://127.0.0.1:8080/swagger-ui/\n")
+
+                # # 示例：创建订单并更新缓存
+                # model_id = 1
+                # new_order = Order(model_id=1, order_type=OrderType.MODEL, status=OrderStatus.COMPLETED)
+                # db.session.add(new_order)
+                # db.session.commit()
+                # OrderService.invalidate_sales_cache(model_id=1)
+
+        flask_app.run(host='127.0.0.1', port=5000, debug=True)

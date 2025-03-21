@@ -1,11 +1,13 @@
-from flask import request, Blueprint, current_app
+import re
+
+from flask import request, Blueprint, current_app, g
 
 from app.schemas.base import apply_rate_limit
 from app.schemas.auth_schema import UserCreateSchema, UserLoginSchema, GenerateCodeSchema
 from app.token.token_service import TokenService
 from app.utils.json_encoder import create_json_response
 from app.token.JWT import token_required, add_to_blacklist, get_jwt_identity, verify_token
-from app.core.exception import ValidationError, AuthenticationError, logger
+from app.core.exception import ValidationError, AuthenticationError, logger, TokenError
 from app.token.token_repo import TokenRepository
 from app.auth.auth_service import AuthService
 from app.core.verify_code_service import VerificationCodeService
@@ -37,15 +39,12 @@ def login():
 
 @auth_bp.route('/logout', methods=['POST'])
 @token_required  # 使用装饰器，确保用户已认证
-def post(current_user):
+def post():
     """登出功能"""
-    # 获取当前用户的 ID
-    if current_user is None:
-        return create_json_response({"msg": "用户信息丢失"}, status=400)
-
-    user_id = current_user.get('user_id')
+    user_id = g.current_user
     if not user_id:
         return create_json_response({"msg": "用户ID无效"}, status=400)
+
     jti = get_jwt_identity()
 
     # 将 Access Token 加入黑名单
@@ -60,49 +59,42 @@ def post(current_user):
 # 受保护接口：需要使用 JWT 认证
 @auth_bp.route('/protected', methods=['GET'])
 @token_required  # 使用装饰器，确保用户已认证
-def protected_route(current_user):
+def protected_route():
     """受保护接口"""
-    if not isinstance(current_user, dict) or 'username' not in current_user:
+    user_id = g.current_user
+    if not isinstance(user_id, dict) or 'username' not in user_id:
         raise ValidationError("Invalid user data")
-    return {"message": f"Hello, {current_user['username']}!"}, 200
+    return {"message": f"Hello, {user_id['username']}!"}, 200
 
 
 @auth_bp.route('/refresh_token', methods=['POST'])
-@token_required
-def refresh_token(current_user):
+def refresh_token():
     """刷新 Token"""
-
     token = request.headers.get('Authorization')
     if not token:
-        raise ValidationError("Token is missing")
-    # 处理 Bearer 头
-    if token.startswith('Bearer '):
-        token = token[len('Bearer '):]
-    # 如果 Token 不以 "Bearer " 开头，直接使用它
-    token = token.strip()  # 确保没有多余的空格
+        raise ValidationError("令牌缺失")
 
-    # 验证 token 类型
+    pattern = r'^\s*(?:Bearer[\s:]+)+(.+)$'  # 关键变化：用 (?:...) 匹配重复的 Bearer
+    match = re.match(pattern, token, re.IGNORECASE)
+    if match:
+        token = match.group(1).strip()
+
     try:
-        decoded = verify_token(token)
+        # 直接验证 refresh_token
+        decoded = verify_token(token, check_blacklist=False)  # refresh_token 无需检查黑名单
         token_type = decoded.get('token_type')
 
-        # 如果是 access_token，则返回错误提示
         if token_type == 'access':
-            raise AuthenticationError("Access token cannot be used to refresh the token. Please use a valid "
-                                      "refresh token.")
-
-    except AuthenticationError as e:
-        current_app.logger.error(f"Token refresh failed: {str(e)}")
-        raise e
-
-    try:
-        # 验证 refresh_token 并获取新的 access_token
+            raise TokenError("请使用有效的 Refresh Token")
+        print(token)
+        # 生成新的 access_token
         response, status = TokenService.refresh_token(token)
         return response, status
-    except AuthenticationError as e:
-        # 记录刷新 Token 失败的日志
+
+    except TokenError as e:
         current_app.logger.error(f"Token refresh failed: {str(e)}")
         raise e
+
 
 
 @auth_bp.route('/generate_code', methods=['POST'])  # 修正methods参数

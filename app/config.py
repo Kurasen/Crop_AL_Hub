@@ -22,20 +22,27 @@ class Config:
     # 本地
     LIMITER_STORAGE_URI = "redis://127.0.0.1:6379"
 
-    LIMITER_DEFAULT_LIMITS = ['200 per day', '200 per hour']
+    LIMITER_DEFAULT_LIMITS = ['1000000 per day', '1000000 per hour']
     # # 根据环境变量决定是否启用限制
     # if os.getenv("FLASK_ENV") == "development":
     #     LIMITER_DEFAULT_LIMITS = []  # 开发环境禁用限流
     # else:
     #     LIMITER_DEFAULT_LIMITS = ['200 per day', '200 per hour']  # 生产环境启用限流
 
-    # 算法基础路径
-    BASE_DIR = Path(__file__).parent.parent
-    DATA_DIR = BASE_DIR / "data"
+    """Celery统一配置类"""
+    broker_url = 'redis://localhost:6379/0'
+    result_backend = 'redis://localhost:6379/0'
+    task_serializer = 'json'
+    result_serializer = 'json'
+    accept_content = ['json']
+    WORKER_CONCURRENCY = os.cpu_count() * 2  # 根据CPU核心数优化
+    task_track_started = True
+    timezone = 'Asia/Shanghai'
 
-    # 输入输出路径
-    INPUT_IMAGES_DIR = DATA_DIR / "images"  # 上传的图片目录
-    OUTPUT_DIR = DATA_DIR / "output"  # 算法输出目录
+
+# 算法文件存储路径配置
+    UPLOAD_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_AL_Hub-API/app/data/input').resolve()  # 使用 Path 对象
+    OUTPUT_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_AL_Hub-API/app/data/output').resolve()  # 使用 Path 对象
 
     # Redis配置
     REDIS_HOST = "localhost"
@@ -80,7 +87,7 @@ class ProductionConfig(Config):
 
 
 # 配置映射
-config = {
+env_config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
     'default': DevelopmentConfig,  # 默认环境
