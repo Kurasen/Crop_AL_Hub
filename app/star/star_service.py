@@ -1,8 +1,7 @@
 from typing import Dict, Any
 
-from flask import current_app
 
-from app.core.exception import NotFoundError, ValidationError
+from app.core.exception import NotFoundError, ValidationError, logger
 from app.exts import db
 from app.star.star import StarType, Star
 from app.star.star_repo import StarRepository
@@ -81,7 +80,7 @@ class StarService:
             return {"message": "收藏记录不存在"}, 404
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"删除收藏时出错: {e}", exc_info=True)  # 记录详细的错误信息
+            logger.error(f"删除收藏时出错: {e}", exc_info=True)  # 记录详细的错误信息
             return {"message": "服务器内部错误"}, 500
 
     @staticmethod

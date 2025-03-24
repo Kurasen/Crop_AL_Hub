@@ -1,12 +1,12 @@
 import hashlib
 import hmac
 import secrets
-import string
+
 import time
 import redis
 
-from flask import current_app
-from app.core.exception import ValidationError, NotFoundError, RetryAfterError
+from app.config import Config
+from app.core.exception import ValidationError, NotFoundError, RetryAfterError, logger
 from app.core.redis_connection_pool import redis_pool
 
 
@@ -64,18 +64,18 @@ class VerificationCodeService:
             try:
                 # 设置验证码缓存，确保 cache_key 是 bytes 类型
                 cache_client.setex(cache_key, VerificationCodeService.CODE_EXPIRE, code)
-                current_app.logger.info(f"验证码已存储: {cache_key}")
+                logger.info(f"验证码已存储: {cache_key}")
 
                 # 设置限制时间的缓存，记录验证码生成时间
                 cache_client.setex(rate_limit_key, VerificationCodeService.RATE_LIMIT_TIME, time.time())
-                current_app.logger.info(f"验证码生成时间已记录: {rate_limit_key}")
+                logger.info(f"验证码生成时间已记录: {rate_limit_key}")
 
             except redis.exceptions.RedisError as e:
-                current_app.logger.error(f"Redis存储失败: {str(e)}")
+                logger.error(f"Redis存储失败: {str(e)}")
                 raise
 
             # 发送验证码到用户（这里只是打印，实际应通过邮件或短信发送）
-            current_app.logger.info(f"Sending {login_type} verification code to {login_identifier}: {code}")
+            logger.info(f"Sending {login_type} verification code to {login_identifier}: {code}")
 
             return code
 
@@ -134,19 +134,19 @@ class VerificationCodeService:
 
                 if stored_code is None:
                     # 如果没有找到验证码，抛出验证码不存在的异常
-                    current_app.logger.warning(f"验证码不存在: {redis_key}")
+                    logger.warning(f"验证码不存在: {redis_key}")
                     raise NotFoundError("验证码未发送", 422)
 
                 if ttl <= 0:
                     # 如果验证码已经被删除，说明验证码已过期
-                    current_app.logger.warning(f"验证码已过期: {redis_key}")
+                    logger.warning(f"验证码已过期: {redis_key}")
                     raise ValidationError("验证码已过期", 422)
 
                 # 将存储的 code 从字节转为整数类型
                 stored_code = int(stored_code)  # 确保从 Redis 获取的 code 是整数
 
                 if stored_code != code:
-                    current_app.logger.warning(f"验证码不匹配: 输入={code}, 存储={stored_code}")
+                    logger.warning(f"验证码不匹配: 输入={code}, 存储={stored_code}")
                     raise ValidationError("验证码错误", 422)
 
                 # 验证成功后删除验证码
@@ -155,13 +155,13 @@ class VerificationCodeService:
 
                 return True
         except redis.exceptions.RedisError as e:
-            current_app.logger.error(f"Redis操作失败: {str(e)}")
+            logger.error(f"Redis操作失败: {str(e)}")
             raise ValidationError("验证服务暂时不可用", 404)
 
     @staticmethod
     def _generate_redis_key(login_type, login_identifier):
         # 获取 SECRET_KEY，确保它是 bytes 类型
-        secret_key = current_app.config['SECRET_KEY']
+        secret_key = Config.SECRET_KEY
 
         # 如果 SECRET_KEY 是字符串类型，则转为 bytes
         if isinstance(secret_key, str):

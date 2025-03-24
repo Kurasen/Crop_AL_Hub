@@ -1,11 +1,15 @@
 import logging
-from flask import request, current_app
+from flask import request
 from werkzeug.exceptions import HTTPException, UnsupportedMediaType
 from marshmallow import ValidationError as MarshmallowValidationError
 from app.utils import create_json_response
 
 # 初始化日志配置，设置错误日志级别
-logging.basicConfig(level=logging.ERROR)
+# 配置日志记录
+logging.basicConfig(level=logging.INFO,  # 设置日志级别为 INFO
+                    format='%(asctime)s - %(levelname)s - %(message)s')  # 设置日志格式
+
+# 获取日志记录器
 logger = logging.getLogger(__name__)
 
 
@@ -131,6 +135,14 @@ class TooManyRequests(CustomError):
         super().__init__(message, status_code)
 
 
+class ServiceException(CustomError):
+    def __init__(self, message="服务异常，请稍后再试", status_code=400):
+        """
+        服务异常
+        """
+        super().__init__(message, status_code)
+
+
 def init_error_handlers(app):
     """注册全局错误处理器，用于捕获和处理不同类型的错误"""
 
@@ -187,7 +199,7 @@ def init_error_handlers(app):
             status_code = 500
 
         # 记录错误日志，包括错误信息和请求信息
-        current_app.logger.error(f"Error: {str(error)}, Status Code: {status_code}, Request Info: {request_info}, "
+        logger.error(f"Error: {str(error)}, Status Code: {status_code}, Request Info: {request_info}, "
                                  f"IP: {request.remote_addr}, User-Agent: {request.user_agent.string}")
 
         # 返回统一的错误响应

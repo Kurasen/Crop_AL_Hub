@@ -2,13 +2,12 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.redis_connection_pool import redis_pool
 from app.token.JWT import generate_access_token, generate_refresh_token, verify_token
-from app.core.exception import ValidationError, AuthenticationError, DatabaseError, RedisConnectionError
+from app.core.exception import ValidationError, AuthenticationError, DatabaseError, RedisConnectionError, logger
 from app.exts import db
 from app.user.user import User
 from app.token.token_repo import TokenRepository
 from app.auth.auth_repo import AuthRepository
 from app.auth.login_attempt_repo import LoginAttemptsRepository
-from flask import current_app
 from app.core.passwd_service import PasswordService
 from app.core.verify_code_service import VerificationCodeService
 
@@ -74,7 +73,7 @@ class AuthService:
             lock = redis_client.set(lock_key, 'locked', nx=True, ex=5)  # 5 秒锁
             if not lock:
                 current_ttl = redis_client.ttl(lock_key)
-                current_app.logger.info(f"Login lock contention for {login_identifier},TTL: {current_ttl}s")
+                logger.info(f"Login lock contention for {login_identifier},TTL: {current_ttl}s")
                 raise AuthenticationError("Too many users, please try again later.")
 
             try:
@@ -106,7 +105,7 @@ class AuthService:
                         # 验证 access_token 是否有效并且没有被撤销
                         verify_token(stored_access_token, check_blacklist=True)
                         print(f"Access token for {login_identifier} is valid and not revoked.")  # 输出验证成功的信息
-                        current_app.logger.info(f"Auth {login_identifier} already has a valid access token.")
+                        logger.info(f"Auth {login_identifier} already has a valid access token.")
                         return {
                             "data": {
                                 "user_info": user.to_dict(),
@@ -128,7 +127,7 @@ class AuthService:
                 # Step 6: 登录成功后，重置登录失败次数
                 LoginAttemptsRepository.reset_login_attempts(login_identifier)
 
-                current_app.logger.info(f"Login successful for {login_identifier}, generated new tokens.")
+                logger.info(f"Login successful for {login_identifier}, generated new tokens.")
                 return {
                     "data": {
                         "user_info": user.to_dict(),
@@ -139,12 +138,12 @@ class AuthService:
                 }, 200
 
             except AuthenticationError as e:
-                current_app.logger.error(f"Authentication failed for {login_identifier}: {str(e)}")
+                logger.error(f"Authentication failed for {login_identifier}: {str(e)}")
                 raise e
             except RedisConnectionError as e:
-                current_app.logger.error(f"Redis connection failed during login: {str(e)}")
+                logger.error(f"Redis connection failed during login: {str(e)}")
             except Exception as e:
-                current_app.logger.error(f"Unexpected error during login for {login_identifier}: {str(e)}")
+                logger.error(f"Unexpected error during login for {login_identifier}: {str(e)}")
             finally:
                 # 确保 Redis 锁被释放
                 redis_client.delete(lock_key)

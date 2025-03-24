@@ -2,6 +2,7 @@ import json
 
 from flask import send_file, Blueprint, make_response
 
+
 from app.exts import db
 from app.schemas.model_schema import ModelRunSchema, ModelTestSchema, ModelSearchSchema, ModelCreateSchema, \
     ModelUpdateSchema
@@ -123,6 +124,19 @@ def delete_model(model_id):
     return create_json_response(response, status)
 
 
+import uuid
+from pathlib import Path
+
+import docker
+from flask import request, jsonify
+
+from app.config import Config
+from app.docker.core.docker_clinet import docker_client
+from app.docker.core.task import logger, run_algorithm
+from app.model.model_service import ModelService
+from app.utils import create_json_response
+from docker.errors import ImageNotFound
+
 
 # Flask路由：上传文件并触发任务
 @models_bp.route('/process', methods=['POST'])
@@ -176,20 +190,6 @@ def process_image():
         },
         "message": "任务提交成功",
     }, 202)
-
-
-import uuid
-from pathlib import Path
-
-import docker
-from flask import request, jsonify
-
-from app.config import Config
-from app.docker.core.docker_clinet import docker_client
-from app.docker.core.task import logger, run_algorithm
-from app.model.model_service import ModelService
-from app.utils import create_json_response
-from docker.errors import ImageNotFound
 
 
 # Flask路由：查询任务状态

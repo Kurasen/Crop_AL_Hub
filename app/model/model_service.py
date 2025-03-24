@@ -1,11 +1,9 @@
 import re
 from typing import Set
 
-from flask import current_app
-
 from app.utils.upload_file import save_uploaded_file
 from app.core.exception import DatabaseError, ValidationError, FileUploadError, ImageProcessingError, \
-    NotFoundError
+    NotFoundError, logger
 from app.exts import db
 from app.model.model_repo import ModelRepository
 from app.dataset.dataset_service import DatasetService
@@ -51,7 +49,7 @@ class ModelService:
                 },
             }
         except Exception as e:
-            current_app.logger.error(f"Error occurred while searching models: {str(e)}")
+            logger.error(f"Error occurred while searching models: {str(e)}")
             raise e
 
     @staticmethod
@@ -75,7 +73,7 @@ class ModelService:
             # 排序后返回列表
             return sorted(unique_types)
         except Exception as e:
-            current_app.logger.error(f"Error getting types: {str(e)}")
+            logger.error(f"Error getting types: {str(e)}")
             raise e
 
     @staticmethod
@@ -87,7 +85,7 @@ class ModelService:
             return model_instance.to_dict(), 201
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Error occurred while creating model: {str(e)}")
+            logger.error(f"Error occurred while creating model: {str(e)}")
             raise e
 
     @staticmethod
@@ -100,7 +98,7 @@ class ModelService:
             return model_instance.to_dict(), 200
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Unexpected error while updating model : {str(e)}")
+            logger.error(f"Unexpected error while updating model : {str(e)}")
             raise e
 
     @staticmethod
@@ -113,7 +111,7 @@ class ModelService:
             return {"message": "Model deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Error occurred while deleting model {model_id}: {str(e)}")
+            logger.error(f"Error occurred while deleting model {model_id}: {str(e)}")
             raise e
 
     # 模拟的图像处理函数
@@ -148,16 +146,16 @@ class ModelService:
 
             return processed_image_path, model_info
         except ValidationError as ve:
-            current_app.logger.error(f"Validation error: {str(ve)}")
+            logger.error(f"Validation error: {str(ve)}")
             raise ve
         except FileUploadError as fe:
-            current_app.logger.error(f"File upload error: {str(fe)}")
+            logger.error(f"File upload error: {str(fe)}")
             raise fe
         except ImageProcessingError as ie:
-            current_app.logger.error(f"Image processing error: {str(ie)}")
+            logger.error(f"Image processing error: {str(ie)}")
             raise ie
         except Exception as e:
-            current_app.logger.error(f"Unexpected error: {str(e)}")
+            logger.error(f"Unexpected error: {str(e)}")
             raise e
 
     @staticmethod
@@ -179,11 +177,11 @@ class ModelService:
                 }
             }
         except ValidationError as ve:
-            current_app.logger.error(f"Validation error: {ve.message}")
+            logger.error(f"Validation error: {ve.message}")
             raise ve
         except NotFoundError as ne:
-            current_app.logger.error(f"Model with ID {model_id} not found: {str(ne)}")
+            logger.error(f"Model with ID {model_id} not found: {str(ne)}")
             raise ne
         except Exception as e:
-            current_app.logger.error(f"Database error occurred while retrieving model accuracy: {str(e)}")
+            logger.error(f"Database error occurred while retrieving model accuracy: {str(e)}")
             raise e

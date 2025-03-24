@@ -1,12 +1,8 @@
 import os
-import logging
 from contextlib import contextmanager
 import redis
 from typing import Dict
-from app.core.exception import RedisConnectionError
-
-# 配置日志
-logger = logging.getLogger(__name__)
+from app.core.exception import RedisConnectionError, logger
 
 
 class RedisConnectionPool:
@@ -29,13 +25,22 @@ class RedisConnectionPool:
         if self.__class__._initialized:
             return
         self.__class__._initialized = True
+
         # 从环境变量读取配置
-        self.redis_host = os.getenv('REDIS_HOST', 'redis')
+        self.redis_host = os.getenv('REDIS_HOST', '127.0.0.1')
         self.redis_port = int(os.getenv('REDIS_PORT', 6379))
         self.redis_password = os.getenv('REDIS_PASSWORD', None)
         # 初始化连接池
         self.pools = self._create_pools()
         logger.info("Redis 连接池初始化完成")
+
+        # 在 Redis 连接池初始化代码中打印进程信息
+        if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+            print(f"Flask 子进程 PID: {os.getpid()}")
+        else:
+            print(f"Flask 主进程 PID: {os.getpid()}")
+
+        print(f"进程 {os.getpid()} 的 Redis 配置 → Host: {self.redis_host}, Port: {self.redis_port}")
 
     def _create_pools(self) -> Dict[str, redis.ConnectionPool]:
         """创建不同用途的连接池（按数据库隔离）"""

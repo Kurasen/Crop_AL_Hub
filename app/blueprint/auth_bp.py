@@ -1,6 +1,6 @@
 import re
 
-from flask import request, Blueprint, current_app, g
+from flask import request, Blueprint, g
 
 from app.schemas.base import apply_rate_limit
 from app.schemas.auth_schema import UserCreateSchema, UserLoginSchema, GenerateCodeSchema
@@ -52,7 +52,7 @@ def post():
 
     # 删除 Refresh Token
     TokenRepository.delete_user_token(user_id, token_type='refresh')
-    current_app.logger.info(f"用户 {user_id} 成功登出")
+    logger.info(f"用户 {user_id} 成功登出")
     return create_json_response(status=204)
 
 
@@ -92,7 +92,7 @@ def refresh_token():
         return response, status
 
     except TokenError as e:
-        current_app.logger.error(f"Token refresh failed: {str(e)}")
+        logger.error(f"Token refresh failed: {str(e)}")
         raise e
 
 

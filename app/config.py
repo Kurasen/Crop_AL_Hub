@@ -1,3 +1,4 @@
+
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -17,7 +18,7 @@ class Config:
     LOCK_KEY = os.getenv('LOCK_KEY', 'user_login_lock')  # 默认值为 'user_login_lock'
     LOCK_EXPIRE = int(os.getenv('LOCK_EXPIRE', 300))  # 默认过期时间为 300 秒
 
-    # Docker化的limiter 配置
+    # Docker化的limiter 配置（服务器配置）
     #LIMITER_STORAGE_URI = "redis://redis:6379"
     # 本地
     LIMITER_STORAGE_URI = "redis://127.0.0.1:6379"
@@ -48,9 +49,6 @@ class Config:
     REDIS_HOST = "localhost"
     REDIS_PORT = 6379
     REDIS_DB = 0
-
-    # Docker配置
-    DOCKER_IMAGE_PREFIX = "my-algorithm-"  # 算法镜像名前缀（例如：my-algorithm-face-detection）
 
     # 数据库配置
     @staticmethod

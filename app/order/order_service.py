@@ -1,9 +1,7 @@
 from contextlib import contextmanager
 from typing import Optional
 
-from flask import current_app
-
-from app.core.exception import RedisConnectionError
+from app.core.exception import RedisConnectionError, logger
 from app.core.redis_connection_pool import redis_pool
 from app.exts import db
 from app.order.order import OrderStatus, Order, OrderType
@@ -18,7 +16,7 @@ class OrderService:
             with redis_pool.get_redis_connection(pool_name=pool_name) as client:
                 yield client
         except Exception as e:
-            current_app.logger.info(f"Redis连接失败: {str(e)}")
+            logger.info(f"Redis连接失败: {str(e)}")
             raise
 
     @classmethod
@@ -33,7 +31,7 @@ class OrderService:
                 if cached is not None:
                     return int(cached)
         except RedisConnectionError:
-            current_app.logger.info("Redis缓存不可用，使用数据库查询")
+            logger.info("Redis缓存不可用，使用数据库查询")
         # 缓存未命中，查询数据库
         count = cls._get_real_time_model_sales(model_id)
 
@@ -58,9 +56,9 @@ class OrderService:
             try:
                 with cls.get_redis_client() as redis_client:
                     redis_client.setex(key, ttl, value)
-                    current_app.logger.debug(f"缓存更新成功: {key}")
+                    logger.debug(f"缓存更新成功: {key}")
             except Exception as e:
-                current_app.logger.error(f"缓存更新失败: {str(e)}")
+                logger.error(f"缓存更新失败: {str(e)}")
 
         # 使用线程池或Celery执行异步任务
         from concurrent.futures import ThreadPoolExecutor
@@ -79,7 +77,7 @@ class OrderService:
                 # 同时失效排行榜缓存
                 redis_client.delete("sales_leaderboard")
         except RedisConnectionError as e:
-            current_app.logger.info(f"缓存失效失败: {str(e)}")
+            logger.info(f"缓存失效失败: {str(e)}")
 
 
 # 在订单状态变更时调用

@@ -1,6 +1,5 @@
-from flask import current_app
 
-from app.core.exception import DatabaseError, NotFoundError
+from app.core.exception import DatabaseError, NotFoundError, logger
 from app.dataset.dataset_repo import DatasetRepository
 from app.exts import db
 
@@ -63,7 +62,7 @@ class DatasetService:
             return dataset_instance.to_dict(), 201
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Error occurred while creating model: {str(e)}")
+            logger.error(f"Error occurred while creating model: {str(e)}")
             raise e
 
     @staticmethod
@@ -79,7 +78,7 @@ class DatasetService:
             return dataset_instance.to_dict(), 200
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Error updating dataset: {str(e)}")
+            logger.error(f"Error updating dataset: {str(e)}")
             raise
 
     @staticmethod
@@ -94,11 +93,11 @@ class DatasetService:
             db.session.commit()
             return {"message": "Dataset deleted successfully"}, 204
         except NotFoundError as ne:
-            current_app.logger.error(f"Dataset with ID {dataset_id} not found: {str(ne)}")
+            logger.error(f"Dataset with ID {dataset_id} not found: {str(ne)}")
             raise ne
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Error occurred while deleting model {dataset_id}: {str(e)}")
+            logger.error(f"Error occurred while deleting model {dataset_id}: {str(e)}")
             raise e
 
     @staticmethod
