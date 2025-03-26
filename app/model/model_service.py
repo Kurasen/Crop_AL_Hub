@@ -1,7 +1,7 @@
 import re
 from typing import Set
 
-from app.utils.upload_file import save_uploaded_file
+from app.utils.file_process import save_uploaded_file
 from app.core.exception import DatabaseError, ValidationError, FileUploadError, ImageProcessingError, \
     NotFoundError, logger
 from app.exts import db

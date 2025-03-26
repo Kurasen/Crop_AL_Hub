@@ -178,15 +178,18 @@ def process_image(model_id):
     except Exception as e:
         logger.error(f"文件保存失败: {str(e)}")
         return create_json_response({'error': {"message": '文件保存失败'}}, 500)
+    print(target_dir)
+    task = run_algorithm.apply_async(
+        args=(str(target_dir), task_id, image_name, instruction),
+        task_id=task_id
+    )
 
-    # 提交异步任务（非阻塞）
-    task = run_algorithm.delay(str(target_dir), task_id, image_name, instruction)
     return create_json_response({
-        "data": {
-            'task_id': task.id,
-        },
-        "message": "任务提交成功",
-    }), 202
+            "data": {
+                'task_id': task_id,
+            },
+            "message": "任务提交成功",
+        }), 202
 
 
 # Flask路由：查询任务状态
