@@ -29,6 +29,14 @@ def search():
     return create_json_response(result, status)
 
 
+@datasets_bp.route('/types', methods=['GET'])
+def get_all_types():
+    """获取所有唯一的模型类型列表"""
+    types = DatasetService.get_all_types()
+    return create_json_response({
+        "data": {"types": types}
+    })
+
 # 创建新数据集
 @datasets_bp.route('', methods=['POST'])
 def create_dataset():

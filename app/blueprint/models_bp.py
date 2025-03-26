@@ -1,11 +1,21 @@
 import json
+import uuid
+from datetime import datetime
 
 from flask import send_file, Blueprint, make_response
-
-
+from app.core.exception import ValidationError, FileUploadError
+from app.docker.core.storage import FileStorage
 from app.exts import db
 from app.schemas.model_schema import ModelRunSchema, ModelTestSchema, ModelSearchSchema, ModelCreateSchema, \
     ModelUpdateSchema
+from pathlib import Path
+from flask import request, jsonify
+from app.config import Config
+from app.docker.core.docker_clinet import docker_client
+from app.docker.core.task import logger, run_algorithm
+from app.model.model_service import ModelService
+from app.utils import create_json_response
+from docker.errors import ImageNotFound
 
 # 设置允许的文件格式
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
@@ -29,28 +39,28 @@ def run(model_id):
     return create_json_response(model_accuracy_info)
 
 
-# 接收图片并返回处理后的图片和 JSON
-@models_bp.route('/<int:model_id>/test-model', methods=['POST'])
-# @token_required
-def test_model(model_id):
-    """
-    上传一张图片，进行处理并返回处理后的图片和相应的 JSON 数据。
-    """
-    # 文件校验
-    uploaded_file = ModelTestSchema().load(request.files).get('file')
-
-    # 处理模型和文件，获取图像处理路径和模型信息
-    processed_image_path, model_info = ModelService.process_model_and_file(model_id, uploaded_file)
-
-    # 构造响应
-    response = make_response(send_file(
-        processed_image_path,
-        mimetype='image/jpeg'
-    ))
-
-    response.headers['X-Model-Output'] = json.dumps(model_info)
-
-    return response
+# # 接收图片并返回处理后的图片和 JSON
+# @models_bp.route('/<int:model_id>/test-model', methods=['POST'])
+# # @token_required
+# def test_model(model_id):
+#     """
+#     上传一张图片，进行处理并返回处理后的图片和相应的 JSON 数据。
+#     """
+#     # 文件校验
+#     uploaded_file = ModelTestSchema().load(request.files).get('file')
+#
+#     # 处理模型和文件，获取图像处理路径和模型信息
+#     processed_image_path, model_info = ModelService.process_model_and_file(model_id, uploaded_file)
+#
+#     # 构造响应
+#     response = make_response(send_file(
+#         processed_image_path,
+#         mimetype='image/jpeg'
+#     ))
+#
+#     response.headers['X-Model-Output'] = json.dumps(model_info)
+#
+#     return response
 
 
 @models_bp.route('', methods=['GET'])
@@ -124,72 +134,59 @@ def delete_model(model_id):
     return create_json_response(response, status)
 
 
-import uuid
-from pathlib import Path
-
-import docker
-from flask import request, jsonify
-
-from app.config import Config
-from app.docker.core.docker_clinet import docker_client
-from app.docker.core.task import logger, run_algorithm
-from app.model.model_service import ModelService
-from app.utils import create_json_response
-from docker.errors import ImageNotFound
+@models_bp.before_request
+def log_request():
+    print(f"Request started at: {datetime.now()}")
 
 
 # Flask路由：上传文件并触发任务
-@models_bp.route('/process', methods=['POST'])
-def process_image():
-    # 获取前端传递的model_id
-    model_id = request.form.get('model_id')
-
-    try:
-        model_id = int(model_id)
-    except ValueError:
-        return jsonify({'error': 'model_id必须是整数'}), 400
+@models_bp.route('/<int:model_id>/test-model', methods=['POST'])
+def process_image(model_id):
 
     # 查数据库，获取对应的 image_name
     model = ModelService.get_model_by_id(model_id)
     image_name = model.image
+    instruction = model.instruction
 
     # 校验镜像是否存在
-    try:
-        docker_client.client.images.get(image_name)
-    except docker.errors.ImageNotFound:
-        return jsonify({'error': f'镜像 {image_name} 未找到，请先拉取镜像'}), 400
-    except docker.errors.APIError as e:
-        logger.error(f"Docker服务异常: {str(e)}")
-        return jsonify({'error': 'Docker服务不可用'}), 50
+    docker_client.validate_image(image_name)
 
-    if 'file' not in request.files:
-        return jsonify({'error': '未上传文件d'}), 400
-
-    file = request.files['file']
-
-    # 生成符合Docker规范的宿主机路径
+    # 生成任务id
     task_id = str(uuid.uuid4())
-    input_subdir = f"task_{task_id}"
 
-    # 使用绝对路径（关键修改）
-    host_upload_dir = Path(Config.UPLOAD_FOLDER) / input_subdir
-    host_upload_dir.mkdir(parents=True, exist_ok=True)
+    file = ModelTestSchema().load(request.files).get('file')
+    if file is None:
+        return create_json_response({"error": "未上传图片"}, status=400)
+    uploaded_files = [file]
 
-    # 保存文件
-    file_path = host_upload_dir / file.filename
-    file.save(file_path)
-    logger.info(f"文件保存位置: {file_path}")
+    # 保存所有文件到同一目录（只需保存第一个文件即可获取目录路径）
+    try:
+        if len(uploaded_files) == 0:
+            raise FileUploadError("未上传任何文件")
 
-    # 提交任务时传递绝对路径
-    task = run_algorithm.delay(str(host_upload_dir), task_id, image_name)
+        # 保存第一个文件并获取目录路径
+        first_file = uploaded_files[0]
+        target_dir = FileStorage.upload_input(first_file, image_name, task_id)
 
+        # 保存剩余文件到同一目录
+        for file in uploaded_files[1:]:
+            FileStorage.save_upload(
+                file_stream=file,
+                save_dir=target_dir,  # 使用已创建的目录
+                file_name=file.filename
+            )
+    except Exception as e:
+        logger.error(f"文件保存失败: {str(e)}")
+        return create_json_response({'error': {"message": '文件保存失败'}}, 500)
+
+    # 提交异步任务（非阻塞）
+    task = run_algorithm.delay(str(target_dir), task_id, image_name, instruction)
     return create_json_response({
         "data": {
             'task_id': task.id,
-            'image_used': image_name,  # 返回使用的镜像信息
         },
         "message": "任务提交成功",
-    }, 202)
+    }), 202
 
 
 # Flask路由：查询任务状态
@@ -200,18 +197,23 @@ def get_task_status(task_id):
     if task.state == 'PENDING':
         response = {'result': None}  # 如果任务还在等待中，不返回结果
         message = '任务尚未开始处理'
+        status_code = 202  # 202 Accepted - 请求已接受，正在处理
     elif task.state == 'SUCCESS':
         response = {'result': task.result}  # 返回任务结果
         message = '任务处理成功'
+        status_code = 200  # 200 OK - 请求成功，任务完成
     elif task.state == 'FAILURE':
-        response = {'result': task.result}  # 如果任务失败，返回无结果
-        message = f'任务处理失败: {str(task.info)}'
+        error_message = str(task.info)
+        response = {'result': None}  # 不返回 task.result
+        message = f'任务处理失败: {error_message}'
+        status_code = 500  # 500 Internal Server Error - 任务执行失败
     else:
         response = {'result': None}  # 其他状态
         message = f'当前状态: {task.state}'
+        status_code = 500  # 500 Internal Server Error - 未知错误状态
 
     # 返回统一格式的响应
     return create_json_response({
         'data': response,
         'message': message,
-    })
+    }, status_code)

@@ -40,10 +40,9 @@ class Config:
     task_track_started = True
     timezone = 'Asia/Shanghai'
 
-
     # 算法文件存储路径配置
-    UPLOAD_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_AL_Hub-API/app/data/input').resolve()  # 使用 Path 对象
-    OUTPUT_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_AL_Hub-API/app/data/output').resolve()  # 使用 Path 对象
+    UPLOAD_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_Data/input').resolve()  # 使用 Path 对象
+    OUTPUT_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_Data/output').resolve()  # 使用 Path 对象
 
     # Redis配置
     REDIS_HOST = "localhost"

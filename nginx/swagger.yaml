@@ -6,8 +6,8 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   version: 1.0.11
 servers:
-  #- url: http://10.0.4.71:8080
-  - url: http://localhost:8080
+  - url: http://10.0.4.71:8080
+  #- url: http://localhost:8080
     description: 本地开发服务器
 tags:
   - name: auth
@@ -456,22 +456,22 @@ paths:
       security:
         - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
+
   /api/v1/models/{model_id}/test-model:
     post:
       tags:
         - models
-      summary: 测试模型并返回处理后的图片
-      description: 上传图片并进行处理，返回处理后的图片和相应的模型输出 JSON 数据。
+      summary: 提交图片处理任务
+      description: 上传图片并提交异步处理任务，返回任务ID
       parameters:
         - name: model_id
           in: path
-          description: The ID of the model to execute
+          description: 要使用的模型ID
           required: true
           schema:
             type: integer
-
       requestBody:
-        description: The file to be processed by the model
+        description: 要处理的图片文件
         required: true
         content:
           multipart/form-data:
@@ -481,40 +481,144 @@ paths:
                 file:
                   type: string
                   format: binary
-                  description: 要处理的图片文件
-
+                  description: 图片文件
       responses:
-        '200':
-          description: 处理后的图片。响应头包含模型输出信息。
+        '202':
+          description: 任务已接受
           content:
-            image/jpeg:
-              schema:
-                type: string
-                format: binary
-                description: 处理后的图像文件
-          headers:
-            X-Model-Output:
-              description: 模型输出信息，包含 model_id, accuracy, 和 description。
+            application/json:
               schema:
                 type: object
                 properties:
-                  model_id:
-                    type: integer
-                    example: 1
-                  accuracy:
-                    type: number
-                    format: float
-                    example: 92.5
-                  description:
+                  data:
+                    type: object
+                    properties:
+                      task_id:
+                        type: string
+                        format: uuid
+                        example: "550e8400-e29b-41d4-a716-446655440000"
+                      image_used:
+                        type: string
+                        example: "model-image:latest"
+                  message:
                     type: string
-                    example: "Model 1 processed the image successfully."
-
+                    example: "任务提交成功"
         '400':
-          description: 没有上传文件
+          description: 错误请求
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "仅允许图片文件"
         '500':
           description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "文件保存失败"
       security:
-        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
+        - BearerAuth: []
+
+  /api/v1/models/task/{task_id}:
+    get:
+      tags:
+        - models
+      summary: 查询任务状态
+      description: 根据任务ID查询异步处理状态
+      parameters:
+        - name: task_id
+          in: path
+          description: 任务唯一标识符
+          required: true
+          schema:
+            type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: 任务处理成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      result:
+                        type: string
+                        description: 处理结果
+                        example: "处理后的数据"
+                    required:
+                      - result
+                  message:
+                    type: string
+                    example: "任务处理成功"
+              example:
+                data:
+                  result: "base64_image_data"
+                message: "任务处理成功"
+        '202':
+          description: 任务正在处理中
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      result:
+                        type: string
+                        nullable: true
+                        example: null
+                  message:
+                    type: string
+                    example: "任务尚未开始处理"
+              example:
+                data:
+                  result: null
+                message: "任务尚未开始处理"
+        '500':
+          description: 任务处理失败
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      result:
+                        type: string
+                        nullable: true
+                        example: null
+                  message:
+                    type: string
+                    example: "任务处理失败: 内部服务器错误"
+              examples:
+                failure:
+                  value:
+                    data:
+                      result: null
+                    message: "任务处理失败: 内存不足"
+                unknown:
+                  value:
+                    data:
+                      result: null
+                    message: "当前状态: RETRY"
 
   /api/v1/models:
     get:

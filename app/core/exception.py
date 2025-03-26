@@ -143,6 +143,14 @@ class ServiceException(CustomError):
         super().__init__(message, status_code)
 
 
+class AlgorithmError(CustomError):
+    def __init__(self, message="算法运行失败，请稍后再试", status_code=500):
+        """
+        服务异常
+        """
+        super().__init__(message, status_code)
+
+
 def init_error_handlers(app):
     """注册全局错误处理器，用于捕获和处理不同类型的错误"""
 
@@ -200,7 +208,7 @@ def init_error_handlers(app):
 
         # 记录错误日志，包括错误信息和请求信息
         logger.error(f"Error: {str(error)}, Status Code: {status_code}, Request Info: {request_info}, "
-                                 f"IP: {request.remote_addr}, User-Agent: {request.user_agent.string}")
+                     f"IP: {request.remote_addr}, User-Agent: {request.user_agent.string}")
 
         # 返回统一的错误响应
         return create_json_response(response, status_code)

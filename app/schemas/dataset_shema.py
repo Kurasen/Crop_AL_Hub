@@ -1,6 +1,7 @@
 import re
+from collections import OrderedDict
 
-from marshmallow import validate, fields, validates_schema
+from marshmallow import validate, fields, validates_schema, pre_load
 from marshmallow_sqlalchemy import auto_field
 
 from marshmallow import ValidationError as MarshmallowValidationError
@@ -76,6 +77,21 @@ class DatasetBaseSchema(BaseSchema):
             error="Type must be less than 100 characters"
         )
     )
+
+    # 在数据加载前处理
+    @pre_load
+    def preprocess_type_format(self, data, **kwargs):
+        """预处理阶段统一格式化 type 字段"""
+        if 'type' in data:
+            raw_value = data['type']
+            # 执行原有的格式化逻辑
+            normalized = re.sub(r'[,，;；\s]+', '；', raw_value)
+            parts = list(OrderedDict.fromkeys(
+                part.strip() for part in normalized.split('；') if part.strip()
+            ))
+            # 更新到待处理数据中
+            data['type'] = '；'.join(parts)
+        return data  # 必须返回修改后的数据
 
 
 class DatasetCreateSchema(DatasetBaseSchema):

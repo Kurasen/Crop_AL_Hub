@@ -66,6 +66,11 @@ def configure_app(app: FlaskApp, env=None):
     app.config.from_object(env_config[env])
     env_config[env].init_app(app)
 
+    app.config['MAX_MEMORY_FILE_SIZE'] = 20 * 1024 * 1024  # 单个文件在内存中的最大大小设置为20MB
+    app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 允许200MB请求
+    app.config['MAX_MEMORY_BUFFER_SIZE'] = 1024 * 1024  # 1MB内存缓冲区
+    app.config['WERKZEUG_MAX_FORM_PARSER_MEMORY'] = 0   # 禁用内存解析限制
+
     # 配置跨域、转码等
     app.config["JSON_AS_ASCII"] = False
     app.json_encoder = CustomJSONEncoder

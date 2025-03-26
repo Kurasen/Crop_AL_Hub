@@ -35,7 +35,7 @@ class VerificationCodeService:
     # """
 
     @staticmethod
-    def generate_verification_code(validated_data):
+    def generate_verification_code(validated_data, is_test=True):
         """
         生成验证码，并将其存入缓存中
         :return: 生成的验证码
@@ -43,8 +43,11 @@ class VerificationCodeService:
         login_identifier = validated_data.get('login_identifier')
         login_type = validated_data.get('login_type')
         # 生成一个6位数的验证码
-        #code = ''.join(secrets.choice(string.digits) for _ in range(6))
-        code = secrets.randbelow(900000) + 100000
+        if is_test:
+            code = 666666
+        else:
+            # 生成一个6位数的验证码
+            code = secrets.randbelow(900000) + 100000
 
         # 获取 Redis 客户端
         with redis_pool.get_redis_connection(pool_name='cache') as cache_client:

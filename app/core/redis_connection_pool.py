@@ -1,4 +1,5 @@
 import os
+import sys
 from contextlib import contextmanager
 import redis
 from typing import Dict
@@ -25,7 +26,9 @@ class RedisConnectionPool:
         if self.__class__._initialized:
             return
         self.__class__._initialized = True
+        self._init_pools()
 
+    def _init_pools(self):
         # 从环境变量读取配置
         self.redis_host = os.getenv('REDIS_HOST', '127.0.0.1')
         self.redis_port = int(os.getenv('REDIS_PORT', 6379))
@@ -71,6 +74,16 @@ class RedisConnectionPool:
                 db=2,
                 max_connections=50,
                 socket_timeout=5,
+                decode_responses=True
+            ),
+            "tasks": redis.ConnectionPool(
+                host=self.redis_host,
+                port=self.redis_port,
+                password=self.redis_password,
+                db=2,
+                max_connections=50,
+                socket_timeout=5,
+                health_check_interval=15,
                 decode_responses=True
             )
 

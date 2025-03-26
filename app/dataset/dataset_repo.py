@@ -20,6 +20,15 @@ class DatasetRepository:
         return Dataset.query.get(dataset_id)
 
     @staticmethod
+    def get_all_type_strings():
+        """直接查询所有模型的 type 字段（仅返回非空值）"""
+        return [
+            result[0]
+            for result in Dataset.query.with_entities(Dataset.type).filter(Dataset.type is not None).all()
+            if result[0]  # 过滤空字符串
+        ]
+
+    @staticmethod
     def get_by_name(name: str):
         """根据数据集名称查询"""
         return Dataset.query.filter(Dataset.name.ilike(f"%{name}%")).all()
