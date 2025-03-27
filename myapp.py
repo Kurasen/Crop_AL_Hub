@@ -33,6 +33,7 @@ def create_app(env=None):
 
     app.config.update({
         'broker_url': Config.broker_url,
+        'worker_concurrency': Config.WORKER_CONCURRENCY,
         'result_backend': Config.result_backend,
         'accept_content': Config.accept_content,
         'task_serializer': Config.task_serializer,

@@ -19,8 +19,8 @@ class Dataset(db.Model):
     type = db.Column(db.String(100))  # 数据集类型
     likes = db.Column(db.Integer, default=0)  # 点赞数
     price = db.Column(db.Numeric(10, 2))
-
-    # stars = db.relationship("Star", back_populates="dataset", lazy="dynamic")
+    readme = db.Column(db.Text, default="")
+# stars = db.relationship("Star", back_populates="dataset", lazy="dynamic")
     # orders = db.relationship("Order", back_populates="dataset", lazy="dynamic")
 
     def __init__(self, **kwargs):
@@ -42,7 +42,8 @@ class Dataset(db.Model):
             "description": self.description,
             "type": self.type,
             # "stars": self.stars,
-            "likes": self.likes
+            "likes": self.likes,
+            "readme": self.readme,
         }
 
     @hybrid_property

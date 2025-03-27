@@ -5,7 +5,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from app import Star
 from app.exts import db
 from app.order.order import OrderStatus
-
+from datetime import datetime
 """
     graph TD
     A[Model 模型层] -->|定义 hybrid_property| B(ORM 查询能力)
@@ -31,11 +31,13 @@ class Model(db.Model):
     accuracy = db.Column(db.Numeric(4, 2), default=0)  # 精度字段，DECIMAL(4, 2) 对应 Numeric(4, 2)
     type = db.Column(db.String(100), default="")  # 模型类型
     likes = db.Column(db.Integer, default=0)  # 点赞数字段
-    price = db.Column(db.Numeric(10, 2))
+    price = db.Column(db.Numeric(10, 2)),
+    user_id = db.Column(db.Integer, db.ForeignKey('user_table.id'), nullable=False, default=1)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间字段，默认当前时间
 
     stars = db.relationship("Star", back_populates="model", lazy="dynamic")
     orders = db.relationship("Order", back_populates="model", lazy="dynamic")
-
+    readme = db.Column(db.Text, default="")
     def __init__(self, **kwargs):
         """
         :param kwargs: 模型的各个字段参数
@@ -59,8 +61,9 @@ class Model(db.Model):
             'accuracy': self.accuracy,
             'type': self.type,
             'likes': self.likes,
-            'price': self.price
-
+            'user_id': self.user_id,
+            'created_at': self.created_at.isoformat(),
+            'readme': self.readme
         }
 
     @hybrid_property

@@ -36,7 +36,7 @@ class Config:
     task_serializer = 'json'
     result_serializer = 'json'
     accept_content = ['json']
-    WORKER_CONCURRENCY = os.cpu_count() * 2  # 根据CPU核心数优化
+    WORKER_CONCURRENCY = os.cpu_count()  # 根据CPU核心数优化
     task_track_started = True
     timezone = 'Asia/Shanghai'
 

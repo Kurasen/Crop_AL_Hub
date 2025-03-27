@@ -177,7 +177,7 @@ def process_image(model_id):
             )
     except Exception as e:
         logger.error(f"文件保存失败: {str(e)}")
-        return create_json_response({'error': {"message": '文件保存失败'}}, 500)
+        return create_json_response({'error': {"message": '服务器异常，文件保存失败'}}, 500)
     print(target_dir)
     task = run_algorithm.apply_async(
         args=(str(target_dir), task_id, image_name, instruction),
@@ -198,18 +198,26 @@ def get_task_status(task_id):
     task = run_algorithm.AsyncResult(task_id)
     # 判断任务状态
     if task.state == 'PENDING':
-        response = {'result': None}  # 如果任务还在等待中，不返回结果
+        response = {'result': {"status": "PENDING"}}  # 如果任务还在等待中，不返回结果
         message = '任务尚未开始处理'
         status_code = 202  # 202 Accepted - 请求已接受，正在处理
+    elif task.state == 'STARTED':
+        response = {'result': {"status": "STARTED"}}  # 任务已开始但未完成
+        message = '任务正在处理中，请耐心等待'
+        status_code = 202  # 200 OK - 请求成功，任务正在处理中
     elif task.state == 'SUCCESS':
         response = {'result': task.result}  # 返回任务结果
         message = '任务处理成功'
         status_code = 200  # 200 OK - 请求成功，任务完成
     elif task.state == 'FAILURE':
         error_message = str(task.info)
-        response = {'result': None}  # 不返回 task.result
-        message = f'任务处理失败: {error_message}'
+        response = {'result': {"status": "FAILURE"}}
+        message = f'任务处理失败，请重新上传数据或联系系统管理员: {error_message}'
         status_code = 500  # 500 Internal Server Error - 任务执行失败
+    elif task.state == 'RETRY':
+        response = {'result': {"status": "RETRY"}}  # 返回任务结果
+        message = '运行过程中发生错误，任务正在重试中'
+        status_code = 202
     else:
         response = {'result': None}  # 其他状态
         message = f'当前状态: {task.state}'
