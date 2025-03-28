@@ -95,13 +95,13 @@ env_config = {
 class JWTConfig:
     ACCESS_SECRET_KEY = os.getenv('ACCESS_SECRET_KEY', 'Access_key')
     REFRESH_SECRET_KEY = os.getenv('REFRESH_SECRET_KEY', 'Refresh_key')
-    BLACKLIST_REDIS_KEY = os.getenv('BLACKLIST_REDIS_KEY', 'Blacklist_key')
+    BLACKLIST_REDIS_KEY = os.getenv('BLACKLIST_REDIS_KEY', 'jwt_blacklist')
     ISSUER = "api.testdomain.com"  # 签发者标识
     AUDIENCE = "web.testdomain.com"  # 接收方标识
 
     # 动态过期时间配置（单位：秒）
-    ACCESS_EXPIRE = 15 * 60         # 15分钟
-    REFRESH_EXPIRE = 7 * 24 * 3600  # 7天
+    ACCESS_EXPIRE = 900      # 15分钟
+    REFRESH_EXPIRE = 604800  # 7天
 
     # 安全配置
     LAST_PWD_CHANGE_KEY = "user:last_pwd_change:{user_id}"  # 密码最后修改时间键名

@@ -21,9 +21,9 @@ def create_json_response(data=None, status=200, http_status=200):
     :param data: 响应的数据内容（可以是字典、列表等）
     :return: Flask Response 对象
     """
-    if status == 204:  # 204 No Content
-        response_data = {"msg": "success", "requestId": str(uuid.uuid4()), "code": status,}
-    elif isinstance(data, dict) and "error" in data:
+    # if status == 204:  # 204 No Content
+    #     response_data = {"msg": "success", "requestId": str(uuid.uuid4()), "code": status,}
+    if isinstance(data, dict) and "error" in data:
         # 如果是错误响应，格式化成 message 和 status_code
         error_details = data["error"].get("details", {})
         error_message = data["error"].get("message", "")

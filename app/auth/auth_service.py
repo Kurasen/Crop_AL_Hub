@@ -104,7 +104,7 @@ class AuthService:
                         # 验证 access_token 是否有效并且没有被撤销
                         verify_token(stored_access_token, check_blacklist=True)
                         print(f"Access token for {login_identifier} is valid and not revoked.")  # 输出验证成功的信息
-                        logger.info(f"Auth {login_identifier} already has a valid access token.")
+                        logger.info(f"复用有效Token | user:{user.id}")
                         return {
                             "data": {
                                 "user_info": user.to_dict(),
@@ -114,13 +114,16 @@ class AuthService:
                             "message": "登录成功"
                         }, 200
                     except AuthenticationError as e:
-                        print(f"Error during token verification: {str(e)}")  # 输出异常信息
+                        TokenRepository.delete_user_token(user.id, 'access')
+                        logger.warning(f"清除失效Token | user:{user.id} reason:{str(e)}")
+                        logger.info(f"Error during token verification: {str(e)}")  # 输出异常信息
                         # 如果验证失败，说明 token 已过期
                         if str(e) == "Token has expired" or str(e) == "Token has been revoked":
                             pass  # 继续生成新的 token
 
                 # Step 5: Access Token 过期，生成新的 Token，并存储新的 Access Token
                 new_access_token = generate_access_token(user.id, user.username)
+                print(new_access_token)
                 TokenRepository.set_user_token(user.id, new_access_token, "access")
 
                 # Step 6: 登录成功后，重置登录失败次数

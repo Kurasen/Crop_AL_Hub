@@ -12,8 +12,7 @@ class TokenRepository:
         :param token_type: 'access' 或 'refresh'
         """
         with redis_pool.get_redis_connection(pool_name='user') as redis_client:
-            # 为了避免重复，存储时附加 'user_{user_id}_token:{token_type}'
-            token_key = f"user_{user_id}_token:{token_type}"
+            token_key = f"user_token:{token_type}:{user_id}"
             if token_type == 'access':
                 redis_client.set(token_key, token, ex=900)  # access_token 有效期为 15 分钟
             elif token_type == 'refresh':
@@ -30,7 +29,7 @@ class TokenRepository:
         :return: 返回存储的 token 或 None
         """
         with redis_pool.get_redis_connection(pool_name='user') as redis_client:
-            token_key = f"user_{user_id}_token:{token_type}"
+            token_key = f"user_token:{token_type}:{user_id}"
             return redis_client.get(token_key)
 
     @staticmethod
@@ -41,7 +40,8 @@ class TokenRepository:
         :param token_type: 'access' 或 'refresh'
         """
         with redis_pool.get_redis_connection(pool_name='user') as redis_client:
-            token_key = f"user_{user_id}_token:{token_type}"
+            token_key = f"user_token:{token_type}:{user_id}"
+            print(token_key)
             redis_client.delete(token_key)
 
     @staticmethod
@@ -53,5 +53,5 @@ class TokenRepository:
         :return: True 如果存在，False 如果不存在
         """
         with redis_pool.get_redis_connection(pool_name='user') as redis_client:
-            token_key = f"user_{user_id}_token:{token_type}"
+            token_key = f"user_token:{token_type}:{user_id}"
             return redis_client.exists(token_key)

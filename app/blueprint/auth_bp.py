@@ -2,11 +2,12 @@ import re
 
 from flask import request, Blueprint, g
 
+from app.core.redis_connection_pool import redis_pool
 from app.schemas.base import apply_rate_limit
 from app.schemas.auth_schema import UserCreateSchema, UserLoginSchema, GenerateCodeSchema
 from app.token.token_service import TokenService
 from app.utils.json_encoder import create_json_response
-from app.token.JWT import token_required, add_to_blacklist, get_jwt_identity, verify_token
+from app.token.JWT import token_required, verify_token, TokenBlacklist
 from app.core.exception import ValidationError, AuthenticationError, logger, TokenError
 from app.token.token_repo import TokenRepository
 from app.auth.auth_service import AuthService
@@ -45,15 +46,42 @@ def post():
     if not user_id:
         return create_json_response({"msg": "用户ID无效"}, status=400)
 
-    jti = get_jwt_identity()
+    with redis_pool.get_redis_connection(pool_name='user') as redis_client:
+        lock_key = f"logout_lock:{user_id}"
+        lock = redis_client.set(lock_key, 'locked', nx=True, ex=5)  # 5 秒锁
+        if not lock:
+            redis_client.ttl(lock_key)
+            raise AuthenticationError("Too many users, please try again later.")
+        try:
+            # 获取当前令牌的payload
+            current_payload = g.current_user_payload
 
-    # 将 Access Token 加入黑名单
-    add_to_blacklist(jti)
+            # 撤销Access Token
+            TokenBlacklist.add_to_blacklist(
+                jti=current_payload['jti'],
+                token_type='access',
+                exp_timestamp=current_payload['exp']
+            )
 
-    # 删除 Refresh Token
-    TokenRepository.delete_user_token(user_id, token_type='refresh')
-    logger.info(f"用户 {user_id} 成功登出")
-    return create_json_response(status=204)
+            # # 可选：撤销关联的Refresh Token（需业务逻辑支持）
+            # if 'linked_refresh_jti' in current_payload:
+            #     TokenBlacklist.add_to_blacklist(
+            #         jti=current_payload['linked_refresh_jti'],
+            #         token_type='refresh',
+            #         exp_timestamp=get_refresh_token_exp(current_payload['linked_refresh_jti'])
+            #     )
+            TokenRepository.delete_user_token(user_id, token_type='access')
+            TokenRepository.delete_user_token(user_id, token_type='refresh')
+            logger.info(f"用户 {user_id} 登出成功")
+            return create_json_response({"message": "登出成功"}, 204)
+        except Exception as e:
+            logger.info(f"用户 {user_id} 登出失败")
+            return create_json_response({"error": {
+                "message": str(e)
+            }}, 400)
+        finally:
+            # 确保 Redis 锁被释放
+            redis_client.delete(lock_key)
 
 
 # 受保护接口：需要使用 JWT 认证
@@ -94,7 +122,6 @@ def refresh_token():
     except TokenError as e:
         logger.error(f"Token refresh failed: {str(e)}")
         raise e
-
 
 
 @auth_bp.route('/generate_code', methods=['POST'])  # 修正methods参数

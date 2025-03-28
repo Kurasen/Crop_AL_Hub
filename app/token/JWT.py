@@ -1,22 +1,22 @@
+import math
 import uuid
 from typing import Union, Optional
 
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import request, g
 from functools import wraps
 
 from app import User
 from app.config import Config, JWTConfig  # 载入配置
-from app.core.exception import AuthenticationError, TokenError, ValidationError
+from app.core.exception import AuthenticationError, TokenError, ValidationError, logger
 from app.core.redis_connection_pool import redis_pool
 
 
 def generate_token(
         user_id: Union[int, str],
         username: str,
-        token_type: str = "access",
-        last_auth_event: Optional[datetime] = None
+        token_type: str = "access"
 ) -> str:
     """
     合并后的Token生成方法（支持access/refresh）
@@ -42,7 +42,7 @@ def generate_token(
     jti = str(uuid.uuid4())
 
     # 设置有效期（安全增强点：动态配置）
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     exp_delta = JWTConfig.ACCESS_EXPIRE if token_type == "access" else JWTConfig.REFRESH_EXPIRE
 
     # 构建完整payload
@@ -50,7 +50,7 @@ def generate_token(
         # 标准声明（RFC 7519）
         "iss": JWTConfig.ISSUER,  # Issuer
         "aud": JWTConfig.AUDIENCE,  # Audience
-        "exp": now + timedelta(seconds=exp_delta),
+        "exp": (now + timedelta(seconds=exp_delta)).timestamp(),
         "nbf": now,  # Not Before
         "iat": now,  # Issued At
 
@@ -61,11 +61,8 @@ def generate_token(
         "token_type": token_type,
 
         # 安全声明
-        "lat": last_auth_event.timestamp() if last_auth_event else None
+        #"lat": last_auth_event.timestamp() if last_auth_event else None
     }
-
-    for time_key in ["exp", "nbf", "iat"]:
-        payload[time_key] = int(payload[time_key].timestamp())
 
     # 选择密钥（安全关键点：access/refresh使用不同密钥）
     secret_key = JWTConfig.ACCESS_SECRET_KEY if token_type == "access" else JWTConfig.REFRESH_SECRET_KEY
@@ -86,33 +83,58 @@ def generate_refresh_token(user_id, username):
     return generate_token(user_id, username, 'refresh')
 
 
-# 将 Token 加入黑名单
-def add_to_blacklist(jti):
-    """
-    将 JWT 的 jti 添加到黑名单。
-    使用 Redis 连接池来获取 Redis 连接，以提高效率。
-    """
-    with redis_pool.get_redis_connection(pool_name='user') as redis_client:
-        # 设置 Redis 中 jti 键的过期时间（例如 7 天）
-        redis_client.setex(f"{JWTConfig.BLACKLIST_REDIS_KEY}:{jti}", 604800, "revoked")
+# # 将 Token 加入黑名单
+# def add_to_blacklist(jti):
+#     """
+#     将 JWT 的 jti 添加到黑名单。
+#     使用 Redis 连接池来获取 Redis 连接，以提高效率。
+#     """
+#     with redis_pool.get_redis_connection(pool_name='user') as redis_client:
+#         # 设置 Redis 中 jti 键的过期时间（例如 7 天）
+#         redis_client.setex(f"{JWTConfig.BLACKLIST_REDIS_KEY}:{jti}", 604800, "revoked")
+
+class TokenBlacklist:
+    @staticmethod
+    def add_to_blacklist(jti: str, token_type: str, exp_timestamp: int):
+        """动态设置黑名单过期时间"""
+        remaining_ttl = exp_timestamp - int(datetime.now(timezone.utc).timestamp())
+        remaining_ttl = math.floor(remaining_ttl)
+        remaining_ttl = max(0, remaining_ttl)
+
+        if remaining_ttl > 0:
+            with redis_pool.get_redis_connection(pool_name='user') as redis_client:
+                redis_client.setex(
+                    f"{JWTConfig.BLACKLIST_REDIS_KEY}:{token_type}:{jti}",
+                    remaining_ttl,
+                    "revoked"
+                )
+        else:
+            logger.warning(f"Token已过期，无需加入黑名单 jti: {jti}")
 
 
 # 验证 JWT
 def verify_token(token, check_blacklist=True):
     try:
+
+        unverified_hear = jwt.get_unverified_header(token)
+        token_type = unverified_hear.get("token_type", "access")
+        secret_key = JWTConfig.ACCESS_SECRET_KEY if token_type == "access" else JWTConfig.REFRESH_SECRET_KEY
+
         payload = jwt.decode(
             token,
-            JWTConfig.ACCESS_SECRET_KEY,
-            algorithms=["HS256"],
-            options={'require': ['exp', 'iat', 'nbf']}  # 强制校验时间声明
+            secret_key,
+            issuer=JWTConfig.ISSUER,
+            audience=JWTConfig.AUDIENCE,
+            algorithms=["HS256"]
         )
-        jti = payload["jti"]
-        token_type = payload.get('token_type', None)  # 获取 token_type
-
-        # 检查黑名单（只对 access_token 做黑名单检查）
-        if check_blacklist and token_type == 'access':
+        # 检查黑名单
+        if check_blacklist:
+            jti = payload["jti"]
+            redis_key = f"{JWTConfig.BLACKLIST_REDIS_KEY}:{token_type}:{jti}"
             with redis_pool.get_redis_connection(pool_name='user') as redis_client:
-                if redis_client.exists(f"{JWTConfig.BLACKLIST_REDIS_KEY}:{jti}"):
+                exists = redis_client.exists(redis_key)
+                print(f"检查黑名单{redis_key} 存在：{exists}")
+                if exists:
                     raise TokenError("令牌已被撤销")
 
         return payload  # 返回解码后的 Payload（有效载荷）, payload 是字典
@@ -159,6 +181,7 @@ def token_required(f):
             payload = verify_token(token)
             # 将 payload 存入全局对象 g
             g.current_user = User.query.get(payload['user_id'])
+            g.current_user_payload = payload
             # 传递 payload 给路由函数
             return f(*args, **kwargs)
         except TokenError as e:
