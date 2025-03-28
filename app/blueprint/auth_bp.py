@@ -42,8 +42,8 @@ def login():
 @token_required  # 使用装饰器，确保用户已认证
 def post():
     """登出功能"""
-    user_id = g.current_user
-    if not user_id:
+    user_id = g.current_user.id
+    if not user_id or not isinstance(user_id, int):
         return create_json_response({"msg": "用户ID无效"}, status=400)
 
     with redis_pool.get_redis_connection(pool_name='user') as redis_client:
@@ -114,7 +114,7 @@ def refresh_token():
 
         if token_type == 'access':
             raise TokenError("请使用有效的 Refresh Token")
-        print(token)
+
         # 生成新的 access_token
         response, status = TokenService.refresh_token(token)
         return response, status

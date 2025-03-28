@@ -41,7 +41,6 @@ class TokenRepository:
         """
         with redis_pool.get_redis_connection(pool_name='user') as redis_client:
             token_key = f"user_token:{token_type}:{user_id}"
-            print(token_key)
             redis_client.delete(token_key)
 
     @staticmethod

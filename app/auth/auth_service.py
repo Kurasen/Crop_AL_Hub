@@ -1,3 +1,4 @@
+import jwt
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.redis_connection_pool import redis_pool
@@ -103,7 +104,6 @@ class AuthService:
                     try:
                         # 验证 access_token 是否有效并且没有被撤销
                         verify_token(stored_access_token, check_blacklist=True)
-                        print(f"Access token for {login_identifier} is valid and not revoked.")  # 输出验证成功的信息
                         logger.info(f"复用有效Token | user:{user.id}")
                         return {
                             "data": {
@@ -123,7 +123,6 @@ class AuthService:
 
                 # Step 5: Access Token 过期，生成新的 Token，并存储新的 Access Token
                 new_access_token = generate_access_token(user.id, user.username)
-                print(new_access_token)
                 TokenRepository.set_user_token(user.id, new_access_token, "access")
 
                 # Step 6: 登录成功后，重置登录失败次数

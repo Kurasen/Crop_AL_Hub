@@ -133,10 +133,8 @@ def verify_token(token, check_blacklist=True):
             redis_key = f"{JWTConfig.BLACKLIST_REDIS_KEY}:{token_type}:{jti}"
             with redis_pool.get_redis_connection(pool_name='user') as redis_client:
                 exists = redis_client.exists(redis_key)
-                print(f"检查黑名单{redis_key} 存在：{exists}")
                 if exists:
                     raise TokenError("令牌已被撤销")
-
         return payload  # 返回解码后的 Payload（有效载荷）, payload 是字典
     except jwt.ExpiredSignatureError:
         raise TokenError("令牌已过期")  # 抛出自定义的认证错误
@@ -182,6 +180,7 @@ def token_required(f):
             # 将 payload 存入全局对象 g
             g.current_user = User.query.get(payload['user_id'])
             g.current_user_payload = payload
+
             # 传递 payload 给路由函数
             return f(*args, **kwargs)
         except TokenError as e:
