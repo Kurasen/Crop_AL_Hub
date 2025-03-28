@@ -37,7 +37,6 @@ class AuthService:
             )
 
             AuthRepository.save_user(user)
-            print(user.to_dict())
             db.session.commit()
 
             # 生成令牌

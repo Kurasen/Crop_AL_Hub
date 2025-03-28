@@ -164,17 +164,17 @@ class VerificationCodeService:
     @staticmethod
     def _generate_redis_key(login_type, login_identifier):
         # 获取 SECRET_KEY，确保它是 bytes 类型
-        secret_key = Config.SECRET_KEY
+        code_key = Config.CODE_KEY
 
         # 如果 SECRET_KEY 是字符串类型，则转为 bytes
-        if isinstance(secret_key, str):
-            secret_key = secret_key.encode('utf-8')
+        if isinstance(code_key, str):
+            code_key = code_key.encode('utf-8')
 
         # 确保 login_type 和 login_identifier 拼接后的 msg 参数是 bytes 类型
 
         # 使用 HMAC 增强安全性，key 和 msg 都是 bytes 类型
         h = hmac.new(
-            key=secret_key,  # 确保是 bytes 类型
+            key=code_key,  # 确保是 bytes 类型
             msg=f"{login_type}:{login_identifier}".encode('utf-8'),  # msg 必须是 bytes 类型
             digestmod=hashlib.sha256
         )

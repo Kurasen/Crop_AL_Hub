@@ -11,7 +11,7 @@ load_dotenv(Path('.') / '.env')
 class Config:
     """通用配置类"""
     # Flask 配置
-    SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
+    CODE_KEY = os.getenv('CODE_KEY', 'Code_key')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Lock配置
@@ -89,3 +89,19 @@ env_config = {
     'production': ProductionConfig,
     'default': DevelopmentConfig,  # 默认环境
 }
+
+
+# 安全配置类（建议从环境变量加载）
+class JWTConfig:
+    ACCESS_SECRET_KEY = os.getenv('ACCESS_SECRET_KEY', 'Access_key')
+    REFRESH_SECRET_KEY = os.getenv('REFRESH_SECRET_KEY', 'Refresh_key')
+    BLACKLIST_REDIS_KEY = os.getenv('BLACKLIST_REDIS_KEY', 'Blacklist_key')
+    ISSUER = "api.testdomain.com"  # 签发者标识
+    AUDIENCE = "web.testdomain.com"  # 接收方标识
+
+    # 动态过期时间配置（单位：秒）
+    ACCESS_EXPIRE = 15 * 60         # 15分钟
+    REFRESH_EXPIRE = 7 * 24 * 3600  # 7天
+
+    # 安全配置
+    LAST_PWD_CHANGE_KEY = "user:last_pwd_change:{user_id}"  # 密码最后修改时间键名
