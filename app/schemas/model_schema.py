@@ -159,8 +159,8 @@ class ModelSearchSchema(ModelBaseFieldsMixin, SortBaseSchema):
     # 排序控制
     sort_by = fields.String(
         validate=validate.OneOf(
-            ["likes", "accuracy"],
-            error="排序字段只能是 likes/accuracy"
+            ["likes", "accuracy", "created_at", "updated_at"],
+            error="排序字段只能是 likes, accuracy, created_at and updated_at must be less than 100 characters"
         )
     )
 

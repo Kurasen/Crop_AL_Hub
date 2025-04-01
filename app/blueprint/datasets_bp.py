@@ -14,7 +14,9 @@ def get_model(dataset_id):
     获取特定模型的详细信息
     """
     dataset = DatasetService.get_dataset_by_id(dataset_id)
-    return create_json_response(dataset.to_dict())
+    return create_json_response({
+        "data": dataset.to_dict()
+    })
 
 
 @datasets_bp.route('', methods=['GET'])
@@ -36,6 +38,7 @@ def get_all_types():
     return create_json_response({
         "data": {"types": types}
     })
+
 
 # 创建新数据集
 @datasets_bp.route('', methods=['POST'])

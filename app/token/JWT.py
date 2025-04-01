@@ -1,6 +1,6 @@
 import math
 import uuid
-from typing import Union, Optional
+from typing import Union
 
 import jwt
 from datetime import datetime, timedelta, timezone
@@ -8,8 +8,8 @@ from flask import request, g
 from functools import wraps
 
 from app import User
-from app.config import Config, JWTConfig  # 载入配置
-from app.core.exception import AuthenticationError, TokenError, ValidationError, logger
+from app.config import JWTConfig  # 载入配置
+from app.core.exception import TokenError, ValidationError, logger
 from app.core.redis_connection_pool import redis_pool
 
 
@@ -82,16 +82,6 @@ def generate_access_token(user_id, username):
 def generate_refresh_token(user_id, username):
     return generate_token(user_id, username, 'refresh')
 
-
-# # 将 Token 加入黑名单
-# def add_to_blacklist(jti):
-#     """
-#     将 JWT 的 jti 添加到黑名单。
-#     使用 Redis 连接池来获取 Redis 连接，以提高效率。
-#     """
-#     with redis_pool.get_redis_connection(pool_name='user') as redis_client:
-#         # 设置 Redis 中 jti 键的过期时间（例如 7 天）
-#         redis_client.setex(f"{JWTConfig.BLACKLIST_REDIS_KEY}:{jti}", 604800, "revoked")
 
 class TokenBlacklist:
     @staticmethod

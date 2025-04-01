@@ -4,7 +4,7 @@ from datetime import datetime
 
 from flask import send_file, Blueprint, make_response
 from app.core.exception import ValidationError, FileUploadError
-from app.docker.core.storage import FileStorage
+from app.docker.core.storage import FileStorage, cleanup_directory
 from app.exts import db
 from app.schemas.model_schema import ModelRunSchema, ModelTestSchema, ModelSearchSchema, ModelCreateSchema, \
     ModelUpdateSchema
@@ -37,30 +37,6 @@ def run(model_id):
 
     model_accuracy_info = ModelService.get_model_accuracy(model_id, dataset_id)
     return create_json_response(model_accuracy_info)
-
-
-# # 接收图片并返回处理后的图片和 JSON
-# @models_bp.route('/<int:model_id>/test-model', methods=['POST'])
-# # @token_required
-# def test_model(model_id):
-#     """
-#     上传一张图片，进行处理并返回处理后的图片和相应的 JSON 数据。
-#     """
-#     # 文件校验
-#     uploaded_file = ModelTestSchema().load(request.files).get('file')
-#
-#     # 处理模型和文件，获取图像处理路径和模型信息
-#     processed_image_path, model_info = ModelService.process_model_and_file(model_id, uploaded_file)
-#
-#     # 构造响应
-#     response = make_response(send_file(
-#         processed_image_path,
-#         mimetype='image/jpeg'
-#     ))
-#
-#     response.headers['X-Model-Output'] = json.dumps(model_info)
-#
-#     return response
 
 
 @models_bp.route('', methods=['GET'])
@@ -142,7 +118,6 @@ def log_request():
 # Flask路由：上传文件并触发任务
 @models_bp.route('/<int:model_id>/test-model', methods=['POST'])
 def process_image(model_id):
-
     # 查数据库，获取对应的 image_name
     model = ModelService.get_model_by_id(model_id)
     image_name = model.image
@@ -178,18 +153,25 @@ def process_image(model_id):
     except Exception as e:
         logger.error(f"文件保存失败: {str(e)}")
         return create_json_response({'error': {"message": '服务器异常，文件保存失败'}}, 500)
-    print(target_dir)
+
+    output_folder = Config.OUTPUT_FOLDER
+    output_dir = output_folder / image_name / f"task_{task_id}"
     task = run_algorithm.apply_async(
         args=(str(target_dir), task_id, image_name, instruction),
         task_id=task_id
     )
 
+    cleanup_directory.apply_async(
+        args=(str(target_dir), str(output_dir)),
+        countdown=86400  # 1天 = 60*60*24 秒
+    )
+
     return create_json_response({
-            "data": {
-                'task_id': task_id,
-            },
-            "message": "任务提交成功",
-        }), 202
+        "data": {
+            'task_id': task_id,
+        },
+        "message": "任务提交成功",
+    }), 202
 
 
 # Flask路由：查询任务状态

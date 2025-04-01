@@ -4,7 +4,7 @@ from app.exts import db
 from app.model.model import Model
 
 # 定义排序字段的枚举类型（例如：stars, size, etc.）
-SORT_BY_CHOICES = ['accuracy', 'likes']
+SORT_BY_CHOICES = ['accuracy', 'likes', 'created_at', 'updated_at']
 
 
 class ModelRepository:
@@ -60,7 +60,8 @@ class ModelRepository:
             # 如果没有提供排序字段和排序顺序，直接跳过排序，返回原始查询
             pass
         else:
-            raise ValidationError("Invalid sort field. Only 'accuracy' and 'likes' are allowed.")
+            raise ValidationError("Invalid sort field. Only 'accuracy', 'likes', 'created_at' and 'updated_at' are "
+                                  "allowed.")
 
         # 总数
         total_count = query.count()

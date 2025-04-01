@@ -1,5 +1,5 @@
 # 数据库模型：Dataset
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from sqlalchemy.ext.hybrid import hybrid_property
 
@@ -20,7 +20,9 @@ class Dataset(db.Model):
     likes = db.Column(db.Integer, default=0)  # 点赞数
     price = db.Column(db.Numeric(10, 2))
     readme = db.Column(db.Text, default="")
-# stars = db.relationship("Star", back_populates="dataset", lazy="dynamic")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # stars = db.relationship("Star", back_populates="dataset", lazy="dynamic")
     # orders = db.relationship("Order", back_populates="dataset", lazy="dynamic")
 
     def __init__(self, **kwargs):
@@ -44,6 +46,8 @@ class Dataset(db.Model):
             # "stars": self.stars,
             "likes": self.likes,
             "readme": self.readme,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
         }
 
     @hybrid_property

@@ -148,8 +148,8 @@ class DatasetSearchSchema(DatasetBaseFieldsMixin, SortBaseSchema):
     # 排序控制
     sort_by = fields.String(
         validate=validate.OneOf(
-            ["stars", "size", "downloads", "likes"],
-            error="排序字段只能是 stars/size/downloads/likes"
+            ["stars", "size", "downloads", "likes", "created_at", "updated_at"],
+            error="排序字段只能是 stars/size/downloads/likes/created_at/updated_at"
         )
     )
 
