@@ -5,6 +5,5 @@ __pycache__/
 migrations
 test
 algorithm
-docker
 .venv
 crop_env
