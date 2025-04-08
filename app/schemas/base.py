@@ -99,7 +99,7 @@ def apply_rate_limit(rule):
             )(func)
 
             return limited_func(*args, **kwargs)
-        print(f"[Rate Limit装饰器] 原函数名: {func.__name__}, 装饰后函数名: {decorated_limit.__name__}")
+        #print(f"[Rate Limit装饰器] 原函数名: {func.__name__}, 装饰后函数名: {decorated_limit.__name__}")
         return decorated_limit
 
     return decorator

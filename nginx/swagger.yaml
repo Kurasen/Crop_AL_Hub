@@ -7,7 +7,7 @@ info:
   version: 1.0.11
 servers:
   - url: http://10.0.4.71:8080
-  #- url: http://localhost:8080
+  - url: http://localhost:8080
     description: 本地开发服务器
 tags:
   - name: auth
@@ -18,8 +18,9 @@ tags:
     description: ''
   - name: stars
     description: ''
-  - name: Apps
+  - name: apps
     description: ''
+  - name: files
 
 paths:
   /api/v1/auth/register:
@@ -44,7 +45,6 @@ paths:
           description: 验证码未发送，错误和已过期
         '500':
           description: 内部服务器错误
-
 
   /api/v1/auth/login:
     post:
@@ -224,7 +224,7 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Dataset'  # 引用Dataset schema
-                  total_count:
+                  total:
                     type: integer
                     description: 数据集总数量
                     example: 5
@@ -405,82 +405,16 @@ paths:
       security:
         - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
-  /api/v1/models/{model_id}/run:
+
+  /api/v1/datasets/types:
     get:
       tags:
-        - models
-      summary: 运行模型并返回准确率
-      description: 使用指定的模型 ID 和数据集 ID 运行模型，并返回训练准确率。
-      parameters:
-        - in: path
-          name: model_id
-          description: 要运行的模型 ID
-          required: true
-          schema:
-            type: integer
-            example: 1
-        - in: query
-          name: dataset_id
-          description: 要使用的数据集 ID
-          required: true
-          schema:
-            type: integer
-            example: 1
+        - datasets
+      summary: 获取所有数据集的type列表
+      description: 获取所有数据集的type列表
       responses:
         '200':
-          description: 模型的训练准确率
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  model_id:
-                    type: integer
-                    example: 1
-                  dataset_id:
-                    type: integer
-                    example: 4
-                  accuracy:
-                    type: number
-                    format: float
-                    example: 0.92
-
-        '400':
-          description: Model ID and Dataset ID are required
-        '404':
-          description: Model ID or Dataset ID not found
-
-      security:
-        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
-
-  /api/v1/models/{model_id}/test-model:
-    post:
-      tags:
-        - models
-      summary: 提交图片处理任务
-      description: 上传图片并提交异步处理任务，返回任务ID
-      parameters:
-        - name: model_id
-          in: path
-          description: 要使用的模型ID
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        description: 要处理的图片文件
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: 图片文件
-      responses:
-        '202':
-          description: 任务已接受
+          description: 成功获取数据集类型列表
           content:
             application/json:
               schema:
@@ -489,135 +423,14 @@ paths:
                   data:
                     type: object
                     properties:
-                      task_id:
-                        type: string
-                        format: uuid
-                        example: "550e8400-e29b-41d4-a716-446655440000"
-                      image_used:
-                        type: string
-                        example: "model-image:latest"
-                  message:
-                    type: string
-                    example: "任务提交成功"
-        '400':
-          description: 错误请求
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: object
-                    properties:
-                      message:
-                        type: string
-                        example: "仅允许图片文件"
-        '500':
-          description: 服务器内部错误
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: object
-                    properties:
-                      message:
-                        type: string
-                        example: "文件保存失败"
-      security:
-        - BearerAuth: []
-
-  /api/v1/models/task/{task_id}:
-    get:
-      tags:
-        - models
-      summary: 查询任务状态
-      description: 根据任务ID查询异步处理状态
-      parameters:
-        - name: task_id
-          in: path
-          description: 任务唯一标识符
-          required: true
-          schema:
-            type: string
-          example: "550e8400-e29b-41d4-a716-446655440000"
-      responses:
-        '200':
-          description: 任务处理成功
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      result:
-                        type: string
-                        description: 处理结果
-                        example: "处理后的数据"
-                    required:
-                      - result
-                  message:
-                    type: string
-                    example: "任务处理成功"
+                      types:
+                        type: array
+                        items:
+                          type: string
+                        description: 模型类型列表
               example:
                 data:
-                  result: "base64_image_data"
-                message: "任务处理成功"
-        '202':
-          description: 任务正在处理中
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      result:
-                        type: string
-                        nullable: true
-                        example: null
-                  message:
-                    type: string
-                    example: "任务尚未开始处理"
-              example:
-                data:
-                  result: null
-                message: "任务尚未开始处理"
-        '500':
-          description: 任务处理失败
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      result:
-                        type: string
-                        nullable: true
-                        example: null
-                  message:
-                    type: string
-                    example: "任务处理失败: 内部服务器错误"
-              examples:
-                failure:
-                  value:
-                    data:
-                      result: null
-                    message: "任务处理失败: 内存不足"
-                unknown:
-                  value:
-                    data:
-                      result: null
-                    message: "当前状态: RETRY"
-
-            security:
-              - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
+                  types: ["叶龄", "数量", "无人机"]
 
   /api/v1/models:
     get:
@@ -698,7 +511,7 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Model'  # 引用Dataset schema
-                  total_count:
+                  total:
                     type: integer
                     description: 模型总数量
                     example: 5
@@ -884,6 +697,248 @@ paths:
       security:
         - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
+  /api/v1/models/types:
+    get:
+      tags:
+        - models
+      summary: 获取所有算法的type列表
+      description: 获取所有算法的type列表
+      responses:
+        '200':
+          description: 成功获取模型类型列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      types:
+                        type: array
+                        items:
+                          type: string
+                        description: 模型类型列表
+              example:
+                data:
+                  types: [ "倒伏", "冠层", "叶龄" ]
+
+        '400':
+          description: 错误请求
+        '500':
+          description: 服务器内部错误
+
+  /api/v1/models/{model_id}/test-model:
+    post:
+      tags:
+        - models
+      summary: 提交图片处理任务
+      description: 上传图片并提交异步处理任务，返回任务ID
+      parameters:
+        - name: model_id
+          in: path
+          description: 要使用的模型ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        description: 要处理的图片文件
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 图片文件
+      responses:
+        '202':
+          description: 任务已接受
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      task_id:
+                        type: string
+                        format: uuid
+                        example: "550e8400-e29b-41d4-a716-446655440000"
+                      image_used:
+                        type: string
+                        example: "model-image:latest"
+                  message:
+                    type: string
+                    example: "任务提交成功"
+        '400':
+          description: 错误请求
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "仅允许图片文件"
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "文件保存失败"
+      security:
+        - BearerAuth: []
+
+  /api/v1/models/{model_id}/run:
+    get:
+      tags:
+        - models
+      summary: 运行模型并返回准确率
+      description: 使用指定的模型 ID 和数据集 ID 运行模型，并返回训练准确率。
+      parameters:
+        - in: path
+          name: model_id
+          description: 要运行的模型 ID
+          required: true
+          schema:
+            type: integer
+            example: 1
+        - in: query
+          name: dataset_id
+          description: 要使用的数据集 ID
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 模型的训练准确率
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model_id:
+                    type: integer
+                    example: 1
+                  dataset_id:
+                    type: integer
+                    example: 4
+                  accuracy:
+                    type: number
+                    format: float
+                    example: 0.92
+
+        '400':
+          description: Model ID and Dataset ID are required
+        '404':
+          description: Model ID or Dataset ID not found
+
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
+
+  /api/v1/models/task/{task_id}:
+    get:
+      tags:
+        - models
+      summary: 查询任务状态
+      description: 根据任务ID查询异步处理状态
+      parameters:
+        - name: task_id
+          in: path
+          description: 任务唯一标识符
+          required: true
+          schema:
+            type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: 任务处理成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      result:
+                        type: string
+                        description: 处理结果
+                        example: "处理后的数据"
+                    required:
+                      - result
+                  message:
+                    type: string
+                    example: "任务处理成功"
+              example:
+                data:
+                  result: "base64_image_data"
+                message: "任务处理成功"
+        '202':
+          description: 任务正在处理中
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      result:
+                        type: string
+                        nullable: true
+                        example: null
+                  message:
+                    type: string
+                    example: "任务尚未开始处理"
+              example:
+                data:
+                  result: null
+                message: "任务尚未开始处理"
+        '500':
+          description: 任务处理失败
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      result:
+                        type: string
+                        nullable: true
+                        example: null
+                  message:
+                    type: string
+                    example: "任务处理失败: 内部服务器错误"
+              examples:
+                failure:
+                  value:
+                    data:
+                      result: null
+                    message: "任务处理失败: 内存不足"
+                unknown:
+                  value:
+                    data:
+                      result: null
+                    message: "当前状态: RETRY"
+
   /api/v1/stars/{target_id}/{star_type}:
     post:
       tags:
@@ -949,7 +1004,8 @@ paths:
 
   /api/v1/apps:
     get:
-      tags: [Apps]
+      tags:
+        - apps
       summary: 搜索数据集
       description: 支持分页和模糊查询
       parameters:
@@ -1007,48 +1063,61 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/App'
-                      total:
-                        type: integer
-                      page:
-                        type: integer
-                      per_page:
-                        type: integer
-                      total_pages:
-                        type: integer
-              example:
-                data:
-                  items:
-                    - id: 1
-                      name: "测试数据集"
-                  total: 1
-                  page: 1
-                  per_page: 5
-                  total_pages: 1
+                  total:
+                    type: integer
+                    description: 模型总数量
+                    example: 5
+                  page:
+                    type: integer
+                    description: 当前页码
+                    example: 1
+                  per_page:
+                    type: integer
+                    description: 每页返回的数量
+                    example: 5
+                  total_pages:
+                    type: integer
+                    description: 总页数
+                    example: 2
 
     post:
-      tags: [Apps]
+      tags:
+        - apps
       summary: 创建数据集
-      security:
-        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AppCreate'
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "玉米植物表型参数解析"
+                description:
+                  type: string
+                  example: "进行玉米植物表型参数解析的工作站"
+                url:
+                  type: string
+                  example: "https://xxx.com"
+                banner:
+                  type: string
+                  example: "path/to/banner/img.png"
+
       responses:
         201:
           description: 创建成功
           content:
             application/json:
-              example:
-                id: 1
-                name: "新数据集"
+              schema:
+                $ref: '#/components/schemas/App'
+      security:
+        - BearerAuth: []
 
-
-  /apps/{app_id}:
+  /api/v1/apps/{app_id}:
     get:
-      tags: [Apps]
+      tags:
+        - apps
       summary: 获取单个数据集详情
       parameters:
         - name: app_id
@@ -1062,18 +1131,16 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: array
                 properties:
-                  data:
+                  items:
                     $ref: '#/components/schemas/App'
         404:
           description: 未找到数据集
 
     put:
-      tags: [Apps]
+      tags: [apps]
       summary: 更新数据集
-      security:
-        - BearerAuth: []
       parameters:
         - name: app_id
           in: path
@@ -1093,9 +1160,11 @@ paths:
             application/json:
               example:
                 message: "更新成功"
+      security:
+        - BearerAuth: []
 
     delete:
-      tags: [Apps]
+      tags: [apps]
       summary: 删除数据集
       security:
         - BearerAuth: []
@@ -1111,8 +1180,109 @@ paths:
           content:
             application/json:
               example:
-                message: "App deleted successfully"
+                message: "数据删除成功"
 
+  /api/v1/files/upload/{upload_type}/{data_id}/{file_type}:
+    post:
+      tags:
+        - files
+      summary: 通用文件上传接口
+      parameters:
+        - name: upload_type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [model]  # 目前只支持 model 类型
+          description: 上传类型
+          example: model
+        - name: data_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 关联数据ID
+          example: 1
+        - name: file_type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [icon]  # 目前只支持 model 类型
+          description: 文件类型标识
+          example: icon
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 上传的文件内容
+      responses:
+        '201':
+          description: 文件上传成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      photo_url:
+                        type: object
+                        properties:
+                          re_url:
+                            type: string
+                            example: user/1/models/icon/550e8400-e29b-41d4-a716-446655440000.jpg
+                          ab_url:
+                            type: string
+                            example: http://10.0.4.71:8080/file/user/1/models/icon/550e8400-e29b-41d4-a716-446655440000.jpg
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: 文件类型不支持
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: 无权操作
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: 服务器异常，文件上传失败
+      security:
+        - BearerAuth: []
 
 components:
   schemas:
@@ -1131,11 +1301,11 @@ components:
           description: 用户注册方式，选择 "email" 或 "telephone"
         login_identifier:
           type: string
-          example: "13345678906"
+          example: "13333333333"
           description: 电话或邮箱信息
         username:
           type: string
-          example: "test004"
+          example: "admin_01"
           description: 用户名(昵称)
         password:
           type: string
@@ -1143,10 +1313,12 @@ components:
           description: 用户密码，密码长度应为8-20字符，包含至少一个大写字母、一个小写字母、一个数字和一个特殊字符。
         code:
           type: integer
-          example: 123456
+          example: 666666
           description: 注册时的验证码，手机号或邮箱发送的验证码。
       description: >
         请提供电子邮件 (email) 或电话号码 (telephone)
+
+
 
 
     AuthLogin:
@@ -1277,9 +1449,9 @@ components:
         url:
           type: string
           example: "http://xxx.com"
-        user_id:
-          type: integer
-          example: 1
+        creator:
+          type: string
+          example: "test001"
         banner:
           type: string
           example: "path/to/banner/img.png"

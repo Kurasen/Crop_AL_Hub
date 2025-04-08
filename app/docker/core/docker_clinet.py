@@ -1,3 +1,4 @@
+import sys
 import uuid
 from pathlib import Path
 
@@ -10,7 +11,15 @@ from app.core.exception import logger, ServiceException
 
 class DockerManager:
     def __init__(self):
-        self.client = docker.DockerClient(base_url='tcp://127.0.0.1:2375')
+        # 根据操作系统类型设置不同的Docker连接地址
+        if sys.platform == 'linux':
+            # Linux系统使用服务器地址
+            self.client = docker.DockerClient(base_url='tcp://127.0.0.1:2375')
+        else:
+            # Windows/Mac系统自动检测本地Docker
+            self.client = None
+        if self.client is not None:
+            logger.info("Docker进程已启动")
 
     @staticmethod
     def validate_image(image_name):

@@ -75,12 +75,12 @@ class Config:
         },
         "model": {
             "subdirectory": "models/{file_type}",
-            "allowed_extensions": ["jpg", "png"],
+            "allowed_extensions": ["jpg", "png", "jpeg"],
             "max_size": 100 * 1024 * 1024  # 100MB
         },
         "dataset": {
             "subdirectory": "datasets/{file_type}",
-            "allowed_extensions": ["jpg", "png"],
+            "allowed_extensions": ["jpg", "png", "jpeg"],
             "max_size": 100 * 1024 * 1024  # 500MB
         }
     }
@@ -121,7 +121,7 @@ class JWTConfig:
     AUDIENCE = "web.testdomain.com"  # 接收方标识
 
     # 动态过期时间配置（单位：秒）
-    ACCESS_EXPIRE = 3600     # 1h
+    ACCESS_EXPIRE = 36000
     REFRESH_EXPIRE = 604800  # 7天
 
     # 安全配置

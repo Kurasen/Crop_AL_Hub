@@ -49,15 +49,15 @@ class AppService:
             raise e
 
     @staticmethod
-    def save_app(app_instance: App):
+    def save_app(instance: App):
         """创建模型"""
         try:
-            AppRepository.save_app(app_instance)
+            AppRepository.save_app(instance)
             db.session.commit()
-            return app_instance.to_dict(), 201
+            return instance.to_dict(), 201
         except Exception as e:
             db.session.rollback()
-            logger.error(f"创建应用失败｜ID={app_instance.id}｜错误={str(e)}")
+            logger.error(f"创建应用失败｜ID={instance.id}｜错误={str(e)}")
             raise e
 
     @staticmethod
@@ -66,7 +66,7 @@ class AppService:
         try:
             AppRepository.delete_app(instance)
             db.session.commit()
-            return {"message": "App deleted successfully"}, 200
+            return {"message": "数据删除成功"}, 200
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error occurred while deleting app : {str(e)}")

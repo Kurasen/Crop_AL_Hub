@@ -25,6 +25,8 @@ class App(db.Model):
     likes = db.Column(db.Integer, default=0)
     watches = db.Column(db.Integer, default=0)
 
+    user = db.relationship("User", back_populates="apps")
+
     def __repr__(self):
         return f"<App {self.name}>"
 
@@ -41,7 +43,7 @@ class App(db.Model):
             "name": self.name,
             "url": self.url,
             "description": self.description,
-            "user_id": self.user_id,
+            "creator":  self.user.username if self.user else "未知用户",
             "banner": self.banner,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),

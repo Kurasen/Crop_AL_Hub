@@ -4,6 +4,7 @@ from flask import Blueprint, request, g
 
 from app.application.app import App
 from app.application.app_service import AppService
+from app.config import Config
 from app.exts import db
 from app.schemas.app_schema import AppCreateSchema, AppUpdateSchema, AppSearchSchema
 from app.token.JWT import token_required
@@ -36,39 +37,36 @@ def search():
     return create_json_response(result)
 
 
-# uploader = FileUploader()
-# @apps_bp.route('/upload', methods=['POST'])
-# @token_required()
-# def upload_file():
-#     form_data = request.form.to_dict()
-#     files = request.files.get("file")
-#
-#     # 使用通用上传器
-#     saved_path = uploader.save_file(
-#         uploaded_file=files,
-#         user_id=g.current_user.id,
-#         subdirectory="test"  # 自定义子目录
-#     )
-#
-#     return create_json_response({"message": "文件上传成功"}, 201)
-
-
 @apps_bp.route('', methods=['POST'])
 @token_required(admin_required=True)
 def save_app():
     """
     创建新数据集
     """
-    form_data = request.form.to_dict()
+    form_data = request.get_json()
+    print(form_data)
     files = request.files.get("banner")
+    saved_path = None  # 初始化文件路径
+    # 如果有文件上传则处理
+    if files and files.filename != '':
+        # 文件类型验证
+        if not allowed_file(files.filename):
+            return create_json_response({"error": "仅支持JPG/PNG格式图片"}, 400)
+        # 文件大小验证
+        max_size = 100 * 1024 * 1024
+        file_data = files.read()
+        if len(file_data) > max_size:
+            return create_json_response({"error": f"文件大小超过{max_size//1024//1024}MB限制"}, 400)
 
-    # 文件类型和大小验证
-    if not allowed_file(files.filename):
-        return create_json_response({"error": "不支持的文件类型"}, 400)
-
-    # 保存文件并获取路径
-    saved_path = save_uploaded_file(files, g.current_user.id, "banners")
-    form_data['banner'] = saved_path  # 存储文件路径
+        # 保存文件
+        files.seek(0)  # 重置文件指针
+        saved_path = save_uploaded_file(files, g.current_user.id, "banners")
+        # 合并数据（如果有上传文件）
+    if saved_path:
+        form_data['banner'] = saved_path
+    else:
+        # 可以设置默认图片或留空
+        form_data['banner'] = ''
     app_instance = AppCreateSchema().load(
         form_data,
         session=db.session

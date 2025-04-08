@@ -16,6 +16,8 @@ class User(db.Model):
     telephone = db.Column(db.String(15), unique=True)  # 手机号
     role_id = db.Column(db.Integer, default=1)  # 用户角色
 
+    apps = db.relationship("App", back_populates="user")
+    models = db.relationship("Model", back_populates="user")
     # stars = db.relationship("Star", back_populates="user", lazy="dynamic")
     # orders = db.relationship("Order", back_populates="user", lazy="dynamic")
 

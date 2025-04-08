@@ -212,6 +212,6 @@ def token_required(model=None, id_param=None, owner_field='user_id', admin_requi
                 kwargs['instance'] = instance  # 注入实例
 
             return f(*args, **kwargs)
-        print(f"[Token装饰器调试] 原函数名: {f.__name__}, 装饰后函数名: {decorated_token.__name__}")
+        #print(f"[Token装饰器调试] 原函数名: {f.__name__}, 装饰后函数名: {decorated_token.__name__}")
         return decorated_token
     return decorator

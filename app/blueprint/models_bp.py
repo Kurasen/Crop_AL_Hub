@@ -134,9 +134,10 @@ def process_image(model_id):
     # 生成任务id
     task_id = str(uuid.uuid4())
 
-    file = ModelTestSchema().load(request.files).get('file')
-    if file is None:
-        return create_json_response({"error": "未上传图片"}, status=400)
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        raise FileUploadError("未上传任何文件")
+
     uploaded_files = [file]
 
     # 保存所有文件到同一目录（只需保存第一个文件即可获取目录路径）
