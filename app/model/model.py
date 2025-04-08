@@ -18,6 +18,13 @@ from datetime import datetime
 # 定义数据库模型
 class Model(db.Model):
     __tablename__ = 'model_table'
+    __table_args__ = (
+        # 时间约束
+        db.CheckConstraint(
+            "created_at <= updated_at OR updated_at IS NULL",
+            name='time_check'
+        ),
+    )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 主键
     name = db.Column(db.String(100), nullable=False, index=True)  # 模型名称
@@ -28,15 +35,16 @@ class Model(db.Model):
     instruction = db.Column(db.Text, default="")
     output = db.Column(db.String(100), default="")  # 输出字段
     accuracy = db.Column(db.Numeric(4, 2), default=0)  # 精度字段，DECIMAL(4, 2) 对应 Numeric(4, 2)
+    icon = db.Column(db.String(100), default="")
     type = db.Column(db.String(100), default="")  # 模型类型
     likes = db.Column(db.Integer, default=0)  # 点赞数字段
-    #price = db.Column(db.Numeric(10, 2))
+    # price = db.Column(db.Numeric(10, 2))
     user_id = db.Column(db.Integer, db.ForeignKey('user_table.id'), nullable=False, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间字段，默认当前时间
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    stars = db.relationship("Star", back_populates="model", lazy="dynamic")
-    orders = db.relationship("Order", back_populates="model", lazy="dynamic")
+    # stars = db.relationship("Star", back_populates="model", lazy="dynamic")
+    # orders = db.relationship("Order", back_populates="model", lazy="dynamic")
     readme = db.Column(db.Text, default="")
 
     def __init__(self, **kwargs):
@@ -62,47 +70,48 @@ class Model(db.Model):
             'accuracy': self.accuracy,
             'type': self.type,
             'likes': self.likes,
+            'icon': self.icon,
             'user_id': self.user_id,
             'readme': self.readme,
             'created_at': self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }
 
-    @hybrid_property
-    def stars_count(self):
-        """直接获取该模型的收藏数（适用于单个对象）"""
-        return self.stars.filter_by(star_type=Star.StarType.MODEL).count()
-
-    @stars_count.expression
-    def stars_count(cls):
-        """生成 SQL 表达式（适用于查询排序/过滤）"""
-        return (
-            db.select(db.func.count(Star.id))
-            .where(Star.model_id == cls.id)
-            .where(Star.star_type == Star.StarType.MODEL)
-            .correlate(cls)
-            .scalar_subquery()
-            .label("stars_count")
-        )
-
-    @hybrid_property
-    def sales_count(self):
-        """访问时触发服务层逻辑"""
-        from app.order.order_service import OrderService
-        return OrderService.get_model_sales_count()
-
-    @sales_count.expression
-    def sales_count(cls):
-        """生成SQL表达式（用于查询排序/过滤）"""
-        from app.order.order import Order
-        return (
-            db.select(db.func.count(Order.id))
-            .where(Order.model_id == cls.id)
-            .where(Order.status == OrderStatus.COMPLETED)
-            .correlate(cls)
-            .scalar_subquery()
-            .label("sales_count")
-        )
+    # @hybrid_property
+    # def stars_count(self):
+    #     """直接获取该模型的收藏数（适用于单个对象）"""
+    #     return self.stars.filter_by(star_type=Star.StarType.MODEL).count()
+    #
+    # @stars_count.expression
+    # def stars_count(cls):
+    #     """生成 SQL 表达式（适用于查询排序/过滤）"""
+    #     return (
+    #         db.select(db.func.count(Star.id))
+    #         .where(Star.model_id == cls.id)
+    #         .where(Star.star_type == Star.StarType.MODEL)
+    #         .correlate(cls)
+    #         .scalar_subquery()
+    #         .label("stars_count")
+    #     )
+    #
+    # @hybrid_property
+    # def sales_count(self):
+    #     """访问时触发服务层逻辑"""
+    #     from app.order.order_service import OrderService
+    #     return OrderService.get_model_sales_count()
+    #
+    # @sales_count.expression
+    # def sales_count(cls):
+    #     """生成SQL表达式（用于查询排序/过滤）"""
+    #     from app.order.order import Order
+    #     return (
+    #         db.select(db.func.count(Order.id))
+    #         .where(Order.model_id == cls.id)
+    #         .where(Order.status == OrderStatus.COMPLETED)
+    #         .correlate(cls)
+    #         .scalar_subquery()
+    #         .label("sales_count")
+    #     )
 
     # def update_star_count(mapper, connection, target):
     #     """收藏变动时自动更新缓存"""

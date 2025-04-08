@@ -120,11 +120,20 @@ def register_blueprints(app: FlaskApp):
     from app.blueprint.users_bp import user_bp
     app.register_blueprint(user_bp, url_prefix='/api/v1/users')
 
-    from app.blueprint.stars_bp import stars_bp
-    app.register_blueprint(stars_bp, url_prefix='/api/v1/stars')
+    # from app.blueprint.stars_bp import stars_bp
+    # app.register_blueprint(stars_bp, url_prefix='/api/v1/stars')
+    #
+    # from app.blueprint.orders_bp import orders_bp
+    # app.register_blueprint(orders_bp, url_prefix='/api/v1/orders')
 
-    from app.blueprint.orders_bp import orders_bp
-    app.register_blueprint(orders_bp, url_prefix='/api/v1/orders')
+    from app.blueprint.apps_bp import apps_bp
+    app.register_blueprint(apps_bp, url_prefix='/api/v1/apps')
+
+    from app.blueprint.tasks_bp import tasks_bp
+    app.register_blueprint(tasks_bp, url_prefix='/api/v1/tasks')
+
+    from app.blueprint.files_bp import files_bp
+    app.register_blueprint(files_bp, url_prefix='/api/v1/files')
 
 
 def configure_global_checks(app):
@@ -177,7 +186,7 @@ if __name__ == '__main__':
                 # 在此处执行需要上下文的代码（如初始化数据）
                 print("Registered routes:")
                 for rule in flask_app.url_map.iter_rules():
-                    print(f"{rule.endpoint}: {rule}")
+                    print(f"端点: {rule.endpoint} → 路径: {rule.rule}")
 
                 print("\nSwagger UI available at: http://127.0.0.1:8080/swagger-ui/\n")
 

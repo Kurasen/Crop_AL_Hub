@@ -39,7 +39,7 @@ def login():
 
 
 @auth_bp.route('/logout', methods=['POST'])
-@token_required  # 使用装饰器，确保用户已认证
+@token_required()  # 使用装饰器，确保用户已认证
 def post():
     """登出功能"""
     user_id = g.current_user.id
@@ -86,7 +86,7 @@ def post():
 
 # 受保护接口：需要使用 JWT 认证
 @auth_bp.route('/protected', methods=['GET'])
-@token_required  # 使用装饰器，确保用户已认证
+@token_required()  # 使用装饰器，确保用户已认证
 def protected_route():
     """受保护接口"""
     user_id = g.current_user

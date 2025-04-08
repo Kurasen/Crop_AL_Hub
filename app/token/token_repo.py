@@ -1,3 +1,4 @@
+from app.config import JWTConfig
 from app.core.redis_connection_pool import redis_pool
 
 
@@ -14,9 +15,9 @@ class TokenRepository:
         with redis_pool.get_redis_connection(pool_name='user') as redis_client:
             token_key = f"user_token:{token_type}:{user_id}"
             if token_type == 'access':
-                redis_client.set(token_key, token, ex=900)  # access_token 有效期为 15 分钟
+                redis_client.set(token_key, token, ex=JWTConfig.ACCESS_EXPIRE)  # access_token 有效期为 15 分钟
             elif token_type == 'refresh':
-                redis_client.set(token_key, token, ex=604800)  # refresh_token 有效期为 7 天
+                redis_client.set(token_key, token, ex=JWTConfig.REFRESH_EXPIRE)  # refresh_token 有效期为 7 天
             else:
                 raise ValueError("Invalid token type. Use 'access' or 'refresh'.")
 

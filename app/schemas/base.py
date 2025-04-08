@@ -82,7 +82,7 @@ def apply_rate_limit(rule):
     # 获取 limiter 实例，避免每次调用时都访问 current_app
     def decorator(func):
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def decorated_limit(*args, **kwargs):
             # 获取 limiter
             limiter_set = current_app.extensions.get('limiter', set())
             if not limiter_set:
@@ -92,12 +92,15 @@ def apply_rate_limit(rule):
             if not isinstance(limiter, Limiter):
                 raise ValueError("限制器不是限制器类型")
 
-            return limiter.limit(
+            limited_func = limiter.limit(
                 rule,
                 error_message="请求过于频繁，请稍后再试",
-                override_defaults=True  # 覆盖默认行为
-            )(func)(*args, **kwargs)
-        return wrapper
+                override_defaults=True
+            )(func)
+
+            return limited_func(*args, **kwargs)
+        print(f"[Rate Limit装饰器] 原函数名: {func.__name__}, 装饰后函数名: {decorated_limit.__name__}")
+        return decorated_limit
 
     return decorator
 
@@ -111,7 +114,7 @@ def validate_request(schema_cls, content_type="json"):
 
     def decorator(f):
         @wraps(f)
-        def wrapper(*args, **kwargs):
+        def decorated_request(*args, **kwargs):
             # 根据内容类型选择解析位置
             locations = ()
             if content_type == "json":
@@ -132,6 +135,6 @@ def validate_request(schema_cls, content_type="json"):
             g.validated_data = parsed_data
             return f(*args, **kwargs)
 
-        return wrapper
+        return decorated_request
 
     return decorator

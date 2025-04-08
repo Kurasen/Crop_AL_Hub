@@ -1,21 +1,24 @@
-import json
+
 import uuid
 from datetime import datetime
 
-from flask import send_file, Blueprint, make_response
-from app.core.exception import ValidationError, FileUploadError
+from flask import Blueprint
+
+from app import Model
+from app.core.exception import FileUploadError
 from app.docker.core.storage import FileStorage, cleanup_directory
 from app.exts import db
 from app.schemas.model_schema import ModelRunSchema, ModelTestSchema, ModelSearchSchema, ModelCreateSchema, \
     ModelUpdateSchema
-from pathlib import Path
-from flask import request, jsonify
+
+from flask import request
 from app.config import Config
 from app.docker.core.docker_clinet import docker_client
 from app.docker.core.task import logger, run_algorithm
 from app.model.model_service import ModelService
+from app.token.JWT import token_required
 from app.utils import create_json_response
-from docker.errors import ImageNotFound
+
 
 # 设置允许的文件格式
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
@@ -26,7 +29,7 @@ models_bp = Blueprint('models', __name__, url_prefix='/api/v1/models')
 
 # 定义 run_model 接口，接收模型编号和数据集编号
 @models_bp.route('/<int:model_id>/run', methods=['GET'])
-# @token_required
+@token_required()
 def run(model_id):
     """
     通过模型ID和数据集ID运行模型，并返回模型的训练准确率。
@@ -40,7 +43,6 @@ def run(model_id):
 
 
 @models_bp.route('', methods=['GET'])
-# @token_required
 def search():
     """
     通过模型名称、输入类型、是否支持CUDA等条件来搜索模型。
@@ -63,6 +65,7 @@ def get_all_types():
 
 
 @models_bp.route('', methods=['POST'])
+@token_required(admin_required=True)
 def create_model():
     """
     创建新模型
@@ -85,15 +88,15 @@ def get_model(model_id):
 
 
 @models_bp.route('/<int:model_id>', methods=['PUT'])
-def update_model(model_id):
+@token_required(model=Model, id_param='model_id')
+def update_model(instance):
     """
     更新现有模型
     """
-    model = ModelService.get_model_by_id(model_id)
     updates = request.get_json()
     model_instance = ModelUpdateSchema().load(
         updates,
-        instance=model,  # 传入现有实例
+        instance=instance,  # 传入现有实例
         partial=True,  # 允许部分更新
         session=db.session,
     )
@@ -102,11 +105,12 @@ def update_model(model_id):
 
 
 @models_bp.route('/<int:model_id>', methods=['DELETE'])
-def delete_model(model_id):
+@token_required(model=Model, id_param='model_id')
+def delete_model(instance):
     """
     删除现有模型
     """
-    response, status = ModelService.delete_model(model_id)
+    response, status = ModelService.delete_model(instance)
     return create_json_response(response, status)
 
 
@@ -117,6 +121,7 @@ def log_request():
 
 # Flask路由：上传文件并触发任务
 @models_bp.route('/<int:model_id>/test-model', methods=['POST'])
+@token_required()
 def process_image(model_id):
     # 查数据库，获取对应的 image_name
     model = ModelService.get_model_by_id(model_id)
@@ -176,6 +181,7 @@ def process_image(model_id):
 
 # Flask路由：查询任务状态
 @models_bp.route('/task/<task_id>', methods=['GET'])
+@token_required()
 def get_task_status(task_id):
     task = run_algorithm.AsyncResult(task_id)
     # 判断任务状态
@@ -210,3 +216,4 @@ def get_task_status(task_id):
         'data': response,
         'message': message,
     }, status_code)
+

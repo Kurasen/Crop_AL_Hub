@@ -44,6 +44,8 @@ class Config:
     UPLOAD_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_Data/input').resolve()  # 使用 Path 对象
     OUTPUT_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_Data/output').resolve()  # 使用 Path 对象
 
+    USER_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_Data/user').resolve()
+
     # Redis配置
     REDIS_HOST = "localhost"
     REDIS_PORT = 6379
@@ -63,6 +65,25 @@ class Config:
     @staticmethod
     def init_app(app):
         pass  # 这里可以放置通用初始化逻辑
+
+    # 上传文件配置
+    UPLOAD_CONFIG = {
+        "user": {
+            "subdirectory": "avatars",
+            "allowed_extensions": ["jpg", "png", "jpeg"],
+            "max_size": 2 * 1024 * 1024  # 2MB
+        },
+        "model": {
+            "subdirectory": "models/{file_type}",
+            "allowed_extensions": ["jpg", "png"],
+            "max_size": 100 * 1024 * 1024  # 100MB
+        },
+        "dataset": {
+            "subdirectory": "datasets/{file_type}",
+            "allowed_extensions": ["jpg", "png"],
+            "max_size": 100 * 1024 * 1024  # 500MB
+        }
+    }
 
 
 # 开发环境配置
@@ -100,7 +121,7 @@ class JWTConfig:
     AUDIENCE = "web.testdomain.com"  # 接收方标识
 
     # 动态过期时间配置（单位：秒）
-    ACCESS_EXPIRE = 900      # 15分钟
+    ACCESS_EXPIRE = 3600     # 1h
     REFRESH_EXPIRE = 604800  # 7天
 
     # 安全配置

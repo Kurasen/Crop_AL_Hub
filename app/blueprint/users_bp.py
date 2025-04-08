@@ -1,6 +1,5 @@
 from flask import Blueprint, request
 
-from app.schemas.users_shema import UserSearchSchema
 from app.user.user_service import UserService
 from app.utils import create_json_response
 

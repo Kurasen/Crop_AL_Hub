@@ -7,9 +7,11 @@ from datetime import datetime, timedelta, timezone
 from flask import request, g
 from functools import wraps
 
+from werkzeug.exceptions import Forbidden
+
 from app import User
 from app.config import JWTConfig  # 载入配置
-from app.core.exception import TokenError, ValidationError, logger
+from app.core.exception import TokenError, ValidationError, logger, NotFoundError, PermissionDeniedError, APIError
 from app.core.redis_connection_pool import redis_pool
 
 
@@ -132,32 +134,39 @@ def verify_token(token, check_blacklist=True):
         raise TokenError("认证失败，错误的令牌")  # 抛出自定义的认证错误
 
 
-def get_jwt_identity():
+# def get_jwt_identity():
+#     """
+#     解析 `access_token` 并返回 `jti`，确保 logout 用的是 `access_token`
+#     """
+#     # 优先从 g 对象获取已解析的 payload
+#     if hasattr(g, 'current_user_payload'):
+#         payload = g.current_user_payload
+#     else:
+#         # 如果 g 中没有，再解析 Token（兼容性处理）
+#         token = request.headers.get('Authorization', '')
+#         if not token.startswith('Bearer '):
+#             raise TokenError("Token is missing")
+#         token = token[len('Bearer '):]
+#         payload = verify_token(token)
+#
+#     # 确保是 Access Token
+#     if payload.get("token_type") != "access":
+#         raise TokenError("Logout must use access_token")
+#
+#     return payload["jti"]
+
+
+def token_required(model=None, id_param=None, owner_field='user_id', admin_required=False):
     """
-    解析 `access_token` 并返回 `jti`，确保 logout 用的是 `access_token`
+    增强版装饰器：集成权限校验
+    :param admin_required:
+    :param model: 需要校验的模型类 (e.g. App)
+    :param id_param: URL 中的资源ID参数名 (e.g. 'app_id')
+    :param owner_field: 模型中的用户关联字段 (默认 'user_id')
     """
-    # 优先从 g 对象获取已解析的 payload
-    if hasattr(g, 'current_user_payload'):
-        payload = g.current_user_payload
-    else:
-        # 如果 g 中没有，再解析 Token（兼容性处理）
-        token = request.headers.get('Authorization', '')
-        if not token.startswith('Bearer '):
-            raise TokenError("Token is missing")
-        token = token[len('Bearer '):]
-        payload = verify_token(token)
-
-    # 确保是 Access Token
-    if payload.get("token_type") != "access":
-        raise TokenError("Logout must use access_token")
-
-    return payload["jti"]
-
-
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        try:
+    def decorator(f):
+        @wraps(f)
+        def decorated_token(*args, **kwargs):
             # 严格处理 Authorization 头
             auth_header = request.headers.get('Authorization', '')
             if not auth_header:
@@ -166,14 +175,43 @@ def token_required(f):
             token = auth_header.split(" ")[1].strip()
             if not token:
                 raise TokenError("空令牌")  # 验证 Token 并获取 payload
-            payload = verify_token(token)
-            # 将 payload 存入全局对象 g
-            g.current_user = User.query.get(payload['user_id'])
-            g.current_user_payload = payload
 
-            # 传递 payload 给路由函数
+            try:
+                payload = verify_token(token)
+                # 将 payload 存入全局对象 g
+                g.current_user = User.query.get(payload['user_id'])
+                g.current_user_payload = payload
+
+            except TokenError as e:
+                raise TokenError(str(e))
+
+            # --- 管理员权限检查 ---
+            if admin_required and g.current_user.role_id != 0:
+                logger.info(f"拒绝非管理员访问，用户ID: {g.current_user.id}")
+                raise PermissionDeniedError("需要管理员权限")
+
+            # --- 权限自动校验 ---
+            if model and id_param:
+                resource_id = kwargs.get(id_param)
+                if not resource_id:
+                    raise APIError(f"URL 缺少必要参数: {id_param}")
+
+                instance = model.query.get(resource_id)
+                if not instance:
+                    raise NotFoundError()
+
+                # 验证权限：管理员无需检查所有权，普通用户需验证所有者
+                is_admin = g.current_user.role_id == 0
+                is_owner = getattr(instance, owner_field) == g.current_user.id
+
+                if not (is_admin or is_owner):
+                    raise PermissionDeniedError("无权操作此资源")
+
+                if id_param in kwargs:
+                    del kwargs[id_param]  # 删除指定参数
+                kwargs['instance'] = instance  # 注入实例
+
             return f(*args, **kwargs)
-        except TokenError as e:
-            raise TokenError(str(e))
-
-    return decorated
+        print(f"[Token装饰器调试] 原函数名: {f.__name__}, 装饰后函数名: {decorated_token.__name__}")
+        return decorated_token
+    return decorator

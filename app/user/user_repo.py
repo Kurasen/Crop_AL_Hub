@@ -35,6 +35,7 @@ class UserRepository:
         db.session.commit()
         return UserRepository.get_user_by_id(user_id)
 
+    @staticmethod
     def delete_user_account(user_id: int) -> None:
         """删除用户账号（硬删除）"""
         user = User.query.get(user_id)

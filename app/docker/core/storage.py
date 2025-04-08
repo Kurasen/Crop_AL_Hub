@@ -142,7 +142,7 @@ def cleanup_directory(input_dir, output_dir):
             shutil.rmtree(input_path)
             logger.info(f"清理输入目录成功: {input_dir}")
         else:
-            logger.warning(f"输入目录不存在: {input_dir}")
+            logger.warning(f"输入目录不存在，可能已被删除: {input_dir}")
 
         # 清理输出目录
         output_path = Path(output_dir)
@@ -150,6 +150,6 @@ def cleanup_directory(input_dir, output_dir):
             shutil.rmtree(output_path)
             logger.info(f"清理输出目录成功: {output_dir}")
         else:
-            logger.warning(f"输出目录不存在: {output_dir}")
+            logger.warning(f"输出目录不存在，可能已被删除: {output_dir}")
     except Exception as e:
         logger.error(f"清理目录失败: {str(e)}", exc_info=True)

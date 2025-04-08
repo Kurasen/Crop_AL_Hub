@@ -21,8 +21,6 @@ OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
 
 @CeleryManager.get_celery().task(bind=True)
 def run_algorithm(self, input_path, task_id, image_name, instruction=None):
-    host_input_dir = None
-    host_output_dir = None
     try:
         logger.info(f"\n=== 任务启动 [{task_id}] ===")
 
@@ -80,12 +78,6 @@ def run_algorithm(self, input_path, task_id, image_name, instruction=None):
 
     except Exception as e:
         logger.error(f"任务失败详情: {str(e)}", exc_info=True)
-        # # 异常时清理输入输出目录
-        # if host_output_dir and host_output_dir.exists():
-        #     FileStorage.clean_directory(host_output_dir, logger)
-        # if host_input_dir and host_input_dir.exists():
-        #     FileStorage.clean_directory(host_input_dir, logger)
-
         # 如果是文件损坏或特定异常，直接标记任务失败，不进行重试
         if isinstance(e, (ImageProcessingError, RuntimeError)):
             self.update_state(

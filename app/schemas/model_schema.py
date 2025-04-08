@@ -19,8 +19,8 @@ def validate_characters(value):
 class ModelBaseSchema(BaseSchema):
     class Meta:
         model = Model
-        load_instance = True
-        include_fk = True
+        load_instance = True  # 启用实例化
+        include_fk = True  # 包含外键字段
 
     name = fields.Str(
         required=True,
@@ -72,13 +72,19 @@ class ModelBaseSchema(BaseSchema):
     )
 
     type = fields.String(
-        required=True,
+        required=False,
         validate=[
             fields.validate.Length(max=100, error="长度需小于100字符"),
-            validate_characters # 直接引用自定义验证函数
+            validate_characters  # 直接引用自定义验证函数
         ]
     )
 
+    readme = fields.String(
+        required=False,
+        validate=[
+            fields.validate.Length(max=500, error="长度需小于100字符")
+        ]
+    )
     @validates('input')
     def validate_input(self, value):
         if value:
@@ -114,8 +120,8 @@ class ModelBaseFieldsMixin:
     name = fields.Str(
         required=False,
         validate=[
-            validate.Length(min=1, max=30),  # 移除 error 参数
-            validate.Regexp(r'^\s*.*?\S+.*\s*$')  # 移除 error 参数
+            validate.Length(min=1, max=30),
+            validate.Regexp(r'^\s*.*?\S+.*\s*$')
         ],
         error_messages={
             "too_short": "Name must be between 1 and 30 characters",

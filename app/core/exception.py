@@ -146,9 +146,23 @@ class ServiceException(CustomError):
 class AlgorithmError(CustomError):
     def __init__(self, message="算法运行失败，请稍后再试", status_code=500):
         """
-        服务异常
+        算法运行服务异常
         """
         super().__init__(message, status_code)
+
+
+class PermissionDeniedError(CustomError):
+    """权限不足异常"""
+
+    def __init__(self, message="无权操作"):
+        super().__init__(message, status_code=403)
+
+
+class APIError(CustomError):
+    """基础API异常"""
+
+    def __init__(self, message="无权操作"):
+        super().__init__(message, status_code=403)
 
 
 def init_error_handlers(app):
@@ -171,15 +185,14 @@ def init_error_handlers(app):
                 # 只有在请求是 JSON 格式时，才尝试读取 JSON 数据
                 request_info = f"Method: {request.method}, URL: {request.url}, Data: {request.get_json()}"
             else:
-                # 如果不是 JSON 格式，记录没有请求体
-                request_info = f"Method: {request.method}, URL: {request.url}, Data: 不是json结构体"
+                request_info = f"Method: {request.method}, URL: {request.url}, Data: No request body"
 
         except UnsupportedMediaType:
             # 捕获 UnsupportedMediaType 异常，并返回自定义错误信息
             return create_json_response({
                 "status": "error",
                 "code": 415,
-                "message": "不支持的媒体类型，请使用application/json"
+                "message": "不支持的媒体类型"
             }), 415
 
         # 判断错误类型并构造响应内容

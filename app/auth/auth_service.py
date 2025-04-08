@@ -81,6 +81,9 @@ class AuthService:
                 user = AuthRepository.get_user_by_identifier(login_identifier, login_type)
                 if not user:  # 添加用户存在性检查
                     raise AuthenticationError("用户不存在")
+                if not user.password or len(user.password) < 60:
+                    logger.error(f"用户 {user.id} 的密码哈希值损坏")
+                    raise AuthenticationError("认证信息错误")
                 if not PasswordService.check_password(user, password):  # 密码校验
                     LoginAttemptsRepository.increment_login_attempts(login_identifier)
                     raise AuthenticationError("密码错误")

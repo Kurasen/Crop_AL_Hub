@@ -10,7 +10,7 @@ stars_bp = Blueprint('stars', __name__, url_prefix='/api/v1/stars')
 
 
 @stars_bp.route('/<int:target_id>/<string:star_type>', methods=['POST', 'DELETE'])
-@token_required
+@token_required()
 def create_star(current_user, target_id, star_type):
     data = {'target_id': target_id, 'star_type': star_type, 'user_id': current_user["user_id"]}
     validated_data = StarCreateSchema().load(data)
@@ -32,7 +32,7 @@ def get_star_count(target_id, star_type):
 
 
 @stars_bp.route('', methods=['GET'])
-@token_required
+@token_required()
 def get_user_stars(current_user):
     """分页获取当前用户的所有收藏"""
     stars = StarService.get_user_stars(current_user["user_id"])

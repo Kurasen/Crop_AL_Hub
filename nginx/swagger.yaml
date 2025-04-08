@@ -18,6 +18,8 @@ tags:
     description: ''
   - name: stars
     description: ''
+  - name: Apps
+    description: ''
 
 paths:
   /api/v1/auth/register:
@@ -42,6 +44,7 @@ paths:
           description: 验证码未发送，错误和已过期
         '500':
           description: 内部服务器错误
+
 
   /api/v1/auth/login:
     post:
@@ -240,9 +243,6 @@ paths:
         '400':
           description: 请求无效
 
-      security:
-        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
-
     post:
       summary: 创建新数据集
       operationId: createDataset
@@ -316,9 +316,6 @@ paths:
                   $ref: '#/components/schemas/Dataset'
         '404':
           description: No datasets found in the database
-
-      security:
-        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
     put:
       summary: 更新现有数据集
@@ -455,7 +452,6 @@ paths:
 
       security:
         - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
-
 
   /api/v1/models/{model_id}/test-model:
     post:
@@ -620,6 +616,9 @@ paths:
                       result: null
                     message: "当前状态: RETRY"
 
+            security:
+              - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
+
   /api/v1/models:
     get:
       tags:
@@ -718,9 +717,6 @@ paths:
         '400':
           description: 查询参数无效
 
-      security:
-        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
-
     post:
       tags:
         - models
@@ -801,8 +797,7 @@ paths:
                   $ref: '#/components/schemas/Model'
         '404':
           description: No datasets found in the database
-      security:
-        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
+
     put:
       tags:
         - models
@@ -952,6 +947,172 @@ paths:
       security:
         - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
+  /api/v1/apps:
+    get:
+      tags: [Apps]
+      summary: 搜索数据集
+      description: 支持分页和模糊查询
+      parameters:
+        - name: name
+          in: query
+          description: ''
+          schema:
+            type: string
+        - name: description
+          in: query
+          description: ''
+          schema:
+            type: string
+        - name: sort_by
+          in: query
+          description: 排序字段，支持的字段包括：created_at, updated_at
+          required: false
+          schema:
+            type: string
+            enum: [created_at, updated_at]
+        - name: sort_order
+          in: query
+          description: 排序顺序，选择升序（asc）或降序（desc）
+          required: false
+          schema:
+            type: string
+            enum: [ asc, desc ]
+        - name: page
+          in: query
+          description: 当前页码
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          description: 每页显示的条数
+          required: false
+          schema:
+            type: integer
+            default: 5
+
+      responses:
+        200:
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/App'
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      per_page:
+                        type: integer
+                      total_pages:
+                        type: integer
+              example:
+                data:
+                  items:
+                    - id: 1
+                      name: "测试数据集"
+                  total: 1
+                  page: 1
+                  per_page: 5
+                  total_pages: 1
+
+    post:
+      tags: [Apps]
+      summary: 创建数据集
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppCreate'
+      responses:
+        201:
+          description: 创建成功
+          content:
+            application/json:
+              example:
+                id: 1
+                name: "新数据集"
+
+
+  /apps/{app_id}:
+    get:
+      tags: [Apps]
+      summary: 获取单个数据集详情
+      parameters:
+        - name: app_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 成功获取
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/App'
+        404:
+          description: 未找到数据集
+
+    put:
+      tags: [Apps]
+      summary: 更新数据集
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: app_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppUpdate'
+      responses:
+        200:
+          description: 更新成功
+          content:
+            application/json:
+              example:
+                message: "更新成功"
+
+    delete:
+      tags: [Apps]
+      summary: 删除数据集
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: app_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 删除成功
+          content:
+            application/json:
+              example:
+                message: "App deleted successfully"
+
 
 components:
   schemas:
@@ -986,6 +1147,7 @@ components:
           description: 注册时的验证码，手机号或邮箱发送的验证码。
       description: >
         请提供电子邮件 (email) 或电话号码 (telephone)
+
 
     AuthLogin:
       type: object
@@ -1099,6 +1261,60 @@ components:
       required:
         - name
 
+    App:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        name:
+          type: string
+          example: "玉米植物表型参数解析"
+        description:
+          type: string
+          example: "进行玉米植物表型参数解析的工作站"
+        url:
+          type: string
+          example: "http://xxx.com"
+        user_id:
+          type: integer
+          example: 1
+        banner:
+          type: string
+          example: "path/to/banner/img.png"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-19 03:14:07"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-03-31 18:09:47"
+
+    AppCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+        description:
+          type: string
+          maxLength: 200
+
+    AppUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+        description:
+          type: string
+          maxLength: 200
 
   securitySchemes:
     BearerAuth:

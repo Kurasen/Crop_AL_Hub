@@ -10,7 +10,13 @@ from app.order.order import OrderStatus, Order
 
 class Dataset(db.Model):
     __tablename__ = 'dataset_table'  # 数据库表名
-
+    __table_args__ = (
+        # 时间约束
+        db.CheckConstraint(
+            "created_at <= updated_at OR updated_at IS NULL",
+            name='time_check'
+        ),
+    )
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 主键
     name = db.Column(db.String(100), nullable=False, index=True)  # 数据集名称
     path = db.Column(db.String(255))  # 数据集文件路径
@@ -20,6 +26,7 @@ class Dataset(db.Model):
     likes = db.Column(db.Integer, default=0)  # 点赞数
     price = db.Column(db.Numeric(10, 2))
     readme = db.Column(db.Text, default="")
+    user_id = db.Column(db.Integer, db.ForeignKey('user_table.id'), nullable=False, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # stars = db.relationship("Star", back_populates="dataset", lazy="dynamic")
@@ -42,6 +49,7 @@ class Dataset(db.Model):
             "path": self.path,
             "size": self.size,
             "description": self.description,
+            "user_id": self.user_id,
             "type": self.type,
             # "stars": self.stars,
             "likes": self.likes,
@@ -50,25 +58,25 @@ class Dataset(db.Model):
             "updated_at": self.updated_at.isoformat(),
         }
 
-    @hybrid_property
-    def sales_count(self):
-        """实时销售计数（带缓存）"""
-        cache_key = f"dataset_sales:{self.id}"
-        if cached := redis_pool.get(cache_key):
-            return int(cached)
-
-        count = self.orders.filter_by(
-            status=OrderStatus.COMPLETED
-        ).count()
-
-        redis_pool.setex(cache_key, timedelta(minutes=5), count)
-        return count
-
-    @sales_count.expression
-    def sales_count(cls):
-        """SQL表达式（用于查询和排序）"""
-        from sqlalchemy import select, func
-        return select([func.count(Order.id)]).where(
-            (Order.model_id == cls.id) &
-            (Order.status == OrderStatus.COMPLETED)
-        ).label("sales_count")
+    # @hybrid_property
+    # def sales_count(self):
+    #     """实时销售计数（带缓存）"""
+    #     cache_key = f"dataset_sales:{self.id}"
+    #     if cached := redis_pool.get(cache_key):
+    #         return int(cached)
+    #
+    #     count = self.orders.filter_by(
+    #         status=OrderStatus.COMPLETED
+    #     ).count()
+    #
+    #     redis_pool.setex(cache_key, timedelta(minutes=5), count)
+    #     return count
+    #
+    # @sales_count.expression
+    # def sales_count(cls):
+    #     """SQL表达式（用于查询和排序）"""
+    #     from sqlalchemy import select, func
+    #     return select([func.count(Order.id)]).where(
+    #         (Order.model_id == cls.id) &
+    #         (Order.status == OrderStatus.COMPLETED)
+    #     ).label("sales_count")

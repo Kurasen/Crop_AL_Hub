@@ -1,6 +1,7 @@
 import re
 from typing import Set
 
+from app import Model
 from app.utils.file_process import save_uploaded_file
 from app.core.exception import DatabaseError, ValidationError, FileUploadError, ImageProcessingError, \
     NotFoundError, logger
@@ -102,16 +103,15 @@ class ModelService:
             raise e
 
     @staticmethod
-    def delete_model(model_id):
+    def delete_model(instance: Model):
         """删除模型"""
         try:
-            model = ModelService.get_model_by_id(model_id)
-            ModelRepository.delete_model(model)
+            ModelRepository.delete_model(instance)
             db.session.commit()
-            return {"message": "Model deleted successfully"}, 200
+            return {"message": "数据删除成功"}, 200
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error occurred while deleting model {model_id}: {str(e)}")
+            logger.error(f"Error occurred while deleting model {instance.id}: {str(e)}")
             raise e
 
     # 模拟的图像处理函数

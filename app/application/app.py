@@ -5,6 +5,13 @@ from app.exts import db
 
 class App(db.Model):
     __tablename__ = 'app_table'
+    __table_args__ = (
+        # 时间约束
+        db.CheckConstraint(
+            "created_at <= updated_at OR updated_at IS NULL",
+            name='time_check'
+        ),
+    )
 
     # 定义表的字段
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -36,8 +43,8 @@ class App(db.Model):
             "description": self.description,
             "user_id": self.user_id,
             "banner": self.banner,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
             "likes": self.likes,
             "watches": self.watches
         }

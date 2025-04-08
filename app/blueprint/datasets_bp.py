@@ -1,7 +1,9 @@
 from flask import request, Blueprint
 
+from app import Dataset
 from app.exts import db
 from app.schemas.dataset_shema import DatasetSearchSchema, DatasetCreateSchema, DatasetUpdateSchema
+from app.token.JWT import token_required
 from app.utils.json_encoder import create_json_response
 from app.dataset.dataset_service import DatasetService
 
@@ -42,6 +44,7 @@ def get_all_types():
 
 # 创建新数据集
 @datasets_bp.route('', methods=['POST'])
+@token_required(admin_required=True)
 def create_dataset():
     """
     创建新数据集
@@ -53,15 +56,15 @@ def create_dataset():
 
 # 更新现有数据集
 @datasets_bp.route('/<int:dataset_id>', methods=['PUT'])
-def update_dataset(dataset_id):
+@token_required(model=Dataset, id_param='dataset_id')
+def update_dataset(instance):
     """
     更新现有数据集
     """
-    dataset = DatasetService.get_dataset_by_id(dataset_id)
     updates = request.get_json()
     dataset_instance = DatasetUpdateSchema().load(
         updates,
-        instance=dataset,  # 传入现有实例
+        instance=instance,  # 传入现有实例
         partial=True,  # 允许部分更新
         session=db.session
     )
@@ -71,9 +74,10 @@ def update_dataset(dataset_id):
 
 # 删除现有数据集
 @datasets_bp.route('/<int:dataset_id>', methods=['DELETE'])
-def delete_dataset(dataset_id):
+@token_required(model=Dataset, id_param='dataset_id')
+def delete_dataset(instance):
     """
     删除现有数据集
     """
-    result, status = DatasetService.delete_dataset(dataset_id)
+    result, status = DatasetService.delete_dataset(instance)
     return create_json_response(result, status)

@@ -1,6 +1,7 @@
 import re
 from typing import Set
 
+from app import Dataset
 from app.core.exception import DatabaseError, NotFoundError, logger
 from app.dataset.dataset_repo import DatasetRepository
 from app.exts import db
@@ -108,22 +109,22 @@ class DatasetService:
             raise
 
     @staticmethod
-    def delete_dataset(dataset_id):
+    def delete_dataset(instance: Dataset):
         """删除模型"""
         try:
             # 获取模型对象
-            dataset = DatasetService.get_dataset_by_id(dataset_id)
+            dataset = DatasetService.get_dataset_by_id(instance)
 
             DatasetRepository.delete_dataset(dataset)
 
             db.session.commit()
-            return {"message": "Dataset deleted successfully"}, 204
+            return {"message": "数据删除成功"}, 204
         except NotFoundError as ne:
-            logger.error(f"Dataset with ID {dataset_id} not found: {str(ne)}")
+            logger.error(f"Dataset with ID {instance.id} not found: {str(ne)}")
             raise ne
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error occurred while deleting model {dataset_id}: {str(e)}")
+            logger.error(f"Error occurred while deleting model {instance}: {str(e)}")
             raise e
 
     @staticmethod

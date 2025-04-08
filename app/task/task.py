@@ -7,15 +7,25 @@ from app.exts import db
 
 class Task(db.Model):
     __tablename__ = 'task_table'
+    __table_args__ = (
+        db.CheckConstraint(
+            "status IN ('PENDING', 'STARTED', 'SUCCESS', 'FAILURE', 'RETRY') OR status IS NULL",
+            name='status_check'
+        ),
+        # 时间约束
+        db.CheckConstraint(
+            "created_at <= updated_at OR updated_at IS NULL",
+            name='time_check'
+        ),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, nullable=False)
     app_id = db.Column(db.String(20), nullable=False)
     models_ids = db.Column(JSON, nullable=True)  # 存储数组格式的JSON数据
-    image_path = db.Column(db.Text, nullable=True)
-    status = db.Column(db.String(20), nullable=False)
+    status = db.Column(db.String(20), nullable=True)
     remarks = db.Column(db.Text, nullable=True)
-    creates_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     result_info = db.Column(db.JSON, nullable=True)
 
@@ -38,7 +48,7 @@ class Task(db.Model):
             "image_path": self.image_path,
             "status": self.status,
             "remarks": self.remarks,
-            "creates_at": self.creates_at,
-            "updated_at": self.updated_at,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
             "result_info": self.result_info
         }

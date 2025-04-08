@@ -14,10 +14,10 @@ class User(db.Model):
     password = db.Column(db.String(200), nullable=False)  # 密码字段
     email = db.Column(db.String(100), unique=True)  # 邮箱
     telephone = db.Column(db.String(15), unique=True)  # 手机号
-    role_id = db.Column(db.Integer, default=0)  # 用户角色
+    role_id = db.Column(db.Integer, default=1)  # 用户角色
 
-    stars = db.relationship("Star", back_populates="user", lazy="dynamic")
-    orders = db.relationship("Order", back_populates="user", lazy="dynamic")
+    # stars = db.relationship("Star", back_populates="user", lazy="dynamic")
+    # orders = db.relationship("Order", back_populates="user", lazy="dynamic")
 
     def __init__(self, **kwargs):
         # 确保可为空字段都有默认值
@@ -25,11 +25,33 @@ class User(db.Model):
         kwargs.setdefault('telephone', None)
         super().__init__(**kwargs)
 
+    @property
+    def role(self) -> str:
+        """ 通过属性访问角色名称 """
+        return 'admin' if self.role_id == 0 else 'user'
+
     def to_dict(self):
         return {
             'id': self.id,
             'username': self.username,
-            'password': self.password,  # 加密的密码
-            'email': self.email,
-            'telephone': self.telephone,
+            #'password': self.password,  # 加密的密码
+            'email': self.mask_email(self.email) if self.email else None,
+            'telephone': self.mask_telephone(self.telephone) if self.telephone else None,
+            'role': self.role
         }
+
+    @staticmethod
+    def mask_email(email):
+        parts = email.split('@')
+        if len(parts) != 2:
+            return email
+        name = parts[0]
+        if len(name) <= 1:
+            return f"*@{parts[1]}"
+        return f"{name[0]}***@{parts[1]}"
+
+    @staticmethod
+    def mask_telephone(telephone):
+        if len(telephone) != 11:
+            return telephone
+        return telephone[:3] + "****" + telephone[-4:]

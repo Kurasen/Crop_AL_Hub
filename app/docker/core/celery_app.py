@@ -6,7 +6,6 @@ from app.config import Config
 from celery import current_app
 
 
-
 class CeleryManager:
     _celery = None
 
@@ -104,4 +103,3 @@ class CeleryManager:
     # 在需要的地方调用
     # if __name__ == '__main__':
     #     print_celery_tasks()
-
