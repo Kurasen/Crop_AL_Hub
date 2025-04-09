@@ -1,3 +1,4 @@
+from app.utils.common.common_service import CommonService
 from app.utils.tag_filtering_utils import process_and_filter_tags
 from app.core.exception import ValidationError
 from app.exts import db
@@ -48,7 +49,7 @@ class ModelRepository:
             query = query.filter(Model.description.ilike(f"%{params.get('description')}%"))
 
         if params.get('type'):
-            query = process_and_filter_tags(query, Model.type, params.get('type'))
+            query = CommonService.process_and_filter_tags(query, Model.type, params.get('type'))
 
         # 排序逻辑
         if params.get('sort_by') in SORT_BY_CHOICES:

@@ -3,8 +3,7 @@ from marshmallow_sqlalchemy import auto_field
 
 from app.application.app import App
 from app.core.exception import ValidationError
-from app.schemas.base import BaseSchema, SortBaseSchema
-from app.utils.file_process import allowed_file
+from app.schemas.base_schema import BaseSchema, SortBaseSchema
 
 
 def validate_file_size(value):
@@ -15,54 +14,40 @@ def validate_file_size(value):
 
 
 class AppBaseSchema(BaseSchema):
-    name = fields.Str(
-        required=False,
-        validate=[
-            validate.Length(min=1, max=30),
-            validate.Regexp(r'^\s*.*?\S+.*\s*$')
-        ],
-        error_messages={
-            "too_short": "Name must be between 1 and 30 characters",
-            "too_long": "Name must be between 1 and 30 characters",
-            "regexp": "Name cannot be empty or just spaces"
-        }
-    )
-    url = fields.Str(required=False)
-    description = auto_field(
-        validate=validate.Length(max=500),
-        error_messages={"required": "Description must be less than 50 characters"}
-    )
-
-    # 可选：自定义验证逻辑（如 URL 格式检查）
-    @validates('url')
-    def validate_url(self, value):
-        if not value.startswith(('http://', 'https://')):
-            raise ValidationError("URL 必须以 http:// 或 https:// 开头")
-
     class Meta:
         model = App
         load_instance = True  # 启用实例化
         include_fk = True  # 包含外键字段
-        fields = ("name", "url", "description", "banner")
-        strict = True  # 禁止额外字段
-        unknown = EXCLUDE
+
+    name = auto_field(
+        required=False
+    )
+
+    banner = auto_field(
+        required=False
+    )
+
+    description = auto_field(
+        required=False,
+        validate=validate.Length(max=50),
+        error_messages={"required": "Description must be less than 50 characters"}
+    )
+
+    # 可选：自定义验证逻辑（如 URL 格式检查）
+    @validates('banner')
+    def validate_url(self, value):
+        if not value.startswith(('http://', 'https://')):
+            raise ValidationError("URL 必须以 http:// 或 https:// 开头")
 
 
 class AppCreateSchema(AppBaseSchema):
-    name = fields.Str(
-        required=True,
-        validate=[
-            validate.Length(min=1, max=30),
-            validate.Regexp(r'^\s*.*?\S+.*\s*$')
-        ],
-        error_messages={
-            "too_short": "Name must be between 1 and 30 characters",
-            "too_long": "Name must be between 1 and 30 characters",
-            "regexp": "Name cannot be empty or just spaces"
-        }
+    name = auto_field(
+        required=True
     )
 
-    url = fields.Str(required=True)
+    banner = auto_field(
+        required=True
+    )
 
 
 class AppUpdateSchema(AppBaseSchema):

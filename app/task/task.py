@@ -20,14 +20,17 @@ class Task(db.Model):
     )
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, nullable=False)
-    app_id = db.Column(db.String(20), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user_table.id'), nullable=False, default=1)
+    app_id = db.Column(db.Integer, db.ForeignKey('app_table.id'), nullable=False, default=1)
     models_ids = db.Column(JSON, nullable=True)  # 存储数组格式的JSON数据
     status = db.Column(db.String(20), nullable=True)
     remarks = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     result_info = db.Column(db.JSON, nullable=True)
+
+    user = db.relationship("User", back_populates="tasks")
+    app = db.relationship("App", back_populates="tasks")
 
     def __repr__(self):
         return f"<Task {self.name}>"
@@ -44,6 +47,7 @@ class Task(db.Model):
             "id": self.id,
             "user_id": self.user_id,
             "app_id": self.app_id,
+            "app_name": self.app_name,
             "models_ids": self.models_ids,
             "image_path": self.image_path,
             "status": self.status,

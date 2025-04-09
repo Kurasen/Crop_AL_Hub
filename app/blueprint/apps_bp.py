@@ -4,7 +4,6 @@ from flask import Blueprint, request, g
 
 from app.application.app import App
 from app.application.app_service import AppService
-from app.config import Config
 from app.exts import db
 from app.schemas.app_schema import AppCreateSchema, AppUpdateSchema, AppSearchSchema
 from app.token.JWT import token_required
@@ -44,8 +43,9 @@ def save_app():
     创建新数据集
     """
     form_data = request.get_json()
-    print(form_data)
+    print(f"form_data: {form_data}")
     files = request.files.get("banner")
+    print(f"files: {files}")
     saved_path = None  # 初始化文件路径
     # 如果有文件上传则处理
     if files and files.filename != '':

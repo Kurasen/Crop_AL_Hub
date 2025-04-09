@@ -27,6 +27,8 @@ class App(db.Model):
 
     user = db.relationship("User", back_populates="apps")
 
+    tasks = db.relationship("Task", back_populates="app")
+
     def __repr__(self):
         return f"<App {self.name}>"
 
@@ -43,6 +45,7 @@ class App(db.Model):
             "name": self.name,
             "url": self.url,
             "description": self.description,
+            "user_id": self.user_id,
             "creator":  self.user.username if self.user else "未知用户",
             "banner": self.banner,
             "created_at": self.created_at.isoformat(),

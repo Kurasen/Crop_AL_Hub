@@ -5,6 +5,8 @@ from app.exts import db
 from app.order.order import OrderStatus
 from datetime import datetime
 
+from app.utils.image_url_utils import ImageURLHandlerUtils
+
 """
     graph TD
     A[Model 模型层] -->|定义 hybrid_property| B(ORM 查询能力)
@@ -35,17 +37,20 @@ class Model(db.Model):
     instruction = db.Column(db.Text, default="")
     output = db.Column(db.String(100), default="")  # 输出字段
     accuracy = db.Column(db.Numeric(4, 2), default=0)  # 精度字段，DECIMAL(4, 2) 对应 Numeric(4, 2)
-    icon = db.Column(db.String(100), default="")
+    icon = db.Column(db.String(255), default="")
     type = db.Column(db.String(100), default="")  # 模型类型
     likes = db.Column(db.Integer, default=0)  # 点赞数字段
     # price = db.Column(db.Numeric(10, 2))
     user_id = db.Column(db.Integer, db.ForeignKey('user_table.id'), nullable=False, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间字段，默认当前时间
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    readme = db.Column(db.Text, default="")
+
+    # 定义反向关系（属性名必须与 User.models 的 back_populates 一致）
+    user = db.relationship("User", back_populates="models")
 
     # stars = db.relationship("Star", back_populates="model", lazy="dynamic")
     # orders = db.relationship("Order", back_populates="model", lazy="dynamic")
-    readme = db.Column(db.Text, default="")
 
     def __init__(self, **kwargs):
         """
@@ -58,7 +63,7 @@ class Model(db.Model):
         return f'<Model {self.name}>'
 
     def to_dict(self):
-        return {
+        base_data = {
             'id': self.id,
             'name': self.name,
             'image': self.image,
@@ -70,12 +75,21 @@ class Model(db.Model):
             'accuracy': self.accuracy,
             'type': self.type,
             'likes': self.likes,
-            'icon': self.icon,
             'user_id': self.user_id,
+            "creator": self.user.username if self.user else "未知用户",
             'readme': self.readme,
             'created_at': self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }
+
+        # 动态处理icon字段
+        if self.icon:
+            # 拼接完整URL
+            base_data['icon'] = ImageURLHandlerUtils.build_full_url(self.icon)
+        else:
+            base_data['icon'] = None  # 或保持原始值 self.icon
+
+        return base_data
 
     # @hybrid_property
     # def stars_count(self):

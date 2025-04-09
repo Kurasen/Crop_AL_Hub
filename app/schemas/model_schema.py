@@ -1,13 +1,15 @@
+import os
 import re
 from collections import OrderedDict
 
+from flask import g
 from marshmallow import fields, validate, validates_schema, validates, pre_load
 from marshmallow_sqlalchemy import auto_field
-
-from app.core.exception import ValidationError
 from app.model.model import Model
-from app.schemas.base import BaseSchema, SortBaseSchema
+from app.schemas.base_schema import BaseSchema, SortBaseSchema
 from marshmallow import ValidationError as MarshmallowValidationError
+
+from app.utils.image_url_utils import ImageURLHandlerUtils
 
 
 def validate_characters(value):
@@ -22,69 +24,71 @@ class ModelBaseSchema(BaseSchema):
         load_instance = True  # 启用实例化
         include_fk = True  # 包含外键字段
 
-    name = fields.Str(
-        required=True,
-        validate=[
-            validate.Length(min=1, max=30),  # 移除 error 参数
-            validate.Regexp(r'^\s*.*?\S+.*\s*$')  # 移除 error 参数
-        ],
-        error_messages={
-            "required": "Name is required",
-            "too_short": "Name must be between 1 and 30 characters",
-            "too_long": "Name must be between 1 and 30 characters",
-            "regexp": "Name cannot be empty or just spaces"
-        }
+    name = auto_field(
+        required=False
     )
 
+    user_id = fields.Int(load_default=lambda: g.current_user.id)  # 自动注入当前用户ID
+
     input = auto_field(
-        allow_none=True
+        allow_none=False,
+        required=False
     )
 
     output = auto_field(
-        allow_none=True,
+        allow_none=False,
+        required=False,
         validate=validate.Regexp(r'.*\.(csv|txt|json)$'),
         error_messages={"required": "Output must be a CSV, TXT, or JSON file"}
     )
 
     description = auto_field(
+        required=False,
         validate=validate.Length(max=50),
         error_messages={"required": "Description must be less than 50 characters"}
     )
 
     image = auto_field(
+        required=False,
         validate=validate.Length(max=50),
         error_messages={"required": "Image should be less than 500 characters"}
     )
 
     cuda = auto_field(
-        default=False,
-        description="是否支持CUDA"
+        required=False,
+        validate=validate.OneOf(
+            [True, False],
+            error="cuda must be true/false"
+        )
     )
 
     instruction = auto_field(
+        required=False,
         validate=validate.Length(max=50),
         error_messages={"required": "Instructions should be less than 50 characters"}
     )
 
     accuracy = auto_field(
+        required=False,
         validate=validate.Range(min=0, max=99.99),
         error_messages={"required": "Accuracy should be between 0 and 99.9 characters"}
     )
 
-    type = fields.String(
-        required=False,
-        validate=[
-            fields.validate.Length(max=100, error="长度需小于100字符"),
-            validate_characters  # 直接引用自定义验证函数
-        ]
+    type = auto_field(
+        required=False
+    )
+
+    icon = auto_field(
+        required=False
     )
 
     readme = fields.String(
         required=False,
         validate=[
-            fields.validate.Length(max=500, error="长度需小于100字符")
+            fields.validate.Length(max=1000, error="长度需小于1000字符")
         ]
     )
+
     @validates('input')
     def validate_input(self, value):
         if value:
@@ -107,9 +111,19 @@ class ModelBaseSchema(BaseSchema):
             data['type'] = '；'.join(parts)
         return data  # 必须返回修改后的数据
 
+    @pre_load
+    def process_icon(self, data, **kwargs):
+        if 'icon' in data:
+            print(ImageURLHandlerUtils.validate_photo_file(data['icon']))
+            data['icon'] = ImageURLHandlerUtils.validate_photo_file(data['icon'])
+        return data
+
 
 class ModelCreateSchema(ModelBaseSchema):
-    pass
+
+    name = auto_field(required=True)
+
+    image = auto_field(required=True)
 
 
 class ModelUpdateSchema(ModelBaseSchema):
@@ -117,25 +131,16 @@ class ModelUpdateSchema(ModelBaseSchema):
 
 
 class ModelBaseFieldsMixin:
-    name = fields.Str(
-        required=False,
-        validate=[
-            validate.Length(min=1, max=30),
-            validate.Regexp(r'^\s*.*?\S+.*\s*$')
-        ],
-        error_messages={
-            "too_short": "Name must be between 1 and 30 characters",
-            "too_long": "Name must be between 1 and 30 characters",
-            "regexp": "Name cannot be empty or just spaces"
-        }
-    )
+    name = auto_field(required=False)
 
     description = auto_field(
+        required=False,
         validate=validate.Length(max=50),
         error_messages={"required": "Description must be less than 50 characters"}
     )
 
     input = auto_field(
+        required=False,
         validate=validate.OneOf(
             ["jpg", "jpeg", "png"],
             error="input must be jpg, jpeg, png"
@@ -143,6 +148,7 @@ class ModelBaseFieldsMixin:
     )
 
     cuda = auto_field(
+        required=False,
         validate=validate.OneOf(
             [True, False],
             error="cuda must be true/false"
@@ -150,10 +156,7 @@ class ModelBaseFieldsMixin:
     )
 
     type = auto_field(
-        validate=validate.Length(
-            max=100,
-            error="Type must be less than 100 characters"
-        )
+        required=False
     )
 
 

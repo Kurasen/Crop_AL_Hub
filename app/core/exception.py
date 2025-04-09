@@ -95,6 +95,30 @@ class FileUploadError(CustomError):
         super().__init__(message, status_code)
 
 
+class FileValidationError(CustomError):
+    def __init__(self, message="文件验证失败", status_code=500):
+        """
+        文件验证失败
+        """
+        super().__init__(message, status_code)
+
+
+class FileSaveError(CustomError):
+    def __init__(self, message="图片处理失败", status_code=500):
+        """
+        文件存储失败
+        """
+        super().__init__(message, status_code)
+
+
+class SecurityError(CustomError):
+    def __init__(self, message="图片处理失败", status_code=500):
+        """
+        图像处理相关的异常
+        """
+        super().__init__(message, status_code)
+
+
 class ImageProcessingError(CustomError):
     def __init__(self, message="图片处理失败", status_code=500):
         """

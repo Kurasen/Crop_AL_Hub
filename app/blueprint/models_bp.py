@@ -1,13 +1,16 @@
-
 import uuid
 from datetime import datetime
+from pathlib import Path
+from urllib.parse import urlparse
 
-from flask import Blueprint
+from flask import Blueprint, g
 
 from app import Model
-from app.core.exception import FileUploadError
+from app.core.exception import FileUploadError, ValidationError, SecurityError, ImageProcessingError, \
+    FileValidationError, FileSaveError
 from app.docker.core.storage import FileStorage, cleanup_directory
 from app.exts import db
+from app.model.model_repo import ModelRepository
 from app.schemas.model_schema import ModelRunSchema, ModelTestSchema, ModelSearchSchema, ModelCreateSchema, \
     ModelUpdateSchema
 
@@ -18,7 +21,7 @@ from app.docker.core.task import logger, run_algorithm
 from app.model.model_service import ModelService
 from app.token.JWT import token_required
 from app.utils import create_json_response
-
+from app.utils.common.common_service import CommonService
 
 # 设置允许的文件格式
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
@@ -58,7 +61,7 @@ def search():
 @models_bp.route('/types', methods=['GET'])
 def get_all_types():
     """获取所有唯一的模型类型列表"""
-    types = ModelService.get_all_types()
+    types = CommonService.get_all_types(ModelRepository)
     return create_json_response({
         "data": {"types": types}
     })
@@ -71,7 +74,11 @@ def create_model():
     创建新模型
     """
     # 获取请求数据
-    model_instance = ModelCreateSchema().load(request.get_json(), session=db.session)
+    current_user_id = g.current_user.id
+    # 加载请求数据并注入用户ID
+    request_data = request.get_json()
+    request_data['user_id'] = current_user_id
+    model_instance = ModelCreateSchema().load(request_data, session=db.session)
     result, status = ModelService.create_model(model_instance)
     return create_json_response(result, status)
 
@@ -134,11 +141,65 @@ def process_image(model_id):
     # 生成任务id
     task_id = str(uuid.uuid4())
 
-    file = request.files.get('file')
-    if not file or file.filename == '':
-        raise FileUploadError("未上传任何文件")
+    # file = request.files.get('file')
+    # if not file or file.filename == '':
+    #     raise FileUploadError("未上传任何文件")
+    # 获取并验证图片URL
+    image_url = request.form.get('url')
+    if not image_url:
+        raise ValidationError("必须提供图片URL参数")
 
-    uploaded_files = [file]
+    # URL格式验证（严格匹配服务器路径）
+    if not image_url.startswith("http://10.0.4.71:8080/file/"):
+        raise ValidationError("仅支持访问本机服务器文件资源")
+
+    # 路径转换和安全验证
+    parsed_url = urlparse(image_url)
+    server_relative_path = parsed_url.path.split("/file", 1)[-1].lstrip('/')
+
+    # 配置本地存储基础路径
+    LOCAL_FILE_BASE = Path("/home/zhaohonglong/workspace/Crop_Data")
+    local_full_path = LOCAL_FILE_BASE / server_relative_path
+
+    # 安全校验（防止路径遍历）
+    try:
+        if not local_full_path.resolve().is_relative_to(LOCAL_FILE_BASE.resolve()):
+            raise SecurityError("非法路径访问尝试")
+    except FileNotFoundError:
+        raise FileNotFoundError(f"路径不存在: {local_full_path}")
+
+    # 文件存在性检查
+    if not local_full_path.is_file():
+        raise FileNotFoundError(f"指定文件不存在: {local_full_path}")
+
+    # 使用自定义类进行文件校验
+    try:
+        FileStorage.is_file_corrupted(local_full_path)  # 前置损坏检查
+    except ImageProcessingError as e:
+        raise FileValidationError(f"文件损坏验证失败: {str(e)}")
+
+    # 创建文件对象（适配后续处理）
+    with open(local_full_path, 'rb') as f:
+        # 创建符合预期的文件对象
+        file_obj = type('', (object,), {
+            'filename': local_full_path.name,
+            'read': f.read,
+            'stream': f
+        })()
+
+        # 使用自定义方法保存文件
+        try:
+            saved_dir = FileStorage.upload_input(
+                file=file_obj,
+                image_name=model.image,
+                task_id=task_id
+            )
+        except Exception as e:
+            logger.error(f"文件保存失败: {str(e)}")
+            raise FileSaveError("文件存储过程失败")
+
+    # 后续处理（保持原有逻辑）
+    uploaded_files = [file_obj]
 
     # 保存所有文件到同一目录（只需保存第一个文件即可获取目录路径）
     try:
@@ -217,4 +278,3 @@ def get_task_status(task_id):
         'data': response,
         'message': message,
     }, status_code)
-

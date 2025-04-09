@@ -1,4 +1,3 @@
-
 import time
 import uuid
 
@@ -19,13 +18,21 @@ class FileUploader:
             raise FileUploadError("未选择文件")
 
         file = files['file']
-        filename = secure_filename(file.filename)
+        filename = file.filename
         if not filename:
             raise FileUploadError("无效文件名")
+        # 打印原始文件名用于调试
+        print(f"原始文件名: {repr(filename)}")
 
-        ext = Path(filename).suffix[1:].lower()
+        # 打印文件名用于调试
+        print(repr(filename))
+
+        # 手动处理扩展名，防止提取后缀时出错
+        ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+        print(f"ext:{ext}")
 
         if ext not in allowed_ext:
+            print(allowed_ext)
             raise FileUploadError("文件类型不支持")
 
         if len(file.read()) > max_size:

@@ -46,6 +46,10 @@ class Config:
 
     USER_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_Data/user').resolve()
 
+    # 上传图片存储路径配置
+    FILE_BASE_URL = "http://10.0.4.71:8080/file/"
+    LOCAL_FILE_BASE = "/home/zhaohonglong/workspace/Crop_Data"
+
     # Redis配置
     REDIS_HOST = "localhost"
     REDIS_PORT = 6379

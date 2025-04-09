@@ -14,7 +14,6 @@ from marshmallow import ValidationError as MarshmallowValidationError
 class BaseSchema(SQLAlchemySchema):
     class Meta:
         unknown = EXCLUDE  # 禁止未知字段
-
         # 自动去除字符串两端空格，空字符串会变成 ""
         string_trim = True
 

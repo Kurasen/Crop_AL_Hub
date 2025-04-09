@@ -1,9 +1,11 @@
-from flask import request, Blueprint
+from flask import request, Blueprint, g
 
 from app import Dataset
+from app.dataset.dataset_repo import DatasetRepository
 from app.exts import db
 from app.schemas.dataset_shema import DatasetSearchSchema, DatasetCreateSchema, DatasetUpdateSchema
 from app.token.JWT import token_required
+from app.utils.common.common_service import CommonService
 from app.utils.json_encoder import create_json_response
 from app.dataset.dataset_service import DatasetService
 
@@ -36,7 +38,7 @@ def search():
 @datasets_bp.route('/types', methods=['GET'])
 def get_all_types():
     """获取所有唯一的模型类型列表"""
-    types = DatasetService.get_all_types()
+    types = CommonService.get_all_types(DatasetRepository)
     return create_json_response({
         "data": {"types": types}
     })
@@ -49,7 +51,12 @@ def create_dataset():
     """
     创建新数据集
     """
-    dataset_instance = DatasetCreateSchema().load(request.get_json(), session=db.session)
+    # 获取当前用户ID
+    current_user_id = g.current_user.id
+    # 加载请求数据并注入用户ID
+    request_data = request.get_json()
+    request_data['user_id'] = current_user_id
+    dataset_instance = DatasetCreateSchema().load(request_data, session=db.session)
     result, status = DatasetService.create_dataset(dataset_instance)
     return create_json_response(result, status)
 

@@ -3,7 +3,7 @@ import re
 from flask import request, Blueprint, g
 
 from app.core.redis_connection_pool import redis_pool
-from app.schemas.base import apply_rate_limit
+from app.schemas.base_schema import apply_rate_limit
 from app.schemas.auth_schema import UserCreateSchema, UserLoginSchema, GenerateCodeSchema
 from app.token.token_service import TokenService
 from app.utils.json_encoder import create_json_response
@@ -43,8 +43,6 @@ def login():
 def post():
     """登出功能"""
     user_id = g.current_user.id
-    if not user_id or not isinstance(user_id, int):
-        return create_json_response({"msg": "用户ID无效"}, status=400)
 
     with redis_pool.get_redis_connection(pool_name='user') as redis_client:
         lock_key = f"logout_lock:{user_id}"

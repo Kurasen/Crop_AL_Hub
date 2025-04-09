@@ -8,6 +8,7 @@ from app.core.exception import DatabaseError, ValidationError, FileUploadError, 
 from app.exts import db
 from app.model.model_repo import ModelRepository
 from app.dataset.dataset_service import DatasetService
+from app.utils.json_encoder import ResponseBuilder
 
 
 class ModelService:
@@ -39,42 +40,20 @@ class ModelService:
         try:
             total_count, models = ModelRepository.search_models(search_params)
 
-            return {
-                "data": {
-                    "items": [ModelService._convert_to_dict(model) for model in models],
-                    "total": total_count,
-                    "page": search_params.get("page", 1),
-                    "per_page": search_params.get("per_page", 5),
-                    "total_pages": (total_count + search_params.get("per_page", 5) - 1) // search_params.get("per_page",
-                                                                                                             5)  # 计算总页数
-                },
-            }
+            # 获取分页参数（带默认值）
+            page = search_params.get("page", 1)
+            per_page = search_params.get("per_page", 5)
+
+            # 构建返回数据
+            items = [ModelService._convert_to_dict(model) for model in models]
+            return ResponseBuilder.paginated_response(
+                items=items,
+                total_count=total_count,
+                page=page,
+                per_page=per_page
+            )
         except Exception as e:
             logger.error(f"Error occurred while searching models: {str(e)}")
-            raise e
-
-    @staticmethod
-    def get_all_types() -> list[str]:
-        """获取所有唯一的类型标签"""
-        try:
-            # 从数据库获取所有模型的 type 字段
-            all_type_strings = ModelRepository.get_all_type_strings()
-
-            # 提取唯一类型
-            unique_types: Set[str] = set()  # 显式类型注解
-            for type_str in all_type_strings:
-                # 处理可能的分隔符（中文；或英文;，避免空格干扰）
-                types = re.split(r'[；;]', type_str)
-                for t in types:
-                    stripped_t: str = t.strip()  # 显式声明为 str
-                    if stripped_t:
-                        # 如果是必须使用 LiteralString 的场景
-                        unique_types.add(stripped_t)
-
-            # 排序后返回列表
-            return sorted(unique_types)
-        except Exception as e:
-            logger.error(f"Error getting types: {str(e)}")
             raise e
 
     @staticmethod

@@ -1,14 +1,14 @@
-
+from app.utils.common.common_service import CommonService
 from app.utils.tag_filtering_utils import process_and_filter_tags
 from app.core.exception import InvalidSizeError, ValidationError
 from app.exts import db
 from app.dataset.dataset import Dataset
 
-# 定义排序字段的枚举类型
-SORT_BY_CHOICES = ['stars', 'likes', 'created_at', 'updated_at']
-
 
 class DatasetRepository:
+    # 定义排序字段的枚举类型
+    SORT_BY_CHOICES = ['stars', 'likes', 'created_at', 'updated_at']
+
     @staticmethod
     def get_all():
         """获取所有数据集"""
@@ -53,10 +53,10 @@ class DatasetRepository:
 
         # 精确查询多个标签（支持多标签模糊查询）
         if params.get('type'):
-            query = process_and_filter_tags(query, Dataset.type, params.get('type'))
+            query = CommonService.process_and_filter_tags(query, Dataset.type, params.get('type'))
 
             # 根据 sort_by 和 sort_order 排序
-        if params.get('sort_by') in SORT_BY_CHOICES:
+        if params.get('sort_by') in DatasetRepository.SORT_BY_CHOICES:
             if params.get('sort_order') == 'desc':
                 query = query.order_by(getattr(Dataset, params.get('sort_by')).desc(), Dataset.id.asc())
             else:
@@ -78,7 +78,8 @@ class DatasetRepository:
         total_count = query.count()
 
         # 分页查询
-        datasets = query.offset((params.get('page', 1) - 1) * params.get('per_page', 5)).limit(params.get('per_page', 5)).all()
+        datasets = query.offset((params.get('page', 1) - 1) * params.get('per_page', 5)).limit(
+            params.get('per_page', 5)).all()
 
         print(f"SQL Query: {str(query)}")
         return total_count, datasets

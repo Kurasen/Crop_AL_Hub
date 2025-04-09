@@ -2,6 +2,7 @@
 import json
 import uuid
 from decimal import Decimal
+from typing import Any
 
 from flask import Response
 
@@ -62,3 +63,18 @@ def create_json_response(data=None, status=200, http_status=200):
 
     # 返回构建好的 Response 对象，设置正确的 content_type 和 HTTP 状态码
     return Response(response, content_type='application/json', status=http_status)
+
+
+class ResponseBuilder:
+    @staticmethod
+    def paginated_response(items, total_count, page, per_page):
+        """构建统一的分页响应格式"""
+        return {
+            "data": {
+                "items": items,
+                "total": total_count,
+                "page": page,
+                "per_page": per_page,
+                "total_pages": (total_count + per_page - 1) // per_page
+            }
+        }

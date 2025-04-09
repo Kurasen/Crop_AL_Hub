@@ -2,7 +2,7 @@ from marshmallow import fields, validate, validates_schema
 
 from app.dataset.dataset_service import DatasetService
 from app.model.model_service import ModelService
-from app.schemas.base import BaseSchema
+from app.schemas.base_schema import BaseSchema
 from app.star.star import StarType
 from marshmallow import ValidationError as MarshmallowValidationError
 

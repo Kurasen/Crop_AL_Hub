@@ -3,7 +3,7 @@ import re
 from marshmallow import fields, validate, validates_schema
 
 from app.core.exception import ValidationError
-from app.schemas.base import BaseSchema
+from app.schemas.base_schema import BaseSchema
 from marshmallow import ValidationError as MarshmallowValidationError
 
 

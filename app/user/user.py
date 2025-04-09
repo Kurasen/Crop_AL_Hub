@@ -16,8 +16,11 @@ class User(db.Model):
     telephone = db.Column(db.String(15), unique=True)  # 手机号
     role_id = db.Column(db.Integer, default=1)  # 用户角色
 
-    apps = db.relationship("App", back_populates="user")
+    # 定义正向关系(一对多)
+    apps = db.relationship("App", back_populates="user")  # back_populates 指向 App.user
     models = db.relationship("Model", back_populates="user")
+    datasets = db.relationship("Dataset", back_populates="user")
+    tasks = db.relationship("Task", back_populates="user")
     # stars = db.relationship("Star", back_populates="user", lazy="dynamic")
     # orders = db.relationship("Order", back_populates="user", lazy="dynamic")
 

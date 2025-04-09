@@ -29,6 +29,8 @@ class Dataset(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user_table.id'), nullable=False, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship("User", back_populates="datasets")
     # stars = db.relationship("Star", back_populates="dataset", lazy="dynamic")
     # orders = db.relationship("Order", back_populates="dataset", lazy="dynamic")
 
@@ -50,6 +52,7 @@ class Dataset(db.Model):
             "size": self.size,
             "description": self.description,
             "user_id": self.user_id,
+            "creator": self.user.username if self.user else "未知用户",
             "type": self.type,
             # "stars": self.stars,
             "likes": self.likes,

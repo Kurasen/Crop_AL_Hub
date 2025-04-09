@@ -1,6 +1,6 @@
 import re
 
-from app.schemas.base import BaseSchema
+from app.schemas.base_schema import BaseSchema
 from marshmallow import fields, validate, post_load
 
 from app.user.user import User

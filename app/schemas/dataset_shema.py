@@ -1,13 +1,14 @@
 import re
 from collections import OrderedDict
 
+from flask import g
 from marshmallow import validate, fields, validates_schema, pre_load
 from marshmallow_sqlalchemy import auto_field
 
 from marshmallow import ValidationError as MarshmallowValidationError
 from app.dataset.dataset import Dataset
 from app.dataset.dataset_repo import DatasetRepository
-from app.schemas.base import BaseSchema, SortBaseSchema
+from app.schemas.base_schema import BaseSchema, SortBaseSchema
 
 
 def validate_size_format(value):
@@ -35,26 +36,16 @@ class DatasetBaseSchema(BaseSchema):
     class Meta:
         model = Dataset
         load_instance = True
+        include_fk = True  # 包含外键字段
 
     name = auto_field(
-        required=True,
-        validate=[
-            validate.Length(min=1, max=100),
-            validate.Regexp(r'^\s*.*?\S+.*\s*$')
-        ],
-        error_messages={
-            "required": "Name is required",
-            "too_short": "Name must be between 1 and 100 characters",
-            "too_long": "Name must be between 1 and 100 characters",
-            "regexp": "Name cannot be empty or just spaces"
-        }
+        required=False
     )
 
+    user_id = fields.Int(load_default=lambda: g.current_user.id)  # 自动注入当前用户ID
+
     path = auto_field(
-        validate=validate.Length(
-            max=255,
-            error="Path must be less than 255 characters"
-        )
+        required=False
     )
 
     size = auto_field(
@@ -65,17 +56,18 @@ class DatasetBaseSchema(BaseSchema):
     )
 
     description = auto_field(
-        validate=validate.Length(
-            max=500,
-            error="Description must be less than 500 characters"
-        )
+        required=False
     )
 
     type = auto_field(
-        validate=validate.Length(
-            max=100,
-            error="Type must be less than 100 characters"
-        )
+        required=False
+    )
+
+    readme = fields.String(
+        required=False,
+        validate=[
+            fields.validate.Length(max=1000, error="长度需小于1000字符")
+        ]
     )
 
     # 在数据加载前处理
@@ -95,7 +87,9 @@ class DatasetBaseSchema(BaseSchema):
 
 
 class DatasetCreateSchema(DatasetBaseSchema):
-    pass
+    name = auto_field(
+        required=True
+    )
 
 
 class DatasetUpdateSchema(DatasetBaseSchema):
@@ -104,30 +98,15 @@ class DatasetUpdateSchema(DatasetBaseSchema):
 
 class DatasetBaseFieldsMixin:
     name = auto_field(
-        required=False,
-        validate=[
-            validate.Length(min=1, max=100),
-            validate.Regexp(r'^\s*.*?\S+.*\s*$')
-        ],
-        error_messages={
-            "too_short": "Name must be between 1 and 100 characters",
-            "too_long": "Name must be between 1 and 100 characters",
-            "regexp": "Name cannot be empty or just spaces"
-        }
+        required=False
     )
 
     description = auto_field(
-        validate=validate.Length(
-            max=500,
-            error="Description must be less than 500 characters"
-        )
+        required=False
     )
 
     type = auto_field(
-        validate=validate.Length(
-            max=100,
-            error="Type must be less than 100 characters"
-        )
+        required=False
     )
 
 
