@@ -37,7 +37,7 @@ class Model(db.Model):
     instruction = db.Column(db.Text, default="")
     output = db.Column(db.String(100), default="")  # 输出字段
     accuracy = db.Column(db.Numeric(4, 2), default=0)  # 精度字段，DECIMAL(4, 2) 对应 Numeric(4, 2)
-    icon = db.Column(db.String(255), default="")
+    icon = db.Column(db.String(255), nullable=True, default=None)
     type = db.Column(db.String(100), default="")  # 模型类型
     likes = db.Column(db.Integer, default=0)  # 点赞数字段
     # price = db.Column(db.Numeric(10, 2))
@@ -82,12 +82,9 @@ class Model(db.Model):
             "updated_at": self.updated_at.isoformat(),
         }
 
-        # 动态处理icon字段
-        if self.icon:
-            # 拼接完整URL
-            base_data['icon'] = ImageURLHandlerUtils.build_full_url(self.icon)
-        else:
-            base_data['icon'] = None  # 或保持原始值 self.icon
+        # 统一处理空值和空字符串
+        icon_value = self.icon.strip() if self.icon else None  # 移除空格并转为 None
+        base_data['icon'] = ImageURLHandlerUtils.build_full_url(icon_value)
 
         return base_data
 

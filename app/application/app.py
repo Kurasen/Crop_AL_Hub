@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from app.exts import db
+from app.utils.image_url_utils import ImageURLHandlerUtils
 
 
 class App(db.Model):
@@ -19,11 +20,11 @@ class App(db.Model):
     url = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user_table.id'), nullable=False)
-    banner = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     likes = db.Column(db.Integer, default=0)
     watches = db.Column(db.Integer, default=0)
+    icon = db.Column(db.String(255), nullable=True, default=None)
 
     user = db.relationship("User", back_populates="apps")
 
@@ -40,16 +41,21 @@ class App(db.Model):
         super().__init__(**kwargs)
 
     def to_dict(self):
-        return {
+        base_data = {
             "id": self.id,
             "name": self.name,
             "url": self.url,
             "description": self.description,
             "user_id": self.user_id,
             "creator":  self.user.username if self.user else "未知用户",
-            "banner": self.banner,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
             "likes": self.likes,
             "watches": self.watches
         }
+
+        # 统一处理空值和空字符串
+        icon_value = self.icon.strip() if self.icon else None  # 移除空格并转为 None
+        base_data['icon'] = ImageURLHandlerUtils.build_full_url(icon_value)
+
+        return base_data

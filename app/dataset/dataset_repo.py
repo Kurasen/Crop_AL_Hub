@@ -1,5 +1,4 @@
 from app.utils.common.common_service import CommonService
-from app.utils.tag_filtering_utils import process_and_filter_tags
 from app.core.exception import InvalidSizeError, ValidationError
 from app.exts import db
 from app.dataset.dataset import Dataset
@@ -7,7 +6,7 @@ from app.dataset.dataset import Dataset
 
 class DatasetRepository:
     # 定义排序字段的枚举类型
-    SORT_BY_CHOICES = ['stars', 'likes', 'created_at', 'updated_at']
+    SORT_BY_CHOICES = ['likes', 'created_at', 'updated_at']
 
     @staticmethod
     def get_all():

@@ -67,7 +67,8 @@ def configure_app(app: FlaskApp, env=None):
     app.config.from_object(env_config[env])
     env_config[env].init_app(app)
 
-    app.config['MAX_MEMORY_FILE_SIZE'] = 20 * 1024 * 1024  # 单个文件在内存中的最大大小设置为20MB
+    app.config['MAX_MEMORY_FILE_SIZE'] = 20 * \
+        1024 * 1024  # 单个文件在内存中的最大大小设置为20MB
     app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 允许200MB请求
     app.config['MAX_MEMORY_BUFFER_SIZE'] = 1024 * 1024  # 1MB内存缓冲区
     app.config['WERKZEUG_MAX_FORM_PARSER_MEMORY'] = 0   # 禁用内存解析限制
@@ -154,16 +155,19 @@ def configure_global_checks(app):
             content_length = request.content_length or 0
 
             # 仅当请求体非空时检查Content-Type, 允许Json或表单上传
-            if content_length > 0 and not any(content_type for ct in allowed_content_types):
+            if content_length > 0 and not any(
+                    content_type for ct in allowed_content_types):
                 if 'application/json' not in content_type:
-                    return create_json_response({"error": "Content-Type 必须是 application/json"}, 415)
+                    return create_json_response(
+                        {"error": "Content-Type 必须是 application/json"}, 415)
 
                 # 验证非空请求体的 JSON 有效性
                 try:
                     request.get_json()
                 except Exception as e:
                     app.logger.error("JSON 解析失败: 错误=%s", str(e))
-                    return create_json_response({"error": "请求体必须是有效的 JSON"}, 400)
+                    return create_json_response(
+                        {"error": "请求体必须是有效的 JSON"}, 400)
 
 
 # 创建 Flask 应用

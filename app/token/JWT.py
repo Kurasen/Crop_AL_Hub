@@ -156,18 +156,21 @@ def verify_token(token, check_blacklist=True):
 #     return payload["jti"]
 
 
-def token_required(model=None, id_param=None, owner_field='user_id', admin_required=False):
+def token_required(model=None, id_param=None, owner_field='user_id', admin_required=False,
+                   resource_map=None):
     """
     增强版装饰器：集成权限校验
-    :param admin_required:
     :param model: 需要校验的模型类 (e.g. App)
     :param id_param: URL 中的资源ID参数名 (e.g. 'app_id')
     :param owner_field: 模型中的用户关联字段 (默认 'user_id')
+    :param admin_required:管理员权限要求
+    :param resource_map: 动态资源映射，格式为 {upload_type: (ModelClass, 'id_param', 'owner_field')}
+
     """
     def decorator(f):
         @wraps(f)
         def decorated_token(*args, **kwargs):
-            # 严格处理 Authorization 头
+            # --- Token验证逻辑 ---
             auth_header = request.headers.get('Authorization', '')
             if not auth_header:
                 raise TokenError("缺少或无效的授权标头")
@@ -189,6 +192,26 @@ def token_required(model=None, id_param=None, owner_field='user_id', admin_requi
             if admin_required and g.current_user.role_id != 0:
                 logger.info(f"拒绝非管理员访问，用户ID: {g.current_user.id}")
                 raise PermissionDeniedError("需要管理员权限")
+
+                # --- 动态资源权限校验 ---
+            if resource_map:
+                upload_type = kwargs.get('upload_type')
+                if upload_type in resource_map:
+                    model_cls, id_param_name, owner_field_name = resource_map[upload_type]
+                    resource_id = kwargs.get('data_id')  # 从路由参数获取资源ID
+
+                    instance = model_cls.query.get(resource_id)
+                    if not instance:
+                        raise NotFoundError(f"资源不存在: {upload_type} ID {resource_id}")
+
+                    # 权限校验：管理员或所有者
+                    is_admin = g.current_user.role_id == 0
+                    is_owner = getattr(instance, owner_field_name) == g.current_user.id
+                    if not (is_admin or is_owner):
+                        raise PermissionDeniedError(f"无权操作此 {upload_type}")
+
+                    # 注入实例到参数（可选）
+                    kwargs[f'{upload_type}_instance'] = instance
 
             # --- 权限自动校验 ---
             if model and id_param:

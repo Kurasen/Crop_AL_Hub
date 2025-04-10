@@ -15,7 +15,7 @@ from app.schemas.model_schema import ModelRunSchema, ModelTestSchema, ModelSearc
     ModelUpdateSchema
 
 from flask import request
-from app.config import Config
+from app.config import Config, FileConfig
 from app.docker.core.docker_clinet import docker_client
 from app.docker.core.task import logger, run_algorithm
 from app.model.model_service import ModelService
@@ -141,65 +141,67 @@ def process_image(model_id):
     # 生成任务id
     task_id = str(uuid.uuid4())
 
-    # file = request.files.get('file')
-    # if not file or file.filename == '':
-    #     raise FileUploadError("未上传任何文件")
-    # 获取并验证图片URL
-    image_url = request.form.get('url')
-    if not image_url:
-        raise ValidationError("必须提供图片URL参数")
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        raise FileUploadError("未上传任何文件")
 
-    # URL格式验证（严格匹配服务器路径）
-    if not image_url.startswith("http://10.0.4.71:8080/file/"):
-        raise ValidationError("仅支持访问本机服务器文件资源")
+    uploaded_files = [file]
+    # # 获取并验证图片URL
+    # image_url = request.form.get('url')
+    # if not image_url:
+    #     raise ValidationError("必须提供图片URL参数")
+    #
+    # # URL格式验证（严格匹配服务器路径）
+    # if not image_url.startswith(FileConfig.FILE_BASE_URL):
+    #     raise ValidationError("仅支持访问本机服务器文件资源")
+    #
+    # # 路径转换和安全验证
+    # parsed_url = urlparse(image_url)
+    # server_relative_path = parsed_url.path.split("/file", 1)[-1].lstrip('/')
+    #
+    # # 配置本地存储基础路径
+    # LOCAL_FILE_BASE = Path(FileConfig.LOCAL_FILE_BASE)
+    # local_full_path = LOCAL_FILE_BASE / server_relative_path
+    #
+    # # 安全校验（防止路径遍历）
+    # try:
+    #     if not local_full_path.resolve().is_relative_to(LOCAL_FILE_BASE.resolve()):
+    #         raise SecurityError("非法路径访问尝试")
+    # except FileNotFoundError:
+    #     raise FileNotFoundError(f"路径不存在: {local_full_path}")
+    #
+    # # 文件存在性检查
+    # if not local_full_path.is_file():
+    #     raise FileNotFoundError(f"指定文件不存在: {local_full_path}")
+    #
+    # # 使用自定义类进行文件校验
+    # try:
+    #     FileStorage.is_file_corrupted(local_full_path)  # 前置损坏检查
+    # except ImageProcessingError as e:
+    #     raise FileValidationError(f"文件损坏验证失败: {str(e)}")
+    #
+    # # 创建文件对象（适配后续处理）
+    # with open(local_full_path, 'rb') as f:
+    #     # 创建符合预期的文件对象
+    #     file_obj = type('', (object,), {
+    #         'filename': local_full_path.name,
+    #         'read': f.read,
+    #         'stream': f
+    #     })()
+    #
+    #     # 使用自定义方法保存文件
+    #     try:
+    #         saved_dir = FileStorage.upload_input(
+    #             file=file_obj,
+    #             image_name=model.image,
+    #             task_id=task_id
+    #         )
+    #     except Exception as e:
+    #         logger.error(f"文件保存失败: {str(e)}")
+    #         raise FileSaveError("文件存储过程失败")
 
-    # 路径转换和安全验证
-    parsed_url = urlparse(image_url)
-    server_relative_path = parsed_url.path.split("/file", 1)[-1].lstrip('/')
-
-    # 配置本地存储基础路径
-    LOCAL_FILE_BASE = Path("/home/zhaohonglong/workspace/Crop_Data")
-    local_full_path = LOCAL_FILE_BASE / server_relative_path
-
-    # 安全校验（防止路径遍历）
-    try:
-        if not local_full_path.resolve().is_relative_to(LOCAL_FILE_BASE.resolve()):
-            raise SecurityError("非法路径访问尝试")
-    except FileNotFoundError:
-        raise FileNotFoundError(f"路径不存在: {local_full_path}")
-
-    # 文件存在性检查
-    if not local_full_path.is_file():
-        raise FileNotFoundError(f"指定文件不存在: {local_full_path}")
-
-    # 使用自定义类进行文件校验
-    try:
-        FileStorage.is_file_corrupted(local_full_path)  # 前置损坏检查
-    except ImageProcessingError as e:
-        raise FileValidationError(f"文件损坏验证失败: {str(e)}")
-
-    # 创建文件对象（适配后续处理）
-    with open(local_full_path, 'rb') as f:
-        # 创建符合预期的文件对象
-        file_obj = type('', (object,), {
-            'filename': local_full_path.name,
-            'read': f.read,
-            'stream': f
-        })()
-
-        # 使用自定义方法保存文件
-        try:
-            saved_dir = FileStorage.upload_input(
-                file=file_obj,
-                image_name=model.image,
-                task_id=task_id
-            )
-        except Exception as e:
-            logger.error(f"文件保存失败: {str(e)}")
-            raise FileSaveError("文件存储过程失败")
-
-    # 后续处理（保持原有逻辑）
-    uploaded_files = [file_obj]
+    # # 后续处理（保持原有逻辑）
+    # uploaded_files = [file_obj]
 
     # 保存所有文件到同一目录（只需保存第一个文件即可获取目录路径）
     try:

@@ -25,7 +25,7 @@ class TaskService:
         # 获取指定ID的模型
         task = TaskRepository.get_task_by_id(task_id)
         if not task:
-            raise NotFoundError(f"未找到task_id为 {task_id} 的任务")
+            raise NotFoundError("未找到的任务")
         return task
 
     @staticmethod

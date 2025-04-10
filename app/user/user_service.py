@@ -8,7 +8,7 @@ class UserService:
         # 获取指定ID的user
         user = UserRepository.get_user_by_id(user_id)
         if not user:
-            raise NotFoundError(f"Dataset with ID {user_id} not found")
+            raise NotFoundError("用户不存在")
         return user
 
     @staticmethod

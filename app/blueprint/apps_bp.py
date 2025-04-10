@@ -44,7 +44,7 @@ def save_app():
     """
     form_data = request.get_json()
     print(f"form_data: {form_data}")
-    files = request.files.get("banner")
+    files = request.files.get("icon")
     print(f"files: {files}")
     saved_path = None  # 初始化文件路径
     # 如果有文件上传则处理
@@ -89,7 +89,7 @@ def update_app(instance):
         session=db.session
     )
     updates.updated_at = datetime.utcnow()
-    result, status = AppService.save_app(updates)
+    result, status = AppService.update_app(updates)
     return create_json_response({"message": "更新成功"}, status)
 
 

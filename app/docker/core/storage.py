@@ -2,7 +2,7 @@ from pathlib import Path
 from app.config import Config
 import os
 import shutil
-from app.core.exception import logger, ImageProcessingError
+from app.core.exception import logger, ImageProcessingError, NotFoundError, ValidationError
 from pathlib import Path
 from PIL import Image, UnidentifiedImageError
 
@@ -21,11 +21,11 @@ class FileStorage:
 
         # 增加路径类型校验
         if not file_path.is_file():  # 确保是文件而非目录
-            raise ValueError(f"路径不是文件: {file_path}")
+            raise ValidationError("非文件")
 
         # 原有逻辑保持不变
         if not file_path.exists():
-            raise FileNotFoundError(f"未找到文件: {file_path}")
+            raise NotFoundError("未找到文件")
 
         # 仅对图片文件进行损坏检测
         if file_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif']:

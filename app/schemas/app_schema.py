@@ -23,7 +23,7 @@ class AppBaseSchema(BaseSchema):
         required=False
     )
 
-    banner = auto_field(
+    icon = auto_field(
         required=False
     )
 
@@ -34,7 +34,7 @@ class AppBaseSchema(BaseSchema):
     )
 
     # 可选：自定义验证逻辑（如 URL 格式检查）
-    @validates('banner')
+    @validates('icon')
     def validate_url(self, value):
         if not value.startswith(('http://', 'https://')):
             raise ValidationError("URL 必须以 http:// 或 https:// 开头")
@@ -45,7 +45,7 @@ class AppCreateSchema(AppBaseSchema):
         required=True
     )
 
-    banner = auto_field(
+    icon = auto_field(
         required=True
     )
 
@@ -62,7 +62,7 @@ class AppSearchSchema(AppBaseSchema, SortBaseSchema):
     # 排序控制
     sort_by = fields.String(
         validate=validate.OneOf(
-            ["likes", "accuracy", "created_at", "updated_at"],
+            ["likes", "watches", "created_at", "updated_at"],
             error="排序字段只能是 likes, accuracy, created_at and updated_at must be less than 100 characters"
         )
     )

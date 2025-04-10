@@ -3,7 +3,7 @@ import uuid
 
 from werkzeug.utils import secure_filename
 
-from app.config import Config
+from app.config import Config, FileConfig
 from app.core.exception import ValidationError, logger, FileUploadError
 from pathlib import Path
 
@@ -18,7 +18,7 @@ class FileUploader:
             raise FileUploadError("未选择文件")
 
         file = files['file']
-        filename = file.filename
+        filename = file.filename ## 需改
         if not filename:
             raise FileUploadError("无效文件名")
         # 打印原始文件名用于调试
@@ -41,7 +41,7 @@ class FileUploader:
 
     def save_uploaded_file(self, uploaded_file, user_id, upload_type, file_type=None):
         """统一文件保存入口"""
-        config = Config.UPLOAD_CONFIG[upload_type]
+        config = FileConfig.UPLOAD_CONFIG[upload_type]
         subdirectory = config['subdirectory'].format(
             user_id=user_id,
             file_type=file_type
@@ -145,7 +145,7 @@ def classify_files(file_list, image_name, task_id):
     """文件分类处理"""
     image_types = {'.jpg', '.jpeg', '.png', '.bmp', '.webp'}
     results = {
-        'images': [],  # 存储Base64编码的图片
+        'images': [],  # 存
         'downloads': []  # 存储可下载文件链接
     }
 
@@ -153,7 +153,7 @@ def classify_files(file_list, image_name, task_id):
         file_name = file_path.name
         ext = Path(file_path).suffix.lower()
         # 统一生成访问URL
-        file_url = f"http://10.0.4.71:8080/file/output/{image_name}/task_{task_id}/{file_name}"
+        file_url = f"{FileConfig.FILE_BASE_URL}/output/{image_name}/task_{task_id}/{file_name}"
 
         if ext in image_types:
             results['images'].append({

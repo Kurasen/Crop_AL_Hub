@@ -2,6 +2,7 @@ from app.application.app import App
 from app.application.app_repo import AppRepository
 from app.core.exception import DatabaseError, NotFoundError, logger
 from app.exts import db
+from app.utils.json_encoder import ResponseBuilder
 
 
 class AppService:
@@ -34,16 +35,18 @@ class AppService:
         try:
             total_count, apps = AppRepository.search_apps(search_params)
 
-            return {
-                "data": {
-                    "items": [AppService._convert_to_dict(app) for app in apps],
-                    "total": total_count,
-                    "page": search_params.get("page", 1),
-                    "per_page": search_params.get("per_page", 5),
-                    "total_pages": (total_count + search_params.get("per_page", 5) - 1) // search_params.get("per_page",
-                                                                                                             5)  # 计算总页数
-                },
-            }
+            # 获取分页参数（带默认值）
+            page = search_params.get("page", 1)
+            per_page = search_params.get("per_page", 5)
+
+            # 构建返回数据
+            items = [AppService._convert_to_dict(app) for app in apps]
+            return ResponseBuilder.paginated_response(
+                items=items,
+                total_count=total_count,
+                page=page,
+                per_page=per_page
+            )
         except Exception as e:
             logger.error(f"Error occurred while searching models: {str(e)}")
             raise e
@@ -58,6 +61,18 @@ class AppService:
         except Exception as e:
             db.session.rollback()
             logger.error(f"创建应用失败｜ID={instance.id}｜错误={str(e)}")
+            raise e
+
+    @staticmethod
+    def update_app(instance: App):
+        """创建模型"""
+        try:
+            AppRepository.save_app(instance)
+            db.session.commit()
+            return instance.to_dict(), 200
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"更新应用失败｜ID={instance.id}｜错误={str(e)}")
             raise e
 
     @staticmethod

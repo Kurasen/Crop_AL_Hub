@@ -28,7 +28,7 @@ class AppRepository:
         if params.get('description'):
             query = query.filter(App.description.like(f"%{params.get('description')}%"))
 
-        SORT_BY_CHOICES = ['created_at', 'updated_at']
+        SORT_BY_CHOICES = ['created_at', 'updated_at', 'likes', 'watches']
 
         # 排序逻辑
         if params.get('sort_by') in SORT_BY_CHOICES:

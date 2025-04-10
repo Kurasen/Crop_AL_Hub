@@ -1,4 +1,3 @@
-
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -70,24 +69,35 @@ class Config:
     def init_app(app):
         pass  # 这里可以放置通用初始化逻辑
 
+
+class FileConfig:
+    # 上传图片存储路径配置
+    FILE_BASE_URL = "http://10.0.4.71:8080/file/"
+    LOCAL_FILE_BASE = "/home/zhaohonglong/workspace/Crop_Data"
+
     # 上传文件配置
     UPLOAD_CONFIG = {
         "user": {
-            "subdirectory": "avatars",
+            "subdirectory": "user/{file_type}",
             "allowed_extensions": ["jpg", "png", "jpeg"],
-            "max_size": 2 * 1024 * 1024  # 2MB
+            "file_types": ["avatars"],
+            "max_size": 10 * 1024 * 1024  # 10MB
         },
         "model": {
             "subdirectory": "models/{file_type}",
             "allowed_extensions": ["jpg", "png", "jpeg"],
-            "max_size": 100 * 1024 * 1024  # 100MB
+            "file_types": ["icon", "readme"],  # 固定允许的file_type列表
+            "max_size": 100 * 1024 * 1024,  # 100MB
         },
         "dataset": {
             "subdirectory": "datasets/{file_type}",
             "allowed_extensions": ["jpg", "png", "jpeg"],
+            "file_types": ["readme"],
             "max_size": 100 * 1024 * 1024  # 500MB
         }
     }
+
+
 
 
 # 开发环境配置

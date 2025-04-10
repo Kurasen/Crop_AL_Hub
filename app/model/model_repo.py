@@ -1,5 +1,4 @@
 from app.utils.common.common_service import CommonService
-from app.utils.tag_filtering_utils import process_and_filter_tags
 from app.core.exception import ValidationError
 from app.exts import db
 from app.model.model import Model
