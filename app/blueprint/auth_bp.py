@@ -7,7 +7,7 @@ from app.schemas.base_schema import apply_rate_limit
 from app.schemas.auth_schema import UserCreateSchema, UserLoginSchema, GenerateCodeSchema
 from app.token.token_service import TokenService
 from app.utils.json_encoder import create_json_response
-from app.token.JWT import token_required, verify_token, TokenBlacklist
+from app.token.JWT import verify_token, TokenBlacklist, auth_required
 from app.core.exception import ValidationError, AuthenticationError, logger, TokenError
 from app.token.token_repo import TokenRepository
 from app.auth.auth_service import AuthService
@@ -39,7 +39,7 @@ def login():
 
 
 @auth_bp.route('/logout', methods=['POST'])
-@token_required()  # 使用装饰器，确保用户已认证
+@auth_required
 def post():
     """登出功能"""
     user_id = g.current_user.id
@@ -84,7 +84,7 @@ def post():
 
 # 受保护接口：需要使用 JWT 认证
 @auth_bp.route('/protected', methods=['GET'])
-@token_required()  # 使用装饰器，确保用户已认证
+@auth_required
 def protected_route():
     """受保护接口"""
     user_id = g.current_user

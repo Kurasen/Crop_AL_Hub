@@ -1,9 +1,10 @@
-from marshmallow import fields, validates, EXCLUDE, validate
+from marshmallow import fields, validates, EXCLUDE, validate, pre_load
 from marshmallow_sqlalchemy import auto_field
 
 from app.application.app import App
 from app.core.exception import ValidationError
 from app.schemas.base_schema import BaseSchema, SortBaseSchema
+from app.utils.image_url_utils import ImageURLHandlerUtils
 
 
 def validate_file_size(value):
@@ -33,11 +34,12 @@ class AppBaseSchema(BaseSchema):
         error_messages={"required": "Description must be less than 50 characters"}
     )
 
-    # 可选：自定义验证逻辑（如 URL 格式检查）
-    @validates('icon')
-    def validate_url(self, value):
-        if not value.startswith(('http://', 'https://')):
-            raise ValidationError("URL 必须以 http:// 或 https:// 开头")
+    @pre_load
+    def process_icon(self, data, **kwargs):
+        if 'icon' in data:
+            print(ImageURLHandlerUtils.validate_photo_file(data['icon']))
+            data['icon'] = ImageURLHandlerUtils.validate_photo_file(data['icon'])
+        return data
 
 
 class AppCreateSchema(AppBaseSchema):

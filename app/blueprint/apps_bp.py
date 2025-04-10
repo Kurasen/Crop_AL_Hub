@@ -6,7 +6,7 @@ from app.application.app import App
 from app.application.app_service import AppService
 from app.exts import db
 from app.schemas.app_schema import AppCreateSchema, AppUpdateSchema, AppSearchSchema
-from app.token.JWT import token_required
+from app.token.JWT import resource_owner, admin_required
 from app.utils import create_json_response
 from app.utils.file_process import allowed_file, save_uploaded_file, FileUploader
 
@@ -37,7 +37,7 @@ def search():
 
 
 @apps_bp.route('', methods=['POST'])
-@token_required(admin_required=True)
+@admin_required
 def save_app():
     """
     创建新数据集
@@ -77,7 +77,7 @@ def save_app():
 
 
 @apps_bp.route('/<int:app_id>', methods=['PUT'])
-@token_required(model=App, id_param='app_id')
+@resource_owner(model=App, id_param='app_id')
 def update_app(instance):
     """
     更新现有数据集
@@ -95,7 +95,7 @@ def update_app(instance):
 
 # 删除现有数据集
 @apps_bp.route('/<int:app_id>', methods=['DELETE'])
-@token_required(model=App, id_param='app_id')
+@resource_owner(model=App, id_param='app_id')
 def delete_app(instance):
     """
     删除现有数据集

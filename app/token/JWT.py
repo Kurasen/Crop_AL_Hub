@@ -9,10 +9,11 @@ from functools import wraps
 
 from werkzeug.exceptions import Forbidden
 
-from app import User
+from app import User, Model, Dataset
 from app.config import JWTConfig  # 载入配置
 from app.core.exception import TokenError, ValidationError, logger, NotFoundError, PermissionDeniedError, APIError
 from app.core.redis_connection_pool import redis_pool
+from app.exts import db
 
 
 def generate_token(
@@ -134,107 +135,188 @@ def verify_token(token, check_blacklist=True):
         raise TokenError("认证失败，错误的令牌")  # 抛出自定义的认证错误
 
 
-# def get_jwt_identity():
+# def token_required(model=None, id_param=None, owner_field='user_id', admin_required=False):
 #     """
-#     解析 `access_token` 并返回 `jti`，确保 logout 用的是 `access_token`
+#     增强版装饰器：集成权限校验
+#     :param model: 需要校验的模型类 (e.g. App)
+#     :param id_param: URL 中的资源ID参数名 (e.g. 'app_id')
+#     :param owner_field: 模型中的用户关联字段 (默认 'user_id')
+#     :param admin_required:管理员权限要求
 #     """
-#     # 优先从 g 对象获取已解析的 payload
-#     if hasattr(g, 'current_user_payload'):
-#         payload = g.current_user_payload
-#     else:
-#         # 如果 g 中没有，再解析 Token（兼容性处理）
-#         token = request.headers.get('Authorization', '')
-#         if not token.startswith('Bearer '):
-#             raise TokenError("Token is missing")
-#         token = token[len('Bearer '):]
-#         payload = verify_token(token)
 #
-#     # 确保是 Access Token
-#     if payload.get("token_type") != "access":
-#         raise TokenError("Logout must use access_token")
+#     def decorator(f):
+#         @wraps(f)
+#         def decorated_token(*args, **kwargs):
+#             # --- Token验证逻辑 ---
+#             auth_header = request.headers.get('Authorization', '')
+#             if not auth_header:
+#                 raise TokenError("缺少或无效的授权标头")
 #
-#     return payload["jti"]
+#             token = auth_header.split(" ")[1].strip()
+#             if not token:
+#                 raise TokenError("空令牌")  # 验证 Token 并获取 payload
+#
+#             try:
+#                 payload = verify_token(token)
+#                 # 将 payload 存入全局对象 g
+#                 g.current_user = User.query.get(payload['user_id'])
+#                 g.current_user_payload = payload
+#
+#             except TokenError as e:
+#                 raise TokenError(str(e))
+#
+#             # --- 管理员权限检查 ---
+#             if admin_required and g.current_user.role_id != 0:
+#                 logger.info(f"拒绝非管理员访问，用户ID: {g.current_user.id}")
+#                 raise PermissionDeniedError("需要管理员权限")
+#
+#             # --- 权限自动校验 ---
+#             if model and id_param:
+#                 resource_id = kwargs.get(id_param)
+#                 if not resource_id:
+#                     raise APIError(f"URL 缺少必要参数: {id_param}")
+#
+#                 instance = model.query.get(resource_id)
+#                 if not instance:
+#                     raise NotFoundError()
+#
+#                 # 验证权限：管理员无需检查所有权，普通用户需验证所有者
+#                 is_admin = g.current_user.role_id == 0
+#                 is_owner = getattr(instance, owner_field) == g.current_user.id
+#
+#                 if not (is_admin or is_owner):
+#                     raise PermissionDeniedError("无权操作此资源")
+#
+#                 if id_param in kwargs:
+#                     del kwargs[id_param]  # 删除指定参数
+#                 kwargs['instance'] = instance  # 注入实例
+#
+#             return f(*args, **kwargs)
+#
+#         #print(f"[Token装饰器调试] 原函数名: {f.__name__}, 装饰后函数名: {decorated_token.__name__}")
+#         return decorated_token
+#
+#     return decorator
 
 
-def token_required(model=None, id_param=None, owner_field='user_id', admin_required=False,
-                   resource_map=None):
-    """
-    增强版装饰器：集成权限校验
-    :param model: 需要校验的模型类 (e.g. App)
-    :param id_param: URL 中的资源ID参数名 (e.g. 'app_id')
-    :param owner_field: 模型中的用户关联字段 (默认 'user_id')
-    :param admin_required:管理员权限要求
-    :param resource_map: 动态资源映射，格式为 {upload_type: (ModelClass, 'id_param', 'owner_field')}
+# ------------------------------
+# 基础登录校验装饰器（外部可直接使用）
+# ------------------------------
+def auth_required(f):
+    """独立登录校验装饰器"""
 
-    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # 原有验证逻辑
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header:
+            raise TokenError("缺少或无效的授权标头")
+
+        token = auth_header.split(" ")[1].strip()
+        if not token:
+            raise TokenError("空令牌")  # 验证 Token 并获取 payload
+
+        try:
+            payload = verify_token(token)
+            # 将 payload 存入全局对象 g
+            g.current_user = User.query.get(payload['user_id'])
+            g.current_user_payload = payload
+
+        except TokenError as e:
+            raise TokenError(str(e))
+
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+# ------------------------------
+# 管理员校验装饰器（内置登录校验）
+# ------------------------------
+def admin_required(f):
+    """管理员校验（自动包含登录校验）"""
+
+    @wraps(f)
+    @auth_required  # 自动嵌套登录校验
+    def decorated(*args, **kwargs):
+        # 已通过login_required校验
+        if g.current_user.role_id != 0:
+            raise PermissionDeniedError("需要管理员权限")
+
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+# ------------------------------
+# 资源所有者装饰器（动态/静态二合一）
+# ------------------------------
+def resource_owner(
+        model=None,  # 静态指定模型类 (优先级低于动态类型)
+        resource_type_param=None,  # 动态模型参数名 (e.g. 'upload_type')
+        id_param='id',  # 资源ID参数名 (对应URL中的参数)
+        owner_field='user_id',  # 资源所有者字段名
+        allow_admin=True,  # 是否允许管理员跳过校验
+        inject_instance=True  # 是否向视图函数注入资源实例 (静态资源默认启用)
+):
+    """资源权限校验装饰器 (需配合_auth_required使用)"""
+
     def decorator(f):
         @wraps(f)
-        def decorated_token(*args, **kwargs):
-            # --- Token验证逻辑 ---
-            auth_header = request.headers.get('Authorization', '')
-            if not auth_header:
-                raise TokenError("缺少或无效的授权标头")
+        @auth_required
+        def decorated(*args, **kwargs):
+            nonlocal model  # 允许动态修改模型类
 
-            token = auth_header.split(" ")[1].strip()
-            if not token:
-                raise TokenError("空令牌")  # 验证 Token 并获取 payload
+            # 动态模型类型解析 (当指定资源类型参数时)
+            if resource_type_param:
+                type_key = kwargs.get(resource_type_param)
+                if not type_key:
+                    raise ValidationError(f"缺少资源类型参数: {resource_type_param}")
+                model = get_model_by_type(type_key)  # 会抛出错误如果类型无效
 
-            try:
-                payload = verify_token(token)
-                # 将 payload 存入全局对象 g
-                g.current_user = User.query.get(payload['user_id'])
-                g.current_user_payload = payload
+            # 参数完整性检查
+            if not model:
+                raise ValidationError("未指定资源模型类")
+            resource_id = kwargs.get(id_param)
+            if not resource_id:
+                raise APIError(f"URL缺少必要参数: {id_param}")
 
-            except TokenError as e:
-                raise TokenError(str(e))
+            # 获取资源实例 (不存在则立即报错)
+            instance = model.query.get(resource_id)
+            if not instance:
+                raise NotFoundError("指定的资源不存在")
 
-            # --- 管理员权限检查 ---
-            if admin_required and g.current_user.role_id != 0:
-                logger.info(f"拒绝非管理员访问，用户ID: {g.current_user.id}")
-                raise PermissionDeniedError("需要管理员权限")
-
-                # --- 动态资源权限校验 ---
-            if resource_map:
-                upload_type = kwargs.get('upload_type')
-                if upload_type in resource_map:
-                    model_cls, id_param_name, owner_field_name = resource_map[upload_type]
-                    resource_id = kwargs.get('data_id')  # 从路由参数获取资源ID
-
-                    instance = model_cls.query.get(resource_id)
-                    if not instance:
-                        raise NotFoundError(f"资源不存在: {upload_type} ID {resource_id}")
-
-                    # 权限校验：管理员或所有者
-                    is_admin = g.current_user.role_id == 0
-                    is_owner = getattr(instance, owner_field_name) == g.current_user.id
-                    if not (is_admin or is_owner):
-                        raise PermissionDeniedError(f"无权操作此 {upload_type}")
-
-                    # 注入实例到参数（可选）
-                    kwargs[f'{upload_type}_instance'] = instance
-
-            # --- 权限自动校验 ---
-            if model and id_param:
-                resource_id = kwargs.get(id_param)
-                if not resource_id:
-                    raise APIError(f"URL 缺少必要参数: {id_param}")
-
-                instance = model.query.get(resource_id)
-                if not instance:
-                    raise NotFoundError()
-
-                # 验证权限：管理员无需检查所有权，普通用户需验证所有者
-                is_admin = g.current_user.role_id == 0
-                is_owner = getattr(instance, owner_field) == g.current_user.id
-
-                if not (is_admin or is_owner):
+            # 权限校验流程
+            is_admin = g.current_user.role_id == 0  # 使用role_id保持兼容性
+            if not (allow_admin and is_admin):  # 非管理员需要校验所有者
+                if getattr(instance, owner_field) != g.current_user.id:
                     raise PermissionDeniedError("无权操作此资源")
 
+            # 参数注入处理
+            if inject_instance and not resource_type_param:
+                # 静态资源：删除原始ID参数，注入实例参数
                 if id_param in kwargs:
-                    del kwargs[id_param]  # 删除指定参数
-                kwargs['instance'] = instance  # 注入实例
+                    del kwargs[id_param]
+                kwargs['instance'] = instance
+            else:
+                # 动态资源：保留原始参数，同时存入全局对象
+                g.resource_instance = instance
 
             return f(*args, **kwargs)
-        #print(f"[Token装饰器调试] 原函数名: {f.__name__}, 装饰后函数名: {decorated_token.__name__}")
-        return decorated_token
+
+        return decorated
+
     return decorator
+
+
+def get_model_by_type(resource_type):
+    """资源类型到模型的映射"""
+    resource_model_map = {
+        'model': Model,
+        'user': User,
+        'dataset': Dataset
+    }
+    model = resource_model_map.get(resource_type)
+    if not model:
+        raise ValidationError("不支持的资源类型")
+    return model

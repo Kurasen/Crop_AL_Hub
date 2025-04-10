@@ -1,25 +1,21 @@
 import uuid
 from datetime import datetime
-from pathlib import Path
-from urllib.parse import urlparse
-
 from flask import Blueprint, g
 
 from app import Model
-from app.core.exception import FileUploadError, ValidationError, SecurityError, ImageProcessingError, \
-    FileValidationError, FileSaveError
+from app.core.exception import FileUploadError
 from app.docker.core.storage import FileStorage, cleanup_directory
 from app.exts import db
 from app.model.model_repo import ModelRepository
-from app.schemas.model_schema import ModelRunSchema, ModelTestSchema, ModelSearchSchema, ModelCreateSchema, \
+from app.schemas.model_schema import ModelRunSchema, ModelSearchSchema, ModelCreateSchema, \
     ModelUpdateSchema
 
 from flask import request
-from app.config import Config, FileConfig
+from app.config import Config
 from app.docker.core.docker_clinet import docker_client
 from app.docker.core.task import logger, run_algorithm
 from app.model.model_service import ModelService
-from app.token.JWT import token_required
+from app.token.JWT import admin_required, auth_required, resource_owner
 from app.utils import create_json_response
 from app.utils.common.common_service import CommonService
 
@@ -32,7 +28,7 @@ models_bp = Blueprint('models', __name__, url_prefix='/api/v1/models')
 
 # 定义 run_model 接口，接收模型编号和数据集编号
 @models_bp.route('/<int:model_id>/run', methods=['GET'])
-@token_required()
+@auth_required
 def run(model_id):
     """
     通过模型ID和数据集ID运行模型，并返回模型的训练准确率。
@@ -68,7 +64,7 @@ def get_all_types():
 
 
 @models_bp.route('', methods=['POST'])
-@token_required(admin_required=True)
+@admin_required
 def create_model():
     """
     创建新模型
@@ -95,7 +91,7 @@ def get_model(model_id):
 
 
 @models_bp.route('/<int:model_id>', methods=['PUT'])
-@token_required(model=Model, id_param='model_id')
+@resource_owner(model=Model, id_param='model_id')
 def update_model(instance):
     """
     更新现有模型
@@ -112,7 +108,7 @@ def update_model(instance):
 
 
 @models_bp.route('/<int:model_id>', methods=['DELETE'])
-@token_required(model=Model, id_param='model_id')
+@resource_owner(model=Model, id_param='model_id')
 def delete_model(instance):
     """
     删除现有模型
@@ -128,7 +124,7 @@ def log_request():
 
 # Flask路由：上传文件并触发任务
 @models_bp.route('/<int:model_id>/test-model', methods=['POST'])
-@token_required()
+@auth_required
 def process_image(model_id):
     # 查数据库，获取对应的 image_name
     model = ModelService.get_model_by_id(model_id)
@@ -245,7 +241,7 @@ def process_image(model_id):
 
 # Flask路由：查询任务状态
 @models_bp.route('/task/<task_id>', methods=['GET'])
-@token_required()
+@auth_required
 def get_task_status(task_id):
     task = run_algorithm.AsyncResult(task_id)
     # 判断任务状态

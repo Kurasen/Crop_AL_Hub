@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -57,6 +58,7 @@ class Config:
     # 数据库配置
     @staticmethod
     def get_sqlalchemy_uri():
+
         db_username = os.getenv('DB_USERNAME', 'root')
         db_password = os.getenv('DB_PASSWORD', '123123')
         db_host = os.getenv('DB_HOST', '10.0.4.71')
@@ -72,7 +74,7 @@ class Config:
 
 class FileConfig:
     # 上传图片存储路径配置
-    FILE_BASE_URL = "http://10.0.4.71:8080/file/"
+    FILE_BASE_URL = "http://10.0.4.71:8080/file"
     LOCAL_FILE_BASE = "/home/zhaohonglong/workspace/Crop_Data"
 
     # 上传文件配置
@@ -96,8 +98,6 @@ class FileConfig:
             "max_size": 100 * 1024 * 1024  # 500MB
         }
     }
-
-
 
 
 # 开发环境配置

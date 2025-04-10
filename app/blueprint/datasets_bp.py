@@ -4,7 +4,7 @@ from app import Dataset
 from app.dataset.dataset_repo import DatasetRepository
 from app.exts import db
 from app.schemas.dataset_shema import DatasetSearchSchema, DatasetCreateSchema, DatasetUpdateSchema
-from app.token.JWT import token_required
+from app.token.JWT import admin_required, resource_owner
 from app.utils.common.common_service import CommonService
 from app.utils.json_encoder import create_json_response
 from app.dataset.dataset_service import DatasetService
@@ -46,7 +46,7 @@ def get_all_types():
 
 # 创建新数据集
 @datasets_bp.route('', methods=['POST'])
-@token_required(admin_required=True)
+@admin_required
 def create_dataset():
     """
     创建新数据集
@@ -63,7 +63,7 @@ def create_dataset():
 
 # 更新现有数据集
 @datasets_bp.route('/<int:dataset_id>', methods=['PUT'])
-@token_required(model=Dataset, id_param='dataset_id')
+@resource_owner(model=Dataset, id_param='dataset_id')
 def update_dataset(instance):
     """
     更新现有数据集
@@ -81,7 +81,7 @@ def update_dataset(instance):
 
 # 删除现有数据集
 @datasets_bp.route('/<int:dataset_id>', methods=['DELETE'])
-@token_required(model=Dataset, id_param='dataset_id')
+@resource_owner(model=Dataset, id_param='dataset_id')
 def delete_dataset(instance):
     """
     删除现有数据集

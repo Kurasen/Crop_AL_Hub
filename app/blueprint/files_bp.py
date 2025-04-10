@@ -1,9 +1,10 @@
 from flask import request, Blueprint, g
+
 from app.config import FileConfig
-from app.core.exception import FileUploadError, logger, ValidationError
+from app.core.exception import FileUploadError, logger
 from app.exts import db
 from app.model.model_service import ModelService
-from app.token.JWT import token_required
+from app.token.JWT import token_required, resource_owner
 from app.user.user_service import UserService
 from app.utils import create_json_response
 from app.utils.file_process import FileUploader
@@ -15,7 +16,11 @@ uploader = FileUploader()
 
 
 @files_bp.route('/upload/<string:upload_type>/<int:data_id>/<string:file_type>', methods=['POST'])
-@token_required()
+@resource_owner(
+    resource_type_param='upload_type',
+    id_param='data_id',
+    inject_instance=False
+)
 def upload_file(upload_type, data_id, file_type):
     print(upload_type, data_id, file_type)
     # 验证上传类型是否存在
@@ -46,27 +51,27 @@ def upload_file(upload_type, data_id, file_type):
         )
         print(f"saved_path: {saved_path}")
 
-    # # 3. 如果上传类型是 model，更新对应模型的 icon 字段
-    # #if upload_type == "model":
-    #     # 获取模型实例
-    #     model = ModelService.get_model_by_id(data_id)
-    #
-    #     # # 验证权限（确保当前用户是模型所有者）
-    #     # if model.user_id != g.current_user.id:
-    #     #     return create_json_response({"error": {"message": "无权操作"}}, 403)
-    #
-    #     # 更新 icon 字段并提交到数据库
-    #     if file_type == "icon":
-    #         model.icon = saved_path
-    #         db.session.commit()
-    #
-    #     return create_json_response({
-    #         "data": {
-    #             "photo_url": {
-    #                 "re_url": f"{saved_path}",
-    #                 "ab_url": f"{FileConfig.FILE_BASE_URL}/{saved_path}"}
-    #             }
-    #     }, 201)
+        # # 3. 如果上传类型是 model，更新对应模型的 icon 字段
+        # #if upload_type == "model":
+        #     # 获取模型实例
+        #     model = ModelService.get_model_by_id(data_id)
+        #
+        #     # # 验证权限（确保当前用户是模型所有者）
+        #     # if model.user_id != g.current_user.id:
+        #     #     return create_json_response({"error": {"message": "无权操作"}}, 403)
+        #
+        #     # 更新 icon 字段并提交到数据库
+        #     if file_type == "icon":
+        #         model.icon = saved_path
+        #         db.session.commit()
+        #
+        #     return create_json_response({
+        #         "data": {
+        #             "photo_url": {
+        #                 "re_url": f"{saved_path}",
+        #                 "ab_url": f"{FileConfig.FILE_BASE_URL}/{saved_path}"}
+        #             }
+        #     }, 201)
 
         # 数据库更新（仅允许 icon/avatars 类型）
         # 定义允许存数据库的 file_type 与模型映射关系
@@ -94,7 +99,7 @@ def upload_file(upload_type, data_id, file_type):
                     "relative_path": saved_path,
                     "absolute_url": f"{FileConfig.FILE_BASE_URL}/{saved_path}"
                 },
-                "saved_to_database": upload_type in database_mapping and file_type in database_mapping[upload_type]
+                #"saved_to_database": upload_type in database_mapping and file_type in database_mapping[upload_type]
             }
         }, 201)
 
@@ -105,4 +110,3 @@ def upload_file(upload_type, data_id, file_type):
         logger.error(f"服务器异常: {str(e)}", exc_info=True)
         db.session.rollback()
         return create_json_response({'error': {"message": f'{str(e)}'}}, 500)
-
