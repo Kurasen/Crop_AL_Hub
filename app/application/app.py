@@ -17,7 +17,7 @@ class App(db.Model):
     # 定义表的字段
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(255), nullable=False)
-    url = db.Column(db.String(255), nullable=False)
+    url = db.Column(db.String(255), nullable=True)
     description = db.Column(db.Text, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user_table.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
