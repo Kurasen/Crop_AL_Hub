@@ -39,7 +39,7 @@ class ImageURLHandlerUtils:
         if not relative_path:  # 处理 None 或空字符串
             return None
         base_url = FileConfig.FILE_BASE_URL
-        return base_url + relative_path.lstrip('/')
+        return f"{base_url}/{relative_path.lstrip('/')}"
 
     @classmethod
     def validate_photo_file(cls, url: str) -> str:

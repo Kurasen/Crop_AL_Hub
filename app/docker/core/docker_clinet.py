@@ -38,7 +38,7 @@ class DockerManager:
         try:
             # 创建输出目录（如果不存在）
             Path(host_output_dir).mkdir(parents=True, exist_ok=True)
-            logger.info(f"输入目录文件列表: {os.listdir(host_input_dir)}")
+            logger.info("输入目录文件列表: %s", os.listdir(host_input_dir))
 
             # 配置容器卷映射
             volumes = {
@@ -52,7 +52,11 @@ class DockerManager:
                 name=f"{image_name}_{uuid.uuid4()}",  # 保证容器名称唯一
                 command=command,
                 volumes=volumes,
-                environment={"TZ": Config.timezone},
+                environment={
+                    "TZ": Config.timezone,
+                    "LANG": "C.UTF-8",  # 强制容器使用UTF-8
+                    "LC_ALL": "C.UTF-8"
+                },
                 detach=True,
                 auto_remove=False,  # 关闭自动删除
                 remove=False,  # 防止自动清理
@@ -81,7 +85,6 @@ class DockerManager:
                 if "marked for removal" not in str(e):
                     raise ServiceException(f"日志流异常: {str(e)}")
 
-
             return {
                 "exit_code": exit_code,
                 "host_output_dir": host_output_dir,
@@ -106,7 +109,7 @@ class DockerManager:
             if container:
                 try:
                     container.remove(force=True)
-                    logger.debug("容器清理完成")
+                    logger.info("容器清理完成")
                 except docker.errors.NotFound:
                     pass
                 except Exception as e:

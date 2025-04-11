@@ -7,3 +7,5 @@ test
 algorithm
 .venv
 crop_env
+/.idea/dbnavigator.xml
+/nohup.out

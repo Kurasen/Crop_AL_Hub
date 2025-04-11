@@ -1,4 +1,4 @@
-from sqlalchemy import CheckConstraint
+from sqlalchemy import CheckConstraint, Enum
 
 from app.exts import db
 
@@ -6,8 +6,12 @@ from app.exts import db
 class User(db.Model):
     __tablename__ = 'user_table'
     __table_args__ = (
+        # 确保邮箱或手机号至少有一个存在
         CheckConstraint('email IS NOT NULL OR telephone IS NOT NULL',
                         name='check_email_or_telephone'),
+        # identity 必须是四个预设值之一
+        CheckConstraint("identity IN ('研究员', '学生', '群众', '其他')",
+                        name='check_identity_values')
     )
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 个人id
     username = db.Column(db.String(100), nullable=False, index=True)  # 用户昵称
@@ -15,12 +19,19 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True)  # 邮箱
     telephone = db.Column(db.String(15), unique=True)  # 手机号
     role_id = db.Column(db.Integer, default=1)  # 用户角色
+    identity = db.Column(
+        Enum('研究员', '学生', '群众', '其他', name='identity_types'),
+        nullable=False,  # 根据需求决定是否允许为空
+        default='群众'  # 可选：设置默认值
+    )
+    workspace = db.Column(db.String(50), nullable=True)
 
     # 定义正向关系(一对多)
     apps = db.relationship("App", back_populates="user")  # back_populates 指向 App.user
     models = db.relationship("Model", back_populates="user")
     datasets = db.relationship("Dataset", back_populates="user")
     tasks = db.relationship("Task", back_populates="user")
+
     # stars = db.relationship("Star", back_populates="user", lazy="dynamic")
     # orders = db.relationship("Order", back_populates="user", lazy="dynamic")
 
@@ -42,7 +53,9 @@ class User(db.Model):
             #'password': self.password,  # 加密的密码
             'email': self.mask_email(self.email) if self.email else None,
             'telephone': self.mask_telephone(self.telephone) if self.telephone else None,
-            'role': self.role
+            'role': self.role,
+            'identity': self.identity,
+            'workspace': self.workspace,
         }
 
     @staticmethod

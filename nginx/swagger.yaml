@@ -952,6 +952,8 @@ paths:
                     data:
                       result: null
                     message: "当前状态: RETRY"
+      security:
+        - BearerAuth: [ ]  # 需要 Bearer Token 进行认证
 
   /api/v1/stars/{target_id}/{star_type}:
     post:

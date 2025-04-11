@@ -139,64 +139,7 @@ def process_image(model_id):
         raise FileUploadError("未上传任何文件")
 
     uploaded_files = [file]
-    # # 获取并验证图片URL
-    # image_url = request.form.get('url')
-    # if not image_url:
-    #     raise ValidationError("必须提供图片URL参数")
-    #
-    # # URL格式验证（严格匹配服务器路径）
-    # if not image_url.startswith(FileConfig.FILE_BASE_URL):
-    #     raise ValidationError("仅支持访问本机服务器文件资源")
-    #
-    # # 路径转换和安全验证
-    # parsed_url = urlparse(image_url)
-    # server_relative_path = parsed_url.path.split("/file", 1)[-1].lstrip('/')
-    #
-    # # 配置本地存储基础路径
-    # LOCAL_FILE_BASE = Path(FileConfig.LOCAL_FILE_BASE)
-    # local_full_path = LOCAL_FILE_BASE / server_relative_path
-    #
-    # # 安全校验（防止路径遍历）
-    # try:
-    #     if not local_full_path.resolve().is_relative_to(LOCAL_FILE_BASE.resolve()):
-    #         raise SecurityError("非法路径访问尝试")
-    # except FileNotFoundError:
-    #     raise FileNotFoundError(f"路径不存在: {local_full_path}")
-    #
-    # # 文件存在性检查
-    # if not local_full_path.is_file():
-    #     raise FileNotFoundError(f"指定文件不存在: {local_full_path}")
-    #
-    # # 使用自定义类进行文件校验
-    # try:
-    #     FileStorage.is_file_corrupted(local_full_path)  # 前置损坏检查
-    # except ImageProcessingError as e:
-    #     raise FileValidationError(f"文件损坏验证失败: {str(e)}")
-    #
-    # # 创建文件对象（适配后续处理）
-    # with open(local_full_path, 'rb') as f:
-    #     # 创建符合预期的文件对象
-    #     file_obj = type('', (object,), {
-    #         'filename': local_full_path.name,
-    #         'read': f.read,
-    #         'stream': f
-    #     })()
-    #
-    #     # 使用自定义方法保存文件
-    #     try:
-    #         saved_dir = FileStorage.upload_input(
-    #             file=file_obj,
-    #             image_name=model.image,
-    #             task_id=task_id
-    #         )
-    #     except Exception as e:
-    #         logger.error(f"文件保存失败: {str(e)}")
-    #         raise FileSaveError("文件存储过程失败")
 
-    # # 后续处理（保持原有逻辑）
-    # uploaded_files = [file_obj]
-
-    # 保存所有文件到同一目录（只需保存第一个文件即可获取目录路径）
     try:
         if len(uploaded_files) == 0:
             raise FileUploadError("未上传任何文件")
@@ -213,8 +156,8 @@ def process_image(model_id):
                 file_name=file.filename
             )
     except Exception as e:
-        logger.error(f"文件保存失败: {str(e)}")
-        return create_json_response({'error': {"message": '服务器异常，文件保存失败'}}, 500)
+        logger.error("文件保存失败: %s", str(e))
+        return create_json_response({'error': {"message": str(e)}}, 500)
 
     output_folder = Config.OUTPUT_FOLDER
     output_dir = output_folder / image_name / f"task_{task_id}"
@@ -228,6 +171,7 @@ def process_image(model_id):
         countdown=86400  # 1天 = 60*60*24 秒
     )
 
+    logger.info("清理任务已调度，预计24h后完成")
     return create_json_response({
         "data": {
             'task_id': task_id,
@@ -238,6 +182,7 @@ def process_image(model_id):
 
 # Flask路由：查询任务状态
 @models_bp.route('/task/<task_id>', methods=['GET'])
+@auth_required
 def get_task_status(task_id):
     task = run_algorithm.AsyncResult(task_id)
     # 判断任务状态
@@ -273,3 +218,4 @@ def get_task_status(task_id):
         'data': response,
         'message': message,
     }, status_code)
+

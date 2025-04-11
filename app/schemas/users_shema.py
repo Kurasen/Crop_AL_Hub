@@ -1,9 +1,13 @@
 import re
 
+from marshmallow_sqlalchemy import auto_field
+
 from app.schemas.base_schema import BaseSchema
 from marshmallow import fields, validate, post_load
 
 from app.user.user import User
+
+VALID_IDENTITIES = {'研究员', '学生', '群众', '其他'}
 
 
 class UserBaseSchema(BaseSchema):
@@ -38,6 +42,16 @@ class UserBaseSchema(BaseSchema):
         error_messages={
             'invalid': 'Invalid email address format.'
         }
+    )
+
+    identity = fields.Str(
+        required=False,
+        validate=validate.OneOf(["研究员", "学生", "群众", "其他"]),
+        error="用户身份不被支持"
+    )
+
+    workspace = auto_field(
+        required=False
     )
 
 

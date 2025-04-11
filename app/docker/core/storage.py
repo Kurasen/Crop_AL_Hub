@@ -2,7 +2,8 @@ from pathlib import Path
 from app.config import Config
 import os
 import shutil
-from app.core.exception import logger, ImageProcessingError, NotFoundError, ValidationError
+from app.core.exception import logger, ImageProcessingError, NotFoundError, ValidationError, FileSaveError, \
+    FileValidationError
 from pathlib import Path
 from PIL import Image, UnidentifiedImageError
 
@@ -42,7 +43,7 @@ class FileStorage:
         """检查目录是否存在且非空"""
         dir_path = Path(directory)
         if not dir_path.is_dir():
-            raise ValueError(f"目录不存在: {directory}")
+            raise FileValidationError(f"目录不存在: {directory}")
         if not any(dir_path.iterdir()):
             raise RuntimeError(f"目录为空: {directory}")
         return dir_path
@@ -76,7 +77,7 @@ class FileStorage:
         # 验证文件大小
         if save_path.stat().st_size == 0:
             os.remove(save_path)
-            raise ValueError("保存文件为空")
+            raise FileSaveError("保存文件为空")
 
         # 延迟检测（解决文件系统同步问题）
         from time import sleep
@@ -94,7 +95,7 @@ class FileStorage:
         """获取输出文件路径"""
         result_dir = Path(Config.OUTPUT_FOLDER) / f"task_{task_id}"
         if not result_dir.exists():
-            raise FileNotFoundError("结果目录不存在")
+            raise NotFoundError("结果丢失")
         return str(result_dir)
 
     @staticmethod
@@ -111,18 +112,18 @@ class FileStorage:
         # 生成保存路径
         upload_dir = FileStorage.generate_upload_path(image_name, task_id)
 
-        # 获取原始文件名并处理后缀
+        # 获取文件后缀并转为小写
         original_filename = file.filename
-        file_ext = Path(original_filename).suffix # 强制转为大写
+        file_ext = Path(original_filename).suffix  # 提取后缀并标准化
 
-        # # 允许的后缀列表（根据需求调整）
-        # allowed_extensions = {'.JPG', '.JPEG', '.PNG'}
-        #
-        # # 验证文件格式
-        # if file_ext not in allowed_extensions:
-        #     raise ValidationError(f"不支持的文件格式: {file_ext}，仅支持 {allowed_extensions}")
-        #
-        # # 构建新文件名（固定为001 + 原后缀）
+        # 允许的后缀列表（根据需求调整）
+        allowed_extensions = {'.bmp', '.dib', '.png', '.jpg', '.jpeg', '.pbm', '.pgm', '.ppm', '.tif', '.tiff', '.JPG'}
+
+        # 验证文件格式
+        if file_ext not in allowed_extensions:
+            raise FileValidationError("文件类型不被支持")
+
+        # 构建新文件名（固定为001 + 原后缀）
         new_filename = f"001{file_ext}"
 
         FileStorage.save_upload(
@@ -132,17 +133,6 @@ class FileStorage:
         )
         return str(upload_dir)  # 返回目录路径，而非文件路径
 
-    # @staticmethod
-    # def clean_directory(directory, logger):
-    #     """清理目录"""
-    #     dir_path = Path(directory)
-    #     if dir_path.exists():
-    #         try:
-    #             shutil.rmtree(dir_path)
-    #             logger.info(f"清理目录成功: {dir_path}")
-    #         except Exception as e:
-    #             logger.error(f"清理目录失败: {dir_path} - {str(e)}")
-
 
 # 单例实例
 storage = FileStorage()
@@ -151,20 +141,21 @@ storage = FileStorage()
 @CeleryManager.get_celery().task
 def cleanup_directory(input_dir, output_dir):
     try:
+        logger.info("[清理任务] 开始处理数据删除")
         # 清理输入目录
         input_path = Path(input_dir)
         if input_path.exists():
             shutil.rmtree(input_path)
-            logger.info(f"清理输入目录成功: {input_dir}")
+            logger.info("清理输入目录成功: %s", input_dir)
         else:
-            logger.warning(f"输入目录不存在，可能已被删除: {input_dir}")
+            logger.warning("输入目录不存在，可能已被删除: %s", input_dir)
 
         # 清理输出目录
         output_path = Path(output_dir)
         if output_path.exists():
             shutil.rmtree(output_path)
-            logger.info(f"清理输出目录成功: {output_dir}")
+            logger.info("清理输入目录成功: %s", output_dir)
         else:
-            logger.warning(f"输出目录不存在，可能已被删除: {output_dir}")
+            logger.warning("输出目录不存在，可能已被删除: %s", output_dir)
     except Exception as e:
-        logger.error(f"清理目录失败: {str(e)}", exc_info=True)
+        logger.error("清理失败: %s", str(e), exc_info=True)
