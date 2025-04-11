@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 
@@ -31,13 +32,14 @@ def run_algorithm(self, input_path, task_id, image_name, instruction=None):
         files_in_directory = list(host_input_dir.glob('*'))  # 使用 * 匹配所有文件
         if not files_in_directory:
             print(files_in_directory)
-            raise RuntimeError(f"文件不存在")
+            raise RuntimeError("文件不存在")
 
         # 检查文件是否损坏
         for file_path in files_in_directory:
             FileStorage.is_file_corrupted(file_path)
 
         # 检查目录权限
+        os.chmod(host_input_dir, 0o777)  # 任务开始前设置权限
         logger.info(f"输入目录权限: {oct(host_input_dir.stat().st_mode)}")
 
         # 宿主机输出目录
@@ -56,17 +58,9 @@ def run_algorithm(self, input_path, task_id, image_name, instruction=None):
             command=docker_command
         )
 
-        # 处理实时日志
-        for log_line in container_info["log_generator"]:
-            logger.info(f"[容器日志] {log_line}")
-
-        # 获取退出状态
-        exit_status = docker_client.get_exit_status(container_info["container"])
-        logger.info(f"容器退出状态码: {exit_status}")
-
         # 验证输出结果
         output_files = list(host_output_dir.glob('*'))
-        logger.info(f"输出目录内容: {[f.name for f in output_files]}")
+        logger.info("输出目录内容: %s", [f.name for f in output_files])
         if not output_files:
             raise RuntimeError("算法未生成任何输出文件")
 
