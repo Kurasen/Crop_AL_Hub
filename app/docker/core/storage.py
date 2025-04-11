@@ -110,10 +110,25 @@ class FileStorage:
         """保存上传的文件并返回文件路径"""
         # 生成保存路径
         upload_dir = FileStorage.generate_upload_path(image_name, task_id)
+
+        # 获取原始文件名并处理后缀
+        original_filename = file.filename
+        file_ext = Path(original_filename).suffix # 强制转为大写
+
+        # # 允许的后缀列表（根据需求调整）
+        # allowed_extensions = {'.JPG', '.JPEG', '.PNG'}
+        #
+        # # 验证文件格式
+        # if file_ext not in allowed_extensions:
+        #     raise ValidationError(f"不支持的文件格式: {file_ext}，仅支持 {allowed_extensions}")
+        #
+        # # 构建新文件名（固定为001 + 原后缀）
+        new_filename = f"001{file_ext}"
+
         FileStorage.save_upload(
             file_stream=file,
             save_dir=upload_dir,  # 目录路径
-            file_name=file.filename
+            file_name=new_filename
         )
         return str(upload_dir)  # 返回目录路径，而非文件路径
 

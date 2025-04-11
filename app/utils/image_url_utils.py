@@ -1,6 +1,5 @@
 import os
 import re
-from pathlib import Path
 from typing import Optional
 
 from app.config import FileConfig
@@ -14,7 +13,7 @@ class ImageURLHandlerUtils:
         """验证URL是否符合服务器规范"""
         expected_prefix = FileConfig.FILE_BASE_URL
         if not url.startswith(expected_prefix):
-            raise ValidationError(f"仅支持访问本机服务器文件资源")
+            raise ValidationError("仅支持访问本机服务器文件资源")
         return True
 
     @staticmethod
@@ -60,7 +59,7 @@ class ImageURLHandlerUtils:
 
         # 验证文件存在性
         if not os.path.isfile(local_path):
-            raise NotFoundError(f"图片无法找到或不存在")
+            raise NotFoundError("图片无法找到或不存在")
 
         return relative_path  # 返回标准化相对路径(无前缀)
 

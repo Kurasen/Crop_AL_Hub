@@ -52,7 +52,7 @@ class AppService:
             raise e
 
     @staticmethod
-    def save_app(instance: App):
+    def create_app(instance: App):
         """创建模型"""
         try:
             AppRepository.save_app(instance)

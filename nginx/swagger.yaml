@@ -1113,10 +1113,10 @@ paths:
                   example: "进行玉米植物表型参数解析的工作站"
                 url:
                   type: string
-                  example: "https://xxx.com"
+                  example: "http://xxx.com"
                 icon:
                   type: string
-                  example: "path/to/icon/img.png"
+                  example: "http://xxx.com"
       responses:
         201:
           description: 创建成功
@@ -1472,7 +1472,7 @@ components:
           example: "test001"
         icon:
           type: string
-          example: "path/to/icon/img.png"
+          example: "http://xxx.com"
         created_at:
           type: string
           format: date-time

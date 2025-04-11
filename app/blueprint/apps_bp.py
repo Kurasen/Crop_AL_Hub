@@ -32,6 +32,7 @@ def search():
     ?name=
     """
     search_params = AppSearchSchema().load(request.args.to_dict())
+    print(f"search_params: {search_params}")
     result = AppService.search_apps(search_params)
     return create_json_response(result)
 
@@ -42,37 +43,10 @@ def save_app():
     """
     创建新数据集
     """
-    form_data = request.get_json()
-    print(f"form_data: {form_data}")
-    files = request.files.get("icon")
-    print(f"files: {files}")
-    saved_path = None  # 初始化文件路径
-    # 如果有文件上传则处理
-    if files and files.filename != '':
-        # 文件类型验证
-        if not allowed_file(files.filename):
-            return create_json_response({"error": "仅支持JPG/PNG格式图片"}, 400)
-        # 文件大小验证
-        max_size = 100 * 1024 * 1024
-        file_data = files.read()
-        if len(file_data) > max_size:
-            return create_json_response({"error": f"文件大小超过{max_size//1024//1024}MB限制"}, 400)
-
-        # 保存文件
-        files.seek(0)  # 重置文件指针
-        saved_path = save_uploaded_file(files, g.current_user.id, "banners")
-        # 合并数据（如果有上传文件）
-    if saved_path:
-        form_data['banner'] = saved_path
-    else:
-        # 可以设置默认图片或留空
-        form_data['banner'] = ''
-    app_instance = AppCreateSchema().load(
-        form_data,
-        session=db.session
-    )
-    app_instance.user_id = g.current_user.id  # 注入当前用户ID
-    result, status = AppService.save_app(app_instance)
+    request_data = request.get_json()
+    request_data['user_id'] = g.current_user.id
+    app_instance = AppCreateSchema().load(request_data, session=db.session)
+    result, status = AppService.create_app(app_instance)
     return create_json_response(result, status)
 
 

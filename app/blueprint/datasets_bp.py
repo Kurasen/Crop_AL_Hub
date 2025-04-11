@@ -51,11 +51,8 @@ def create_dataset():
     """
     创建新数据集
     """
-    # 获取当前用户ID
-    current_user_id = g.current_user.id
-    # 加载请求数据并注入用户ID
     request_data = request.get_json()
-    request_data['user_id'] = current_user_id
+    request_data['user_id'] = g.current_user.id
     dataset_instance = DatasetCreateSchema().load(request_data, session=db.session)
     result, status = DatasetService.create_dataset(dataset_instance)
     return create_json_response(result, status)

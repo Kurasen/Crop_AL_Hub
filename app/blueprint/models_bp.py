@@ -69,11 +69,8 @@ def create_model():
     """
     创建新模型
     """
-    # 获取请求数据
-    current_user_id = g.current_user.id
-    # 加载请求数据并注入用户ID
     request_data = request.get_json()
-    request_data['user_id'] = current_user_id
+    request_data['user_id'] = g.current_user.id
     model_instance = ModelCreateSchema().load(request_data, session=db.session)
     result, status = ModelService.create_model(model_instance)
     return create_json_response(result, status)
@@ -241,7 +238,6 @@ def process_image(model_id):
 
 # Flask路由：查询任务状态
 @models_bp.route('/task/<task_id>', methods=['GET'])
-@auth_required
 def get_task_status(task_id):
     task = run_algorithm.AsyncResult(task_id)
     # 判断任务状态
@@ -260,8 +256,9 @@ def get_task_status(task_id):
     elif task.state == 'FAILURE':
         error_message = str(task.info)
         response = {'result': {"status": "FAILURE"}}
-        message = f'任务处理失败，请重新上传数据或联系系统管理员: {error_message}'
+        message = '任务处理失败，请重新上传数据或联系系统管理员'
         status_code = 500  # 500 Internal Server Error - 任务执行失败
+        logger.error("error: %s", error_message)
     elif task.state == 'RETRY':
         response = {'result': {"status": "RETRY"}}  # 返回任务结果
         message = '运行过程中发生错误，任务正在重试中'
