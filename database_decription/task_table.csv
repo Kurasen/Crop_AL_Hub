@@ -1,0 +1,19 @@
+
+
+
+CREATE TABLE `task_table` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `app_id` int NOT NULL,
+  `models_ids` json DEFAULT NULL,
+  `status` varchar(20) DEFAULT NULL,
+  `remarks` text,
+  `updated_at` datetime DEFAULT NULL,
+  `result_info` json DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `app_id` (`app_id`),
+  CONSTRAINT `task_table_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user_table` (`id`),
+  CONSTRAINT `task_table_ibfk_2` FOREIGN KEY (`app_id`) REFERENCES `app_table` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci

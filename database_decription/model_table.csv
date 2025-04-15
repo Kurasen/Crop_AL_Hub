@@ -1,36 +1,49 @@
 # 表内数据
-id,name,image,input,description,cuda,instruction,output,accuracy,type,sales,stars,likes,price
-1,"雄穗数量识别模型","detetcion-tassel","*.JPG","通过数量除以面积可以计算密度",Flase,"",detection_results.txt,0.95,“玉米;数量”,3,3,3,1.0
-2,"冠层覆盖度计算模型","segmentation-canopy","*.JPG","通过数量除以面积可以计算密度",Flase,"","not ready",0.96,“玉米；覆盖度”,2,5,8,2.0
-3,"雄穗面积计算模型","segmentation-tassel","*.JPG","面积=像素数*像素空间分辨率，像素空间分辨率看传感器的型号和拍摄距离",Flase,"",segmentation_results.txt,0.97,“玉米；面积”,1,4,7,1.0
-4,"基于近地面图像的株数识别模型","detetcion-seed-leaf","*.JPG","通过数量除以面积可以计算密度",Flase,"-m ngp",plant_detection_summary.csv,0.98,“玉米；近地面；数量”,0,0,0,0.0
-5,"基于无人机图像的株数识别模型","detetcion-seed-leaf","*.JPG","通过数量除以面积可以计算密度",Flase,"-m uavp",plant_detection_summary.csv,0.93,“玉米；无人机；数量”,3,6,9,0.0
-6,"基于近地面图像的叶龄识别模型","detetcion-seed-leaf","*.JPG","两个叶尖就是二叶期，三个叶尖就是三叶期",Flase,"-m ngl",leaf_detection_summary.csv,0.99,“玉米；近地面；叶龄”,3,3,3,3.0
-7,"基于无人机图像的叶龄识别模型","detetcion-seed-leaf","*.JPG","两个叶尖就是二叶期，三个叶尖就是三叶期",Flase,"-m uavl",leaf_detection_summary.csv,0.95,“玉米；无人机；叶龄”,1,2,3,3.0
+id,name,image,input,description,cuda,instruction,output,accuracy,type,likes,user_id,readme,icon,created_at,updated_at
+1,"雄穗数量识别模型","detetcion-tassel","*.JPG","通过数量除以面积可以计算密度",Flase,"",detection_results.txt,0.95,“玉米;数量”,3,
+2,"冠层覆盖度计算模型","segmentation-canopy","*.JPG","通过数量除以面积可以计算密度",Flase,"","not ready",0.96,“玉米；覆盖度”,2,
+3,"雄穗面积计算模型","segmentation-tassel","*.JPG","面积=像素数*像素空间分辨率，像素空间分辨率看传感器的型号和拍摄距离",Flase,"",segmentation_results.txt,0.97,“玉米；面积”,1,
+4,"基于近地面图像的株数识别模型","detetcion-seed-leaf","*.JPG","通过数量除以面积可以计算密度",Flase,"-m ngp",plant_detection_summary.csv,0.98,“玉米；近地面；数量”,0,
+5,"基于无人机图像的株数识别模型","detetcion-seed-leaf","*.JPG","通过数量除以面积可以计算密度",Flase,"-m uavp",plant_detection_summary.csv,0.93,“玉米；无人机；数量”,3,
+6,"基于近地面图像的叶龄识别模型","detetcion-seed-leaf","*.JPG","两个叶尖就是二叶期，三个叶尖就是三叶期",Flase,"-m ngl",leaf_detection_summary.csv,0.99,“玉米；近地面；叶龄”,3,
+7,"基于无人机图像的叶龄识别模型","detetcion-seed-leaf","*.JPG","两个叶尖就是二叶期，三个叶尖就是三叶期",Flase,"-m uavl",leaf_detection_summary.csv,0.95,“玉米；无人机；叶龄”,1,
+
 
 # 创建表
-CREATE TABLE model_table (
-    id INT PRIMARY KEY,
-    name VARCHAR(100),
-    image VARCHAR(100),
-    input VARCHAR(100),
-    description TEXT,
-    cuda BOOLEAN,
-    instruction TEXT,
-    output VARCHAR(100),
-    accuracy DECIMAL(4, 2),
-    type VARCHAR(100),
-    likes INT
-    price DECIMAL(10, 2) NOT NULL
-);
+CREATE TABLE `model_table` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `image` varchar(255) DEFAULT NULL,
+  `input` varchar(100) DEFAULT NULL,
+  `description` text,
+  `cuda` tinyint(1) DEFAULT NULL,
+  `instruction` text,
+  `output` varchar(100) DEFAULT NULL,
+  `accuracy` decimal(4,2) DEFAULT NULL,
+  `type` varchar(100) DEFAULT NULL,
+  `likes` int DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `user_id` int NOT NULL,
+  `readme` text,
+  `updated_at` datetime DEFAULT NULL,
+  `icon` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_model_table_name` (`name`),
+  KEY `user_id` (`user_id`),
+  KEY `idx_accuracy` (`accuracy`),
+  KEY `idx_created_at` (`created_at`),
+  KEY `idx_likes` (`likes`),
+  KEY `idx_updated_at` (`updated_at`),
+  CONSTRAINT `model_table_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user_table` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=78 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 # 插入数据
-INSERT INTO model_table (id, name, image, input, description, cuda, instruction, output, accuracy, type, sales, stars, likes,  price))
+INSERT INTO model_table (id, name, image, input, description, cuda, instruction, output, accuracy, type,likes,user_id,readme,icon,created_at,updated_at))
 VALUES 
-(1, '雄穗数量识别模型', 'detetcion-tassel', '*.JPG', '通过数量除以面积可以计算密度', FALSE, '', 'detection_results.txt', 0.95, '玉米;数量', 3, 3, 3, 1.0),
-(2, '冠层覆盖度计算模型', 'segmentation-canopy', '*.JPG', '通过数量除以面积可以计算密度', FALSE, '', 'not ready', 0.96, '玉米；覆盖度', 2, 5, 8, 2.0),
-(3, '雄穗面积计算模型', 'segmentation-tassel', '*.JPG', '面积=像素数*像素空间分辨率，像素空间分辨率看传感器的型号和拍摄距离', FALSE, '', 'segmentation_results.txt', 0.97, '玉米；面积', 1, 4, 7, 1.0),
-(4, '基于近地面图像的株数识别模型', 'detetcion-seed-leaf', '*.JPG', '通过数量除以面积可以计算密度', FALSE, '-m ngp', 'plant_detection_summary.csv', 0.98, '玉米；近地面；数量', 0, 0, 0, 0.0),
-(5, '基于无人机图像的株数识别模型', 'detetcion-seed-leaf', '*.JPG', '通过数量除以面积可以计算密度', FALSE, '-m uavp', 'plant_detection_summary.csv', 0.93, '玉米；无人机；数量', 3, 6, 9, 0.0),
-(6, '基于近地面图像的叶龄识别模型', 'detetcion-seed-leaf', '*.JPG', '两个叶尖就是二叶期，三个叶尖就是三叶期', FALSE, '-m ngl', 'leaf_detection_summary.csv', 0.99, '玉米；近地面；叶龄', 3, 3, 3, 3.0),
-(7, '基于无人机图像的叶龄识别模型', 'detetcion-seed-leaf', '*.JPG', '两个叶尖就是二叶期，三个叶尖就是三叶期', FALSE, '-m uavl', 'leaf_detection_summary.csv', 0.95, '玉米；无人机；叶龄', 1, 2, 3, 3.0);
+(1, '雄穗数量识别模型', 'detetcion-tassel', '*.JPG', '通过数量除以面积可以计算密度', FALSE, '', 'detection_results.txt', 0.95, '玉米;数量', 3,),
+(2, '冠层覆盖度计算模型', 'segmentation-canopy', '*.JPG', '通过数量除以面积可以计算密度', FALSE, '', 'not ready', 0.96, '玉米；覆盖度', 2, ),
+(3, '雄穗面积计算模型', 'segmentation-tassel', '*.JPG', '面积=像素数*像素空间分辨率，像素空间分辨率看传感器的型号和拍摄距离', FALSE, '', 'segmentation_results.txt', 0.97, '玉米；面积', 1, ),
+(4, '基于近地面图像的株数识别模型', 'detetcion-seed-leaf', '*.JPG', '通过数量除以面积可以计算密度', FALSE, '-m ngp', 'plant_detection_summary.csv', 0.98, '玉米；近地面；数量', 0,),
+(5, '基于无人机图像的株数识别模型', 'detetcion-seed-leaf', '*.JPG', '通过数量除以面积可以计算密度', FALSE, '-m uavp', 'plant_detection_summary.csv', 0.93, '玉米；无人机；数量', 3, ),
+(6, '基于近地面图像的叶龄识别模型', 'detetcion-seed-leaf', '*.JPG', '两个叶尖就是二叶期，三个叶尖就是三叶期', FALSE, '-m ngl', 'leaf_detection_summary.csv', 0.99, '玉米；近地面；叶龄', 3, ),
+(7, '基于无人机图像的叶龄识别模型', 'detetcion-seed-leaf', '*.JPG', '两个叶尖就是二叶期，三个叶尖就是三叶期', FALSE, '-m uavl', 'leaf_detection_summary.csv', 0.95, '玉米；无人机；叶龄', 1, );
