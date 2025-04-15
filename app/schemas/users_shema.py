@@ -14,6 +14,7 @@ class UserBaseSchema(BaseSchema):
     class Meta:
         model = User
         load_instance = True
+        include_fk = True
 
     # id = fields.Integer(dump_only=True)  # 只用于响应输出，不用于输入
     username = fields.Str(

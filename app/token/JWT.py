@@ -11,7 +11,7 @@ from werkzeug.exceptions import Forbidden
 
 from app import User, Model, Dataset
 from app.config import JWTConfig  # 载入配置
-from app.core.exception import TokenError, ValidationError, logger, NotFoundError, PermissionDeniedError, APIError
+from app.core.exception import TokenError, ValidationError, logger, NotFoundError, PermissionDeniedError, ApiError
 from app.core.redis_connection_pool import redis_pool
 from app.exts import db
 
@@ -279,7 +279,7 @@ def resource_owner(
                 raise ValidationError("未指定资源模型类")
             resource_id = kwargs.get(id_param)
             if not resource_id:
-                raise APIError(f"URL缺少必要参数: {id_param}")
+                raise ApiError(f"URL缺少必要参数: {id_param}")
 
             # 获取资源实例 (不存在则立即报错)
             instance = model.query.get(resource_id)

@@ -6,7 +6,7 @@ from app.exts import db
 from app.schemas.dataset_shema import DatasetSearchSchema, DatasetCreateSchema, DatasetUpdateSchema
 from app.token.JWT import admin_required, resource_owner
 from app.utils.common.common_service import CommonService
-from app.utils.json_encoder import create_json_response
+from app.utils.common.json_encoder import create_json_response
 from app.dataset.dataset_service import DatasetService
 
 datasets_bp = Blueprint('datasets', __name__, url_prefix='/api/v1/datasets')

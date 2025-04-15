@@ -182,11 +182,11 @@ class PermissionDeniedError(CustomError):
         super().__init__(message, status_code=403)
 
 
-class APIError(CustomError):
+class ApiError(CustomError):
     """基础API异常"""
 
-    def __init__(self, message="无权操作"):
-        super().__init__(message, status_code=403)
+    def __init__(self, message="api异常"):
+        super().__init__(message, status_code=409)
 
 
 def init_error_handlers(app):

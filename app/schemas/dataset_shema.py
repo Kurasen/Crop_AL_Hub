@@ -42,7 +42,7 @@ class DatasetBaseSchema(BaseSchema):
         required=False
     )
 
-    user_id = fields.Int(load_default=lambda: g.current_user.id)  # 自动注入当前用户ID
+    user_id = fields.Int(load_only=True, load_default=lambda: g.current_user.id)  # 自动注入当前用户ID
 
     path = auto_field(
         required=False

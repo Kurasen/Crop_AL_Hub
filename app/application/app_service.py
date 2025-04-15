@@ -1,8 +1,8 @@
 from app.application.app import App
 from app.application.app_repo import AppRepository
-from app.core.exception import DatabaseError, NotFoundError, logger
+from app.core.exception import DatabaseError, NotFoundError, logger, ServiceException
 from app.exts import db
-from app.utils.json_encoder import ResponseBuilder
+from app.utils.common.json_encoder import ResponseBuilder
 
 
 class AppService:
@@ -12,7 +12,7 @@ class AppService:
         # 获取所有模型数据
         tasks = AppRepository.get_all_apps()
         if not tasks:
-            raise DatabaseError("No models found.")
+            raise DatabaseError("未查询到数据")
         return [AppService._convert_to_dict(task) for task in tasks]
 
     @staticmethod
@@ -26,18 +26,23 @@ class AppService:
         # 获取指定ID的模型
         app = AppRepository.get_app_by_id(app_id)
         if not app:
-            raise NotFoundError(f"应用不存在")
+            raise NotFoundError("应用未找到")
         return app
 
     @staticmethod
     def search_apps(search_params: dict):
         """查询模型，调用Repository层"""
         try:
-            total_count, apps = AppRepository.search_apps(search_params)
+            # 统一分页参数处理
+            page = max(1, int(search_params.get("page", 1)))
+            per_page = min(100, max(1, int(search_params.get("per_page", 5))))
 
-            # 获取分页参数（带默认值）
-            page = search_params.get("page", 1)
-            per_page = search_params.get("per_page", 5)
+            # 传递分页参数到Repository
+            total_count, apps = AppRepository.search_apps(
+                search_params,
+                page=page,
+                per_page=per_page
+            )
 
             # 构建返回数据
             items = [AppService._convert_to_dict(app) for app in apps]
@@ -48,8 +53,8 @@ class AppService:
                 per_page=per_page
             )
         except Exception as e:
-            logger.error(f"Error occurred while searching models: {str(e)}")
-            raise e
+            logger.error("搜索模型错误｜参数= %s｜异常= %s", search_params, str(e), exc_info=True)
+            raise ServiceException("查询服务暂时不可用")
 
     @staticmethod
     def create_app(instance: App):

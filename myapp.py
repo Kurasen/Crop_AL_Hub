@@ -14,7 +14,7 @@ from app.exts import db
 from flask_migrate import Migrate
 from flask_cors import CORS
 
-from app.utils.json_encoder import CustomJSONEncoder, create_json_response
+from app.utils.common.json_encoder import CustomJSONEncoder, create_json_response
 from flask.app import Flask as FlaskApp
 
 

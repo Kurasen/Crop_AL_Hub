@@ -1,17 +1,18 @@
 from flask import request, Blueprint, g
 
 from app.config import FileConfig
-from app.core.exception import FileUploadError, logger
+from app.core.exception import FileUploadError, logger, ValidationError
+from app.core.redis_connection_pool import redis_pool
 from app.exts import db
 from app.model.model_service import ModelService
-from app.token.JWT import resource_owner
+from app.token.JWT import resource_owner, auth_required
 from app.user.user_service import UserService
 from app.utils import create_json_response
 from app.utils.file_process import FileUploader
+from app.utils.temp_file_service import TempFileService
 
 files_bp = Blueprint('files', __name__, url_prefix='/api/v1/files')
 
-# 假设已有的上传器类
 uploader = FileUploader()
 
 
@@ -80,9 +81,76 @@ def upload_file(upload_type, data_id, file_type):
         }, 201)
 
     except FileUploadError as e:
-        logger.warning(f"文件验证失败: {str(e)}")
-        return create_json_response({'error': {"message": f'{str(e)}'}}, 400)
+        logger.warning("文件验证失败: %s", str(e))
+        return create_json_response({'error': {"message": {str(e)}}}, 400)
     except Exception as e:
-        logger.error(f"服务器异常: {str(e)}", exc_info=True)
+        logger.error("服务器异常: %s", str(e), exc_info=True)
         db.session.rollback()
-        return create_json_response({'error': {"message": f'{str(e)}'}}, 500)
+        return create_json_response({'error': {"message": {str(e)}}}, 500)
+
+
+temp_service = TempFileService()
+
+
+@files_bp.route('/uploads/<string:upload_type>/<int:data_id>/<string:file_type>', methods=['POST'])
+@resource_owner(
+    resource_type_param='upload_type',
+    id_param='data_id',
+    inject_instance=False
+)
+def upload(upload_type, data_id, file_type):
+    # 验证上传类型是否存在
+    config = FileConfig.UPLOAD_CONFIG.get(upload_type)
+    if not config:
+        return create_json_response({'error': {"message": "暂不支持其他选择"}}, 400)
+
+    # 检查 file_type 是否在配置允许范围内
+    if 'file_types' in config and file_type not in config['file_types']:
+        allowed = ", ".join(config['file_types'])
+        return create_json_response({'error': {"message": "不支持的类型"}}, 400)
+
+    # 执行核心验证逻辑
+    try:
+        # 保存到临时区
+        temp_url = temp_service.save_temp(
+            file=request.files['file'],
+            upload_type=upload_type,
+            data_id=data_id,
+            file_type=file_type,
+            user_id=g.current_user.id
+        )
+        logger.info(f"temp_url: {temp_url}")
+
+        return create_json_response({
+            "data": {
+                "temp_url": temp_url,
+                "absolute_url": f"{FileConfig.FILE_BASE_URL}/{temp_url}"
+            }
+        }, 201)
+
+    except FileUploadError as e:
+        logger.warning("文件验证失败: %s", str(e))
+        return create_json_response({'error': {"message": {str(e)}}}, 400)
+    except Exception as e:
+        logger.error("服务器异常: %s", str(e), exc_info=True)
+        db.session.rollback()
+        return create_json_response({'error': {"message": {str(e)}}}, 500)
+
+
+@files_bp.route('/test', methods=['POST'])
+@auth_required
+def update_avatar():
+    data = request.get_json()
+    try:
+        # 调用通用提交方法
+        temp_service.commit_from_temp(
+            temp_url=data['url'],
+            user_id=g.current_user.id
+        )
+        return create_json_response({"message": "提交成功"})
+    except ValidationError as e:
+        logger.info(str(e))
+        return create_json_response({"error": {"message": str(e)}}, 400)
+    except Exception as e:
+        logger.error("服务器异常: %s", str(e), exc_info=True)
+        return create_json_response({"error": {"message": str(e)}}, 500)

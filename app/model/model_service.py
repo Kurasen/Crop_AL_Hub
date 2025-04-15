@@ -1,14 +1,11 @@
-import re
-from typing import Set
-
 from app import Model
 from app.utils.file_process import save_uploaded_file
 from app.core.exception import DatabaseError, ValidationError, FileUploadError, ImageProcessingError, \
-    NotFoundError, logger
+    NotFoundError, logger, ServiceException
 from app.exts import db
 from app.model.model_repo import ModelRepository
 from app.dataset.dataset_service import DatasetService
-from app.utils.json_encoder import ResponseBuilder
+from app.utils.common.json_encoder import ResponseBuilder
 
 
 class ModelService:
@@ -17,7 +14,7 @@ class ModelService:
         # 获取所有模型数据
         models = ModelRepository.get_all_models()
         if not models:
-            raise DatabaseError("No models found.")
+            raise DatabaseError("未查询到数据")
         return [ModelService._convert_to_dict(model) for model in models]
 
     @staticmethod
@@ -38,11 +35,15 @@ class ModelService:
     def search_models(search_params: dict):
         """查询模型，调用Repository层"""
         try:
-            total_count, models = ModelRepository.search_models(search_params)
+            # 统一分页参数处理
+            page = max(1, int(search_params.get("page", 1)))
+            per_page = min(100, max(1, int(search_params.get("per_page", 10))))  # 统一限制每页最大100条
 
-            # 获取分页参数（带默认值）
-            page = search_params.get("page", 1)
-            per_page = search_params.get("per_page", 5)
+            total_count, models = ModelRepository.search_models(
+                search_params,
+                page=page,
+                per_page=per_page
+            )
 
             # 构建返回数据
             items = [ModelService._convert_to_dict(model) for model in models]
@@ -53,8 +54,8 @@ class ModelService:
                 per_page=per_page
             )
         except Exception as e:
-            logger.error(f"Error occurred while searching models: {str(e)}")
-            raise e
+            logger.error("搜索模型错误｜参数= %s｜异常= %s", search_params, str(e), exc_info=True)
+            raise ServiceException("查询服务暂时不可用")
 
     @staticmethod
     def create_model(model_instance):

@@ -1,14 +1,16 @@
 import uuid
 from datetime import datetime
 from flask import Blueprint, g
+from sqlalchemy.exc import IntegrityError
 
 from app import Model
-from app.core.exception import FileUploadError
-from app.docker.core.storage import FileStorage, cleanup_directory
+from app.core.exception import FileUploadError, ApiError
+from app.utils.storage import FileStorage
+from app.utils.cleanup import cleanup_directory
 from app.exts import db
 from app.model.model_repo import ModelRepository
 from app.schemas.model_schema import ModelRunSchema, ModelSearchSchema, ModelCreateSchema, \
-    ModelUpdateSchema
+    ModelUpdateSchema, ModelResponseSchema
 
 from flask import request
 from app.config import Config
@@ -63,17 +65,33 @@ def get_all_types():
     })
 
 
+# @models_bp.route('', methods=['POST'])
+# @admin_required
+# def create_model():
+#     """
+#     创建新模型
+#     """
+#     request_data = request.get_json()
+#     request_data['user_id'] = g.current_user.id
+#     model_instance = ModelCreateSchema().load(request_data, session=db.session)
+#     result, status = ModelService.create_model(model_instance)
+#     return create_json_response(result, status)
+
 @models_bp.route('', methods=['POST'])
 @admin_required
 def create_model():
-    """
-    创建新模型
-    """
     request_data = request.get_json()
     request_data['user_id'] = g.current_user.id
-    model_instance = ModelCreateSchema().load(request_data, session=db.session)
-    result, status = ModelService.create_model(model_instance)
-    return create_json_response(result, status)
+    # 严格过滤输入字段
+    model = ModelCreateSchema().load(request_data, session=db.session)
+    try:
+        db.session.add(model)
+        db.session.commit()
+        serialized_data = ModelResponseSchema().dump(model)
+        return create_json_response({"data": serialized_data}, 201)
+    except IntegrityError:
+        db.session.rollback()
+        raise ApiError("该数据已存在")
 
 
 @models_bp.route('/<int:model_id>', methods=['GET'])
@@ -152,7 +170,7 @@ def process_image(model_id):
         for file in uploaded_files[1:]:
             FileStorage.save_upload(
                 file_stream=file,
-                save_dir=target_dir,  # 使用已创建的目录
+                save_dir=str(target_dir),  # 使用已创建的目录
                 file_name=file.filename
             )
     except Exception as e:

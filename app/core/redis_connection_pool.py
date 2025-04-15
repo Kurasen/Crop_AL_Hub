@@ -85,6 +85,16 @@ class RedisConnectionPool:
                 socket_timeout=5,
                 health_check_interval=15,
                 decode_responses=True
+            ),
+            "files": redis.ConnectionPool(
+                host=self.redis_host,
+                port=self.redis_port,
+                password=self.redis_password,
+                db=3,
+                max_connections=50,
+                socket_timeout=5,
+                health_check_interval=15,
+                decode_responses=True
             )
 
         }

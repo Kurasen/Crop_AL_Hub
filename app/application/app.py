@@ -7,13 +7,16 @@ from app.utils.image_url_utils import ImageURLHandlerUtils
 class App(db.Model):
     __tablename__ = 'app_table'
     __table_args__ = (
+        db.Index('idx_created_at', 'created_at'),
+        db.Index('idx_updated_at', 'updated_at'),
+        db.Index('idx_likes', 'likes'),
+        db.Index('idx_watches', 'watches'),
         # 时间约束
         db.CheckConstraint(
             "created_at <= updated_at OR updated_at IS NULL",
             name='time_check'
         ),
     )
-
     # 定义表的字段
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(255), nullable=False)

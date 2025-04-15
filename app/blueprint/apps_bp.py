@@ -32,7 +32,6 @@ def search():
     ?name=
     """
     search_params = AppSearchSchema().load(request.args.to_dict())
-    print(f"search_params: {search_params}")
     result = AppService.search_apps(search_params)
     return create_json_response(result)
 
