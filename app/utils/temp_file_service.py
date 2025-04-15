@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict
 
 from app.config import FileConfig
-from app.core.exception import ValidationError, logger
+from app.core.exception import ValidationError, logger, FileUploadError, RedisConnectionError, FileSaveError
 from app.core.redis_connection_pool import redis_pool
 from app.docker.core.celery_app import CeleryManager
 from app.exts import db
@@ -77,59 +77,98 @@ class TempFileService:
 
     def save_temp(self, file, upload_type: str, data_id: int, file_type: str, user_id: int) -> str:
         """保存到临时目录并生成URL"""
-        # 生成文件哈希（使用文件内容）
-        logger.info(f"upload_type: {upload_type}, file_type: {file_type}, data_id: {data_id}, file: {file}")
+        try:
+            # 生成文件哈希（使用文件内容）
+            logger.info(f"upload_type: {upload_type}, file_type: {file_type}, data_id: {data_id}, file: {file}")
 
-        file_content = file.read()
-        file_hash = hashlib.md5(file_content).hexdigest()
-        file.seek(0)
+            # ========== 文件内容处理 ==========
+            try:
+                file_content = file.read()
+                file_hash = hashlib.md5(file_content).hexdigest()
+                file.seek(0)  # 重置文件指针
+            except IOError as e:
+                logger.error("文件读取失败: %s", e)
+                raise FileUploadError("文件损坏或无法读取")
 
-        logger.info(f"✅ 计算的文件哈希: {file_hash}")
-        logger.info(f"✅ 保存的文件名: {file_hash}{Path(file.filename).suffix}")
+            logger.info(f"✅ 计算的文件哈希: {file_hash}")
+            logger.info(f"✅ 保存的文件名: {file_hash}{Path(file.filename).suffix}")
 
-        # 构建临时目录路径（复用正式目录模板）
-        temp_dir = Path(FileConfig.TEMP_DIR) / FileConfig.UPLOAD_CONFIG[upload_type]['subdirectory'].format(
-            file_type=file_type,
-            data_id=data_id,
-            user_id=user_id
-        )
-        logger.info(f"temp_dir: {temp_dir}")
+            # ========== Redis重复检查 ==========
+            redis_key = f"temp:{user_id}:{upload_type}:{data_id}:{file_type}:{file_hash}"
+            try:
+                with self.redis.get_redis_connection('files') as conn:
+                    if conn.exists(redis_key):
+                        current_status = conn.hget(redis_key, "status")
+                        if current_status:
+                            if current_status in ['pending', 'processing']:
+                                raise FileUploadError("文件已上传，请勿重复提交")
+            except RedisConnectionError as e:
+                logger.error("Redis连接异常: %s", e)
+                raise FileUploadError("系统繁忙，请稍后再试")
 
-        # 保存到临时目录（复用你的FileStorage）
-        saved_path = self.storage.save_upload(
-            file_stream=file,
-            save_dir=temp_dir,
-            file_name=f"{file_hash}{Path(file.filename).suffix}"
-        )
-        logger.info(f"saved_path: {saved_path}")
+            # ========== 临时目录构建 ==========
+            try:
+                temp_dir = Path(FileConfig.TEMP_DIR) / FileConfig.UPLOAD_CONFIG[upload_type]['subdirectory'].format(
+                    file_type=file_type,
+                    data_id=data_id,
+                    user_id=user_id
+                )
+            except KeyError:
+                logger.error("无效的上传类型: %s", upload_type)
+                raise FileUploadError("不支持的上传类型")
 
-        saved_file_path = Path(saved_path) / f"{file_hash}{Path(file.filename).suffix}"
-        logger.info(f"✅ 完整文件路径: {saved_file_path}")
+            # 保存到临时目录
+            # ========== 文件存储 ==========
+            try:
+                saved_path = self.storage.save_upload(
+                    file_stream=file,
+                    save_dir=temp_dir,
+                    file_name=f"{file_hash}{Path(file.filename).suffix}"
+                )
+                saved_file_path = Path(saved_path) / f"{file_hash}{Path(file.filename).suffix}"
+            except FileSaveError as e:
+                logger.error("文件存储失败: %s", e)
+                raise FileUploadError("文件保存失败")
+            logger.info(f"临时保存目录: {saved_path}")
+            logger.info(f"✅ 完整文件路径: {saved_file_path}")
 
-        # 记录Redis
-        with self.redis.get_redis_connection('files') as conn:
-            key = f"temp:{user_id}:{upload_type}:{data_id}:{file_type}:{file_hash}"
-            conn.hmset(key, {
-                "real_path": str(saved_file_path),
-                "user_id": str(user_id),
-                "status": "pending",
-                "expire_at": str(time.time() + 45)  # 7天
-            })
-            logger.info(f"当前时间:{time.time()}, 过期时间：:{time.time() + 45}")
-            #conn.expire(key, 120)  # 原为7天（604800秒）
+            # ========== Redis记录 ==========
+            try:
+                with self.redis.get_redis_connection('files') as conn:
+                    conn.hmset(redis_key, {
+                        "real_path": str(saved_file_path),
+                        "user_id": user_id,
+                        "status": "pending",
+                        "expire_at": time.time() + 45
+                    })
+                    # conn.expire(key, 120)  # 原为7天（604800秒）
+            except Exception as e:
+                logger.error("Redis记录失败: %s", e)
+                # 回滚已保存文件
+                try:
+                    saved_file_path.unlink(missing_ok=True)
+                    remove_empty_parents_safely(saved_file_path, Path(FileConfig.TEMP_DIR))
+                except Exception as cleanup_err:
+                    logger.error("文件回滚失败: %s", cleanup_err)
+                raise FileUploadError("系统临时错误")
 
-            logger.info(f"✅ 保存到Redis的键: {key}")
+            logger.info(f"✅ 保存到Redis的键: {redis_key}")
             logger.info(f"✅ 文件哈希: {file_hash}")
             logger.info(f"✅ 保存路径: {saved_path}")
 
-        # 获取相对于 TEMP_DIR 的路径
-        relative_path = Path(saved_path).relative_to(FileConfig.TEMP_DIR)
+            # 获取相对于 TEMP_DIR 的路径
+            relative_path = Path(saved_path).relative_to(FileConfig.TEMP_DIR)
 
-        # 生成URL路径（使用实际存储路径结构）
-        url_path = f"{FileConfig.TEMP_BASE_URL}/{relative_path}/{file_hash}{Path(file.filename).suffix}"
-        logger.info(f"✅ 生成的URL路径: {url_path}")
+            # 生成URL路径（使用实际存储路径结构）
+            url_path = f"{FileConfig.TEMP_BASE_URL}/{relative_path}/{file_hash}{Path(file.filename).suffix}"
+            logger.info(f"✅ 生成的URL路径: {url_path}")
 
-        return url_path
+            return url_path
+        except FileUploadError:
+            raise
+        except Exception as e:
+            logger.error("未知异常", exc_info=True)
+            raise FileUploadError("上传服务异常")  # 兜底异常处理
 
     def commit_from_temp(self, temp_url: str, user_id: int) -> bool:
         """从临时URL提交文件（其他接口调用）"""
@@ -303,89 +342,11 @@ class TempFileService:
                 conn.hset(redis_key, "status", "error")
             raise self.retry(exc=e, countdown=60, max_retries=2)  # 有限重试
 
-    # @staticmethod
-    # @CeleryManager.get_celery().task(bind=True)
-    # def _move_to_final(self, redis_key: str, src_path: str, upload_type: str, data_id: int, file_type: str,
-    #                    user_id: int):
-    #     """异步移动文件到正式区"""
-    #     try:
-    #         # 导入Flask应用工厂并创建上下文
-    #         from myapp import create_app
-    #         app = create_app()
-    #
-    #         # 构建正式目录
-    #         final_subdir = FileConfig.UPLOAD_CONFIG[upload_type]['subdirectory'].format(
-    #             file_type=file_type,
-    #             data_id=data_id,
-    #             user_id=user_id
-    #         )
-    #         final_dir = Path(FileConfig.LOCAL_FILE_BASE) / "user_data" / final_subdir
-    #         final_dir.mkdir(parents=True, exist_ok=True)  # 确保目录存在
-    #
-    #         # 生成文件名（从源路径提取）
-    #         file_name = Path(src_path).name  # 如 61a26a72c6283f97dde68f53ce2c2c41.jpg
-    #         logger.info(f"final_dir: {final_dir}")
-    #         final_file_path = final_dir / file_name
-    #
-    #         # 移动文件
-    #         with open(src_path, 'rb') as f:
-    #             saved_path = FileStorage.save_upload(
-    #                 file_stream=f,
-    #                 save_dir=final_dir,
-    #                 file_name=Path(src_path).name
-    #             )
-    #
-    #         src_file = Path(src_path)
-    #         if src_file.exists():
-    #             # 删除源文件
-    #             try:
-    #                 src_file.unlink()
-    #                 logger.info(f"🗑️ 删除源文件: {src_file}")
-    #
-    #                 # 安全清理目录
-    #                 remove_empty_parents_safely(
-    #                     file_path=src_file,
-    #                     stop_at=Path(FileConfig.TEMP_DIR).resolve(),
-    #                     max_retries=3
-    #                 )
-    #             except Exception as e:
-    #                 logger.error(f"⛔ 文件删除失败: {src_file} - {str(e)}")
-    #
-    #         relative_path = str(final_file_path.relative_to(FileConfig.LOCAL_FILE_BASE))
-    #
-    #         database_mapping = {
-    #             "model": {
-    #                 "icon": (ModelService.get_model_by_id, "icon")  # (模型查询方法, 字段名)
-    #             },
-    #             "user": {
-    #                 "avatars": (UserService.get_user_by_id, "avatar")
-    #             }
-    #         }
-    #
-    #         # 在应用上下文中更新数据库
-    #         with app.app_context():
-    #             # 更新数据库（完全复用你原有的逻辑）
-    #             if upload_type in database_mapping and file_type in database_mapping[upload_type]:
-    #                 get_func, field = database_mapping[upload_type][file_type]
-    #                 instance = get_func(data_id)
-    #                 setattr(instance, field, relative_path)
-    #                 db.session.commit()
-    #
-    #         # 清理记录
-    #         with redis_pool.get_redis_connection('files') as conn:
-    #             conn.delete(redis_key)
-    #         Path(src_path).unlink()
-    #     except Exception as e:
-    #         # 错误处理
-    #         with redis_pool.get_redis_connection('files') as conn:
-    #             conn.hset(redis_key, "status", "error")
-    #         raise self.retry(exc=e, countdown=60, max_retries=3)
-
 
 temp_service = TempFileService()
 
 
-@CeleryManager.get_celery().task(bind=True)
+@CeleryManager.get_celery().task(bind=True,  expires=3600)
 def cleanup_temp_files(self):
     logger.info("🚀 开始执行临时文件清理任务")
     try:
@@ -433,6 +394,7 @@ def cleanup_temp_files(self):
                             conn.delete(key)
                             deleted_count += 1
                             logger.info(f"✅ 清理完成: {key}")
+
                     except Exception as e:
                         logger.error(f"清理失败: {key} - {str(e)}", exc_info=True)
 

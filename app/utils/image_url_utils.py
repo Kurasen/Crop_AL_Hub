@@ -62,7 +62,7 @@ class ImageURLHandlerUtils:
 
         # 验证文件存在性
         if not os.path.isfile(local_path):
-            raise NotFoundError("图片无法找到或不存在")
+            raise NotFoundError("图片已失效")
 
         return relative_path  # 返回标准化相对路径(无前缀)
 

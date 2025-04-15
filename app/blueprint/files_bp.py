@@ -130,11 +130,11 @@ def upload(upload_type, data_id, file_type):
 
     except FileUploadError as e:
         logger.warning("文件验证失败: %s", str(e))
-        return create_json_response({'error': {"message": {str(e)}}}, 400)
+        return create_json_response({'error': {"message": str(e)}}, 400)
     except Exception as e:
         logger.error("服务器异常: %s", str(e), exc_info=True)
         db.session.rollback()
-        return create_json_response({'error': {"message": {str(e)}}}, 500)
+        return create_json_response({'error': {"message": str(e)}}, 500)
 
 
 @files_bp.route('/test', methods=['POST'])
