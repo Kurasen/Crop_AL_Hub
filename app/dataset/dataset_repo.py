@@ -1,17 +1,26 @@
+
 from app.utils.common.common_service import CommonService
-from app.core.exception import InvalidSizeError, ValidationError
+from app.core.exception import InvalidSizeError, ValidationError, logger
 from app.exts import db
 from app.dataset.dataset import Dataset
+from sqlalchemy.orm import joinedload
+
+from app.utils.common.pagination import PaginationHelper
 
 
 class DatasetRepository:
     # 定义排序字段的枚举类型
-    SORT_BY_CHOICES = ['likes', 'created_at', 'updated_at']
+
+    SORT_FIELD_MAPPING = {
+        'likes': Dataset.likes,
+        'created_at': Dataset.created_at,
+        'updated_at': Dataset.updated_at,
+     }
 
     @staticmethod
-    def get_all():
+    def get_all_datasets():
         """获取所有数据集"""
-        return Dataset.query.all()
+        return Dataset.query.all().options(joinedload(Dataset.user))
 
     @staticmethod
     def get_dataset_by_id(dataset_id: int):
@@ -38,50 +47,57 @@ class DatasetRepository:
         return Dataset.query.filter(Dataset.path.ilike(f"%{path}%")).all()
 
     @staticmethod
-    def search(params: dict):
+    def search(params: dict, page: int = 1, per_page: int = 10):
         """支持多条件查询"""
-        query = Dataset.query
+        try:
+            query = Dataset.query.options(
+                joinedload(Dataset.user),
+            )
 
-        # 模糊查询数据集名称
-        if params.get('name'):
-            query = query.filter(Dataset.name.ilike(f"%{params.get('name')}%"))
+            # 模糊查询数据集名称
+            if params.get('name'):
+                query = query.filter(Dataset.name.ilike(f"%{params.get('name')}%"))
 
-        # 添加描述字段的查询条件
-        if params.get('description'):
-            query = query.filter(Dataset.description.ilike(f"%{params.get('description')}%"))
+            # 添加描述字段的查询条件
+            if params.get('description'):
+                query = query.filter(Dataset.description.ilike(f"%{params.get('description')}%"))
 
-        # 精确查询多个标签（支持多标签模糊查询）
-        if params.get('type'):
-            query = CommonService.process_and_filter_tags(query, Dataset.type, params.get('type'))
+            # 精确查询多个标签（支持多标签模糊查询）
+            if params.get('type'):
+                query = CommonService.process_and_filter_tags(query, Dataset.type, params.get('type'))
 
-            # 根据 sort_by 和 sort_order 排序
-        if params.get('sort_by') in DatasetRepository.SORT_BY_CHOICES:
-            if params.get('sort_order') == 'desc':
-                query = query.order_by(getattr(Dataset, params.get('sort_by')).desc(), Dataset.id.asc())
-            else:
-                query = query.order_by(getattr(Dataset, params.get('sort_by')).asc(), Dataset.id.asc())
-        elif params.get('sort_by') == 'size':
-            # 获取所有数据集
-            datasets = query.all()
+            #     # 根据 sort_by 和 sort_order 排序
+            # if params.get('sort_by') in DatasetRepository.SORT_BY_CHOICES:
+            #     if params.get('sort_order') == 'desc':
+            #         query = query.order_by(getattr(Dataset, params.get('sort_by')).desc(), Dataset.id.asc())
+            #     else:
+            #         query = query.order_by(getattr(Dataset, params.get('sort_by')).asc(), Dataset.id.asc())
+            # elif params.get('sort_by') == 'size':
+            #     # 获取所有数据集
+            #     datasets = query.all()
+            #
+            #     # 进行大小转换和排序
+            #     datasets.sort(key=lambda dataset: DatasetRepository.convert_size_to_bytes(dataset.size),
+            #                   reverse=(params.get('sort_order') == 'desc'))
+            #
+            #     # 返回排序后的数据集
+            #     return len(datasets), datasets
+            # elif not params.get("page", 1) and not params.get('sort_order', 5):
+            #     pass
 
-            # 进行大小转换和排序
-            datasets.sort(key=lambda dataset: DatasetRepository.convert_size_to_bytes(dataset.size),
-                          reverse=(params.get('sort_order') == 'desc'))
-
-            # 返回排序后的数据集
-            return len(datasets), datasets
-        elif not params.get("page", 1) and not params.get('sort_order', 5):
-            pass
-
-        # 计算总数
-        total_count = query.count()
-
-        # 分页查询
-        datasets = query.offset((params.get('page', 1) - 1) * params.get('per_page', 5)).limit(
-            params.get('per_page', 5)).all()
-
-        print(f"SQL Query: {str(query)}")
-        return total_count, datasets
+            print(f"SQL Query: {str(query)}")
+            # 调用通用分页方法
+            return PaginationHelper.paginate(
+                query=query,
+                page=page,
+                per_page=per_page,
+                sort_mapping=DatasetRepository.SORT_FIELD_MAPPING,
+                sort_by=params.get('sort_by'),
+                sort_order=params.get('sort_order', 'asc')
+            )
+        except Exception as e:
+            logger.error("模型查询失败｜%s", str(e), exc_info=True)
+            raise
 
     @staticmethod
     def convert_size_to_bytes(size_str):

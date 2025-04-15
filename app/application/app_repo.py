@@ -2,16 +2,25 @@
 from typing import Optional
 
 from app.application.app import App
-from app.core.exception import ValidationError
+from app.core.exception import ValidationError, logger
 from app.exts import db
 from app.utils.apply_sort import apply_sorting
+from sqlalchemy.orm import joinedload
+
+from app.utils.common.pagination import PaginationHelper
 
 
 class AppRepository:
+    SORT_FIELD_MAPPING = {
+        'created_at': App.created_at,
+        'updated_at': App.updated_at,
+        'likes': App.likes,
+        'watches': App.watches
+    }
     @staticmethod
     def get_all_apps():
         """获取所有应用"""
-        return App.query.all()
+        return App.query.all().options(joinedload(App.user))
 
     @staticmethod
     def get_app_by_id(app_id: int) -> Optional[App]:
@@ -19,40 +28,31 @@ class AppRepository:
         return App.query.get(app_id)
 
     @staticmethod
-    def search_apps(params: dict):
-        query = App.query
+    def search_apps(params: dict, page: int = 1, per_page: int = 10):
+        try:
+            # 基础查询+急加载
+            query = App.query.options(
+                joinedload(App.user),
+            )
 
-        if params.get('name'):
-            query = query.filter(App.name.ilike(f"%{params.get('name')}%"))
+            if params.get('name'):
+                query = query.filter(App.name.ilike(f"%{params.get('name')}%"))
 
-        if params.get('description'):
-            query = query.filter(App.description.like(f"%{params.get('description')}%"))
+            if params.get('description'):
+                query = query.filter(App.description.like(f"%{params.get('description')}%"))
 
-        SORT_BY_CHOICES = ['created_at', 'updated_at', 'likes', 'watches']
-
-        # 排序逻辑
-        if params.get('sort_by') in SORT_BY_CHOICES:
-            if params.get('sort_order') == 'desc':
-                query = query.order_by(getattr(App, params.get('sort_by')).desc(), App.id.asc())  # 降序
-            else:
-                query = query.order_by(getattr(App, params.get('sort_by')).asc(), App.id.asc())  # 升序
-        elif not params.get('sort_by') and not params.get('sort_order'):
-            # 如果没有提供排序字段和排序顺序，直接跳过排序，返回原始查询
-            pass
-        else:
-            raise ValidationError("Invalid sort field. Only 'accuracy', 'likes', 'created_at' and 'updated_at' are "
-                                  "allowed.")
-
-        # 总数
-        total_count = query.count()
-
-        # 分页查询
-        models = query.offset((params.get('page', 1) - 1) * params.get('per_page', 5)).limit(
-            params.get('per_page', 5)).all()
-
-        print(f"SQL Query: {str(query)}")
-
-        return total_count, models
+            # 调用通用分页方法
+            return PaginationHelper.paginate(
+                query=query,
+                page=page,
+                per_page=per_page,
+                sort_mapping=AppRepository.SORT_FIELD_MAPPING,
+                sort_by=params.get('sort_by'),
+                sort_order=params.get('sort_order', 'asc')
+            )
+        except Exception as e:
+            logger.error("模型查询失败｜%s", str(e), exc_info=True)
+            raise
 
     @staticmethod
     def save_app(app_data):

@@ -1,20 +1,17 @@
-import re
-from typing import Set
-
 from app import Dataset
 from app.core.exception import DatabaseError, NotFoundError, logger
 from app.dataset.dataset_repo import DatasetRepository
 from app.exts import db
-from app.utils.json_encoder import ResponseBuilder
+from app.utils.common.json_encoder import ResponseBuilder
 
 
 class DatasetService:
     @staticmethod
     def get_all_datasets():
         """获取所有数据集"""
-        datasets = DatasetRepository.get_all()
+        datasets = DatasetRepository.get_all_datasets()
         if not datasets:
-            raise DatabaseError("No datasets found.")
+            raise DatabaseError("未查询到数据")
         return [DatasetService._convert_to_dict(dataset) for dataset in datasets]
 
     @staticmethod
@@ -22,14 +19,22 @@ class DatasetService:
         # 获取指定ID的模型
         dataset = DatasetRepository.get_dataset_by_id(dataset_id)
         if not dataset:
-            raise NotFoundError(f"Dataset with ID {dataset_id} not found")
+            raise NotFoundError("数据集未找到")
         return dataset
 
     @staticmethod
     def search_datasets(search_params: dict):
         """根据过滤条件获取数据集"""
 
-        total_count, datasets = DatasetRepository.search(search_params)
+        # 统一分页参数处理
+        page = max(1, int(search_params.get("page", 1)))
+        per_page = min(100, max(1, int(search_params.get("per_page", 5))))
+
+        total_count, datasets = DatasetRepository.search(
+            search_params,
+            page=page,
+            per_page=per_page
+        )
 
         # 转换大小为字节（None 代表不限制）
         min_size_value = DatasetRepository.convert_size_to_bytes(search_params.get('size_min')) if search_params.get(
@@ -43,10 +48,6 @@ class DatasetService:
                 if DatasetService._is_size_in_range(dataset.size, min_size_value, max_size_value)
             ]
 
-        # 获取分页参数（带默认值）
-        page = search_params.get("page", 1)
-        per_page = search_params.get("per_page", 5)
-
         # 构建返回数据
         items = [DatasetService._convert_to_dict(dataset) for dataset in datasets]
         response_data = ResponseBuilder.paginated_response(
@@ -56,7 +57,7 @@ class DatasetService:
             per_page=per_page
         )
 
-        return response_data, 200  # 保持原有的状态码返回
+        return response_data, 200
 
     @staticmethod
     def create_dataset(dataset_instance):

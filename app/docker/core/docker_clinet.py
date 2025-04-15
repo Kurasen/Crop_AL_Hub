@@ -12,7 +12,7 @@ from app.core.exception import logger, ServiceException
 
 class DockerManager:
     def __init__(self):
-        #根据操作系统类型设置不同的Docker连接地址
+        # 根据操作系统类型设置不同的Docker连接地址
         if sys.platform == 'linux':
             # Linux系统使用服务器地址
             self.client = docker.DockerClient(base_url='tcp://127.0.0.1:2375')
@@ -27,9 +27,9 @@ class DockerManager:
         try:
             docker_client.client.images.get(image_name)
         except docker.errors.ImageNotFound:
-            raise ServiceException(f'镜像 {image_name} 未找到，请先拉取镜像')
+            raise ServiceException('镜像 %s 未找到，请先拉取镜像', image_name)
         except docker.errors.APIError as e:
-            logger.error(f"Docker服务异常: {str(e)}")
+            logger.error("Docker服务异常: %s", str(e))
             raise ServiceException('Docker服务不可用')
 
     def run_algorithm_container(self, image_name, host_input_dir, host_output_dir, command):

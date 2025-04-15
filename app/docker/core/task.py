@@ -1,5 +1,4 @@
 import os
-import shutil
 from pathlib import Path
 
 from app.config import Config
@@ -8,7 +7,7 @@ from app.core.exception import logger, ImageProcessingError
 from app.docker.core.celery_app import CeleryManager
 
 from app.docker.core.docker_clinet import docker_client
-from app.docker.core.storage import FileStorage
+from app.utils.storage import FileStorage
 from app.utils.file_process import classify_files
 
 # 文件存储路径配置

@@ -1,17 +1,27 @@
+from sqlalchemy.orm import joinedload
+
 from app.utils.common.common_service import CommonService
-from app.core.exception import ValidationError
+from app.core.exception import ValidationError, logger, ServiceException
 from app.exts import db
 from app.model.model import Model
+from sqlalchemy.orm import joinedload
 
-# 定义排序字段的枚举类型（例如：stars, size, etc.）
-SORT_BY_CHOICES = ['accuracy', 'likes', 'created_at', 'updated_at']
+from app.utils.common.pagination import PaginationHelper
 
 
 class ModelRepository:
+    # 定义可排序字段映射
+    SORT_FIELD_MAPPING = {
+        'accuracy': Model.accuracy,
+        'likes': Model.likes,
+        'created_at': Model.created_at,
+        'updated_at': Model.updated_at
+    }
+
     @staticmethod
     def get_all_models():
         """获取所有模型"""
-        return Model.query.all()
+        return Model.query.all().options(joinedload(Model.user))
 
     @staticmethod
     def get_model_by_id(model_id: int):
@@ -33,46 +43,40 @@ class ModelRepository:
         ]
 
     @staticmethod
-    def search_models(params: dict):
-        query = Model.query
-        if params.get('name'):
-            query = query.filter(Model.name.ilike(f"%{params.get('name')}%"))
+    def search_models(params: dict, page: int = 1, per_page: int = 10):
+        try:
+            # 基础查询+急加载
+            query = Model.query.options(
+                joinedload(Model.user),
+            )
 
-        if params.get('input'):
-            query = query.filter(Model.input.like(f"%{params.get('input')}"))
+            if params.get('name'):
+                query = query.filter(Model.name.ilike(f"%{params.get('name')}%"))
 
-        if params.get('cuda'):
-            query = query.filter(Model.cuda == params.get('cuda'))
+            if params.get('input'):
+                query = query.filter(Model.input.like(f"%{params.get('input')}"))
 
-        if params.get('description'):
-            query = query.filter(Model.description.ilike(f"%{params.get('description')}%"))
+            if params.get('cuda'):
+                query = query.filter(Model.cuda == params.get('cuda'))
 
-        if params.get('type'):
-            query = CommonService.process_and_filter_tags(query, Model.type, params.get('type'))
+            if params.get('description'):
+                query = query.filter(Model.description.ilike(f"%{params.get('description')}%"))
 
-        # 排序逻辑
-        if params.get('sort_by') in SORT_BY_CHOICES:
-            if params.get('sort_order') == 'desc':
-                query = query.order_by(getattr(Model, params.get('sort_by')).desc(), Model.id.asc())  # 降序
-            else:
-                query = query.order_by(getattr(Model, params.get('sort_by')).asc(), Model.id.asc())  # 升序
-        elif not params.get('sort_by') and not params.get('sort_order'):
-            # 如果没有提供排序字段和排序顺序，直接跳过排序，返回原始查询
-            pass
-        else:
-            raise ValidationError("Invalid sort field. Only 'accuracy', 'likes', 'created_at' and 'updated_at' are "
-                                  "allowed.")
+            if params.get('type'):
+                query = CommonService.process_and_filter_tags(query, Model.type, params.get('type'))
 
-        # 总数
-        total_count = query.count()
-
-        # 分页查询
-        models = query.offset((params.get('page', 1) - 1) * params.get('per_page', 5)).limit(
-            params.get('per_page', 5)).all()
-
-        print(f"SQL Query: {str(query)}")
-
-        return total_count, models
+            # 调用通用分页方法
+            return PaginationHelper.paginate(
+                query=query,
+                page=page,
+                per_page=per_page,
+                sort_mapping=ModelRepository.SORT_FIELD_MAPPING,
+                sort_by=params.get('sort_by'),
+                sort_order=params.get('sort_order', 'asc')
+            )
+        except Exception as e:
+            logger.error("模型查询失败｜%s", str(e), exc_info=True)
+            raise
 
     @staticmethod
     def save_model(model_instance):

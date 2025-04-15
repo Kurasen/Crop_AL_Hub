@@ -58,7 +58,6 @@ class Config:
     # 数据库配置
     @staticmethod
     def get_sqlalchemy_uri():
-
         db_username = os.getenv('DB_USERNAME', 'root')
         db_password = os.getenv('DB_PASSWORD', '123123')
         db_host = os.getenv('DB_HOST', '10.0.4.71')
@@ -77,22 +76,25 @@ class FileConfig:
     FILE_BASE_URL = "http://10.0.4.71:8080/file"
     LOCAL_FILE_BASE = "/home/zhaohonglong/workspace/Crop_Data"
 
+    TEMP_DIR = "/home/zhaohonglong/workspace/Crop_Data/storage/temp"  # 临时存储目录
+    TEMP_BASE_URL = "storage/temp"  # 临时文件访问基础路径
+
     # 上传文件配置
     UPLOAD_CONFIG = {
         "user": {
-            "subdirectory": "user/{file_type}",
+            "subdirectory": "{user_id}/user/{data_id}/{file_type}",
             "allowed_extensions": ["jpg", "png", "jpeg"],
             "file_types": ["avatars"],
             "max_size": 10 * 1024 * 1024  # 10MB
         },
         "model": {
-            "subdirectory": "models/{file_type}",
+            "subdirectory": "{user_id}/model/{data_id}/{file_type}",
             "allowed_extensions": ["jpg", "png", "jpeg"],
             "file_types": ["icon", "readme"],  # 固定允许的file_type列表
             "max_size": 100 * 1024 * 1024,  # 100MB
         },
         "dataset": {
-            "subdirectory": "datasets/{file_type}",
+            "subdirectory": "{user_id}/dataset/{data_id}/{file_type}",
             "allowed_extensions": ["jpg", "png", "jpeg"],
             "file_types": ["readme"],
             "max_size": 100 * 1024 * 1024  # 500MB

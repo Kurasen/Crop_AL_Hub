@@ -1,13 +1,10 @@
-from pathlib import Path
 from app.config import Config
 import os
-import shutil
+
 from app.core.exception import logger, ImageProcessingError, NotFoundError, ValidationError, FileSaveError, \
     FileValidationError
 from pathlib import Path
 from PIL import Image, UnidentifiedImageError
-
-from app.docker.core.celery_app import CeleryManager
 
 
 class FileStorage:
@@ -34,9 +31,9 @@ class FileStorage:
                 with Image.open(file_path) as img:
                     img.verify()  # 验证文件是否完整
             except (UnidentifiedImageError, IOError) as e:
-                raise ImageProcessingError(f"文件已经损坏") from e
+                raise ImageProcessingError("文件已经损坏") from e
             except Exception as e:
-                raise ImageProcessingError(f"文件检测失败") from e
+                raise ImageProcessingError("文件检测失败") from e
 
     @staticmethod
     def validate_directory(directory):
@@ -56,9 +53,12 @@ class FileStorage:
             file_stream.seek(0)
         # 确保父目录存在
         save_dir = Path(save_dir)
-        save_dir.parent.mkdir(parents=True, exist_ok=True)
+        save_dir.mkdir(parents=True, exist_ok=True)  # ✅ 直接创建完整目录
 
         save_path = save_dir / file_name
+
+        print(f"保存目录：{save_dir.absolute()}")  # 输出：/home/zhaohonglong/.../temp/models/readme
+        print(f"目录是否存在：{save_dir.exists()}")  # 输出：True
 
         # 使用二进制追加模式写入（确保原子性）
         try:
@@ -86,7 +86,7 @@ class FileStorage:
         # 二次验证损坏
         if FileStorage.is_file_corrupted(save_path):
             os.remove(save_path)
-            raise ValueError(f"文件损坏，已被删除")
+            raise ValueError("文件损坏，已被删除")
 
         return str(save_dir)
 
@@ -136,26 +136,3 @@ class FileStorage:
 
 # 单例实例
 storage = FileStorage()
-
-
-@CeleryManager.get_celery().task
-def cleanup_directory(input_dir, output_dir):
-    try:
-        logger.info("[清理任务] 开始处理数据删除")
-        # 清理输入目录
-        input_path = Path(input_dir)
-        if input_path.exists():
-            shutil.rmtree(input_path)
-            logger.info("清理输入目录成功: %s", input_dir)
-        else:
-            logger.warning("输入目录不存在，可能已被删除: %s", input_dir)
-
-        # 清理输出目录
-        output_path = Path(output_dir)
-        if output_path.exists():
-            shutil.rmtree(output_path)
-            logger.info("清理输入目录成功: %s", output_dir)
-        else:
-            logger.warning("输出目录不存在，可能已被删除: %s", output_dir)
-    except Exception as e:
-        logger.error("清理失败: %s", str(e), exc_info=True)

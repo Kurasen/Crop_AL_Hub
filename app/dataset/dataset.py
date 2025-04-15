@@ -11,6 +11,9 @@ from app.order.order import OrderStatus, Order
 class Dataset(db.Model):
     __tablename__ = 'dataset_table'  # 数据库表名
     __table_args__ = (
+        db.Index('idx_created_at', 'created_at'),
+        db.Index('idx_updated_at', 'updated_at'),
+        db.Index('idx_likes', 'likes'),
         # 时间约束
         db.CheckConstraint(
             "created_at <= updated_at OR updated_at IS NULL",

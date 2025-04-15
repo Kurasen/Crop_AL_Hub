@@ -21,6 +21,10 @@ from app.utils.image_url_utils import ImageURLHandlerUtils
 class Model(db.Model):
     __tablename__ = 'model_table'
     __table_args__ = (
+        db.Index('idx_created_at', 'created_at'),
+        db.Index('idx_updated_at', 'updated_at'),
+        db.Index('idx_likes', 'likes'),
+        db.Index('idx_accuracy', 'accuracy'),
         # 时间约束
         db.CheckConstraint(
             "created_at <= updated_at OR updated_at IS NULL",

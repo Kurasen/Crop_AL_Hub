@@ -9,6 +9,7 @@ from app.model.model import Model
 from app.schemas.base_schema import BaseSchema, SortBaseSchema
 from marshmallow import ValidationError as MarshmallowValidationError
 
+from app.schemas.users_shema import UserBaseSchema
 from app.utils.image_url_utils import ImageURLHandlerUtils
 
 
@@ -18,21 +19,31 @@ def validate_characters(value):
         raise MarshmallowValidationError("包含非法字符，只允许中文、英文、数字、空格、中英文逗号和分号")
 
 
-class ModelBaseSchema(BaseSchema):
-    class Meta:
+class ModelInputBaseSchema(BaseSchema):
+    class Meta(BaseSchema.Meta):  # 显式继承基类配置
         model = Model
-        load_instance = True  # 启用实例化
-        include_fk = True  # 包含外键字段
+        load_instance = True
+        include_fk = True
 
     name = auto_field(
-        required=False
+        required=False,
+        validate=[
+            validate.Length(min=1, max=50),
+            validate.Regexp(r'^[\w\u4e00-\u9fa5]+$', error="只能包含中文、英文、数字和下划线")
+        ]
     )
 
-    user_id = fields.Int(load_default=lambda: g.current_user.id)  # 自动注入当前用户ID
+    user_id = fields.Int(
+        load_only=True,  # 只用于输入，不输出
+        load_default=lambda: g.current_user.id
+    )
 
     input = auto_field(
-        allow_none=False,
-        required=False
+        required=False,  # 允许客户端不传此字段
+        allow_none=False,  # 但如果传了值，则不能为 null
+        validate=[
+            validate.Regexp(r'.*\.(jpg|png|jpeg|JPG|PNG|JPEG)$', error="必须为 JPG/PNG/JPEG 文件")
+        ]
     )
 
     output = auto_field(
@@ -82,19 +93,12 @@ class ModelBaseSchema(BaseSchema):
         required=False
     )
 
-    readme = fields.String(
+    readme = auto_field(
         required=False,
         validate=[
             fields.validate.Length(max=1000, error="长度需小于1000字符")
         ]
     )
-
-    @validates('input')
-    def validate_input(self, value):
-        if value:
-            # 如果不为空，检查是否是以 .JPG, .PNG, 或 .JPEG 结尾
-            if not re.match(r'.*\.(jpg|png|jpeg)$', value, re.IGNORECASE):
-                raise MarshmallowValidationError("Input must be a file with .JPG, .PNG, or .JPEG extension")
 
     # 在数据加载前处理
     @pre_load
@@ -119,15 +123,33 @@ class ModelBaseSchema(BaseSchema):
         return data
 
 
-class ModelCreateSchema(ModelBaseSchema):
+class ModelCreateSchema(ModelInputBaseSchema):
+    """专门用于创建模型的校验"""
 
-    name = auto_field(required=True)
+    class Meta(ModelInputBaseSchema.Meta):
+        pass  # 继承父类配置
 
-    image = auto_field(required=True)
+    name = auto_field(required=True)  # 覆盖父类定义
 
 
-class ModelUpdateSchema(ModelBaseSchema):
-    pass
+class ModelUpdateSchema(ModelInputBaseSchema):
+    class Meta(ModelInputBaseSchema.Meta):
+        pass
+
+
+class ModelResponseSchema(BaseSchema):
+    """专门用于响应数据序列化"""
+
+    class Meta(ModelInputBaseSchema.Meta):
+        fields = (
+            "id", "name", "description", "image",
+            "input", "cuda", "instruction", "output",
+            "accuracy", "created_at", "user_info", "readme"
+        )
+        dump_only = ("id", "created_at", "user_info")
+
+        # 可以添加响应专用格式处理
+    user_info = fields.Nested(UserBaseSchema, attribute='user')  # 嵌套其他 Schema
 
 
 class ModelBaseFieldsMixin:

@@ -1,6 +1,8 @@
 from typing import Dict, List, Any
 
 from celery import Celery
+from celery.schedules import crontab
+
 from app.config import Config
 
 from celery import current_app
@@ -40,6 +42,15 @@ class CeleryManager:
                     force=True,
                     related_name='task'  # 明确任务模块路径
                 )
+            # 添加定时任务配置
+            cls._celery.conf.beat_schedule = {
+                'cleanup_temp_files_daily': {
+                    'task': 'app.utils.temp_file_service.cleanup_temp_files',
+                    #'schedule': crontab(hour=0, minute=0),  # 每天00:00执行
+                    'schedule': crontab(minute='*/1'),  # 每分钟触发
+                    'args': ()
+                },
+            }
 
         return cls._celery
 

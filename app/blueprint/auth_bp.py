@@ -6,7 +6,7 @@ from app.core.redis_connection_pool import redis_pool
 from app.schemas.base_schema import apply_rate_limit
 from app.schemas.auth_schema import UserCreateSchema, UserLoginSchema, GenerateCodeSchema
 from app.token.token_service import TokenService
-from app.utils.json_encoder import create_json_response
+from app.utils.common.json_encoder import create_json_response
 from app.token.JWT import verify_token, TokenBlacklist, auth_required
 from app.core.exception import ValidationError, AuthenticationError, logger, TokenError
 from app.token.token_repo import TokenRepository

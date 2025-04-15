@@ -1,1 +1,1 @@
-from .json_encoder import create_json_response
+from app.utils.common.json_encoder import create_json_response
