@@ -45,10 +45,12 @@ def run_algorithm(self, input_path, task_id, image_name, instruction=None):
         host_output_dir = OUTPUT_FOLDER / image_name / f"task_{task_id}"
         host_output_dir.mkdir(parents=True, exist_ok=True)
 
-        # 构建容器命令
-        docker_command = ["python3", "main.py", "-i", "/data", "-o", "/result"]
-        if instruction:
-            docker_command.extend(instruction.split())
+        # # 构建容器命令
+        # docker_command = ["python3", "main.py", "-i", "/data", "-o", "/result"]
+        # if instruction:
+        #     docker_command.extend(instruction.split())
+
+        docker_command = instruction
 
         container_info = docker_client.run_algorithm_container(
             image_name=image_name,
