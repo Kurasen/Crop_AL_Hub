@@ -1,12 +1,13 @@
 # 表内数据
 id,name,image,input,description,cuda,instruction,output,accuracy,type,likes,user_id,readme,icon,created_at,updated_at
-1,"雄穗数量识别模型","detetcion-tassel","*.JPG","通过数量除以面积可以计算密度",Flase,"",detection_results.txt,0.95,“玉米;数量”,3,
-2,"冠层覆盖度计算模型","segmentation-canopy","*.JPG","通过数量除以面积可以计算密度",Flase,"","not ready",0.96,“玉米；覆盖度”,2,
-3,"雄穗面积计算模型","segmentation-tassel","*.JPG","面积=像素数*像素空间分辨率，像素空间分辨率看传感器的型号和拍摄距离",Flase,"",segmentation_results.txt,0.97,“玉米；面积”,1,
-4,"基于近地面图像的株数识别模型","detetcion-seed-leaf","*.JPG","通过数量除以面积可以计算密度",Flase,"-m ngp",plant_detection_summary.csv,0.98,“玉米；近地面；数量”,0,
-5,"基于无人机图像的株数识别模型","detetcion-seed-leaf","*.JPG","通过数量除以面积可以计算密度",Flase,"-m uavp",plant_detection_summary.csv,0.93,“玉米；无人机；数量”,3,
-6,"基于近地面图像的叶龄识别模型","detetcion-seed-leaf","*.JPG","两个叶尖就是二叶期，三个叶尖就是三叶期",Flase,"-m ngl",leaf_detection_summary.csv,0.99,“玉米；近地面；叶龄”,3,
-7,"基于无人机图像的叶龄识别模型","detetcion-seed-leaf","*.JPG","两个叶尖就是二叶期，三个叶尖就是三叶期",Flase,"-m uavl",leaf_detection_summary.csv,0.95,“玉米；无人机；叶龄”,1,
+1,雄穗数量识别算法,detetcion-tassel,*.JPG,识别图像中的雄穗数量,Flase,python3 main.py -i /data -o /result ,detection_results.txt,0.95,“玉米；数量；雄穗；表型”,3,1,# 算法模型详情描述（暂时为空，后续填写）,,,
+2,雄穗面积计算算法,segmentation,*.JPG,识别图像中的雄穗面积和比例,Flase,python3 main.py -i /data -o /result -m tassel,segmentation_results.txt,0.97,“玉米；面积；雄穗；表型”,1,1,# 算法模型详情描述（暂时为空，后续填写）,,,
+3,冠层覆盖度计算算法,segmentation,*.JPG,识别图像中的冠层面积和比例,Flase,python3 main.py -i /data -o /result -m canopy,segmentation_results.txt,0.96,“玉米；面积；冠层；表型”,2,1,# 算法模型详情描述（暂时为空，后续填写）,,,
+4,倒伏面积计算算法,segmentation,*.JPG,识别图像中的倒伏面积和比例,Flase,python3 main.py -i /data -o /result -m lodging,segmentation_results.txt,0.97,“玉米；面积；倒伏；表型”,1,1,# 算法模型详情描述（暂时为空，后续填写）,,,
+5,基于近地面图像的株数识别算法,detetcion-seed-leaf,*.JPG,识别近地面图像中的玉米苗数量，通过数量除以面积可以计算密度,Flase,python3 main.py -i /data -o /result  -m ngp,plant_detection_summary.csv,0.98,“玉米；近地面；数量；表型”,0,1,# 算法模型详情描述（暂时为空，后续填写）,,,
+6,基于无人机图像的株数识别算法,detetcion-seed-leaf,*.JPG,识别无人机图像中的玉米苗数量，通过数量除以面积可以计算密度,Flase,python3 main.py -i /data -o /result  -m uavp,plant_detection_summary.csv,0.93,“玉米；无人机；数量；表型”,3,1,# 算法模型详情描述（暂时为空，后续填写）,,,
+7,基于近地面图像的叶龄识别算法,detetcion-seed-leaf,*.JPG,识别近地面图像中玉米苗叶龄，两个叶尖就是二叶期，三个叶尖就是三叶期。,Flase,python3 main.py -i /data -o /result  -m ngl,leaf_detection_summary.csv,0.99,“玉米；近地面；叶龄；表型”,3,1,# 算法模型详情描述（暂时为空，后续填写）,,,
+8,基于无人机图像的叶龄识别算法,detetcion-seed-leaf,*.JPG,识别无人机图像中玉米苗叶龄，两个叶尖就是二叶期，三个叶尖就是三叶期。,Flase,python3 main.py -i /data -o /result  -m uavl,leaf_detection_summary.csv,0.95,“玉米；无人机；叶龄；表型”,1,1,# 算法模型详情描述（暂时为空，后续填写）,,,
 
 
 # 创建表
@@ -38,12 +39,14 @@ CREATE TABLE `model_table` (
 ) ENGINE=InnoDB AUTO_INCREMENT=78 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 # 插入数据
-INSERT INTO model_table (id, name, image, input, description, cuda, instruction, output, accuracy, type,likes,user_id,readme,icon,created_at,updated_at))
-VALUES 
-(1, '雄穗数量识别模型', 'detetcion-tassel', '*.JPG', '通过数量除以面积可以计算密度', FALSE, '', 'detection_results.txt', 0.95, '玉米;数量', 3,),
-(2, '冠层覆盖度计算模型', 'segmentation-canopy', '*.JPG', '通过数量除以面积可以计算密度', FALSE, '', 'not ready', 0.96, '玉米；覆盖度', 2, ),
-(3, '雄穗面积计算模型', 'segmentation-tassel', '*.JPG', '面积=像素数*像素空间分辨率，像素空间分辨率看传感器的型号和拍摄距离', FALSE, '', 'segmentation_results.txt', 0.97, '玉米；面积', 1, ),
-(4, '基于近地面图像的株数识别模型', 'detetcion-seed-leaf', '*.JPG', '通过数量除以面积可以计算密度', FALSE, '-m ngp', 'plant_detection_summary.csv', 0.98, '玉米；近地面；数量', 0,),
-(5, '基于无人机图像的株数识别模型', 'detetcion-seed-leaf', '*.JPG', '通过数量除以面积可以计算密度', FALSE, '-m uavp', 'plant_detection_summary.csv', 0.93, '玉米；无人机；数量', 3, ),
-(6, '基于近地面图像的叶龄识别模型', 'detetcion-seed-leaf', '*.JPG', '两个叶尖就是二叶期，三个叶尖就是三叶期', FALSE, '-m ngl', 'leaf_detection_summary.csv', 0.99, '玉米；近地面；叶龄', 3, ),
-(7, '基于无人机图像的叶龄识别模型', 'detetcion-seed-leaf', '*.JPG', '两个叶尖就是二叶期，三个叶尖就是三叶期', FALSE, '-m uavl', 'leaf_detection_summary.csv', 0.95, '玉米；无人机；叶龄', 1, );
+INSERT INTO `model_table` (`name`, `image`, `input`, `description`, `cuda`, `instruction`, `output`, `accuracy`, `type`, `likes`, `user_id`, `readme`, `icon`, `created_at`, `updated_at`)
+VALUES
+('雄穗数量识别算法', 'detetcion-tassel', '*.JPG', '识别图像中的雄穗数量', 0, 'python3 main.py -i /data -o /result ', 'detection_results.txt', 0.95, '玉米；数量；雄穗；表型', 3, 1, '# 算法模型详情描述（暂时为空，后续填写）', '', NOW(), NOW()),
+('雄穗面积计算算法', 'segmentation', '*.JPG', '识别图像中的雄穗面积和比例', 0, 'python3 main.py -i /data -o /result -m tassel', 'segmentation_results.txt', 0.97, '玉米；面积；雄穗；表型', 1, 1, '# 算法模型详情描述（暂时为空，后续填写）', '', NOW(), NOW()),
+('冠层覆盖度计算算法', 'segmentation', '*.JPG', '识别图像中的冠层面积和比例', 0, 'python3 main.py -i /data -o /result -m canopy', 'segmentation_results.txt', 0.96, '玉米；面积；冠层；表型', 2, 1, '# 算法模型详情描述（暂时为空，后续填写）', '', NOW(), NOW()),
+('倒伏面积计算算法', 'segmentation', '*.JPG', '识别图像中的倒伏面积和比例', 0, 'python3 main.py -i /data -o /result -m lodging', 'segmentation_results.txt', 0.97, '玉米；面积；倒伏；表型', 1, 1, '# 算法模型详情描述（暂时为空，后续填写）', '', NOW(), NOW()),
+('基于近地面图像的株数识别算法', 'detetcion-seed-leaf', '*.JPG', '识别近地面图像中的玉米苗数量，通过数量除以面积可以计算密度', 0, 'python3 main.py -i /data -o /result  -m ngp', 'plant_detection_summary.csv', 0.98, '玉米；近地面；数量；表型', 0, 1, '# 算法模型详情描述（暂时为空，后续填写）', '', NOW(), NOW()),
+('基于无人机图像的株数识别算法', 'detetcion-seed-leaf', '*.JPG', '识别无人机图像中的玉米苗数量，通过数量除以面积可以计算密度', 0, 'python3 main.py -i /data -o /result  -m uavp', 'plant_detection_summary.csv', 0.93, '玉米；无人机；数量；表型', 3, 1, '# 算法模型详情描述（暂时为空，后续填写）', '', NOW(), NOW()),
+('基于近地面图像的叶龄识别算法', 'detetcion-seed-leaf', '*.JPG', '识别近地面图像中玉米苗叶龄，两个叶尖就是二叶期，三个叶尖就是三叶期。', 0, 'python3 main.py -i /data -o /result  -m ngl', 'leaf_detection_summary.csv', 0.99, '玉米；近地面；叶龄；表型', 3, 1, '# 算法模型详情描述（暂时为空，后续填写）', '', NOW(), NOW()),
+('基于无人机图像的叶龄识别算法', 'detetcion-seed-leaf', '*.JPG', '识别无人机图像中玉米苗叶龄，两个叶尖就是二叶期，三个叶尖就是三叶期。', 0, 'python3 main.py -i /data -o /result  -m uavl', 'leaf_detection_summary.csv', 0.95, '玉米；无人机；叶龄；表型', 1, 1, '# 算法模型详情描述（暂时为空，后续填写）', '', NOW(), NOW());
+    
