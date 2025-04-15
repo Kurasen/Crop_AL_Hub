@@ -1,6 +1,7 @@
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from app import Star
+from app.config import FileConfig
 from app.exts import db
 from app.order.order import OrderStatus
 from datetime import datetime
@@ -41,7 +42,11 @@ class Model(db.Model):
     instruction = db.Column(db.Text, default="")
     output = db.Column(db.String(100), default="")  # 输出字段
     accuracy = db.Column(db.Numeric(4, 2), default=0)  # 精度字段，DECIMAL(4, 2) 对应 Numeric(4, 2)
-    icon = db.Column(db.String(255), nullable=True, default=None)
+    icon = db.Column(
+        db.String(255),
+        nullable=True,
+        default="http://10.0.4.71:8080/static/icon/model_default_icon.png"
+    )
     type = db.Column(db.String(100), default="")  # 模型类型
     likes = db.Column(db.Integer, default=0)  # 点赞数字段
     # price = db.Column(db.Numeric(10, 2))
@@ -88,7 +93,14 @@ class Model(db.Model):
 
         # 统一处理空值和空字符串
         icon_value = self.icon.strip() if self.icon else None  # 移除空格并转为 None
-        base_data['icon'] = ImageURLHandlerUtils.build_full_url(icon_value)
+
+        # 新增逻辑：当 icon 为空时，直接指向静态资源默认图标
+        if not icon_value:
+            # 硬编码静态资源路径（绕过 FILE_BASE_URL）
+            base_data['icon'] = FileConfig.MODEL_ICON_DEFAULT_URL
+        else:
+            # 非空时走原有逻辑（如上传文件路径拼接）
+            base_data['icon'] = ImageURLHandlerUtils.build_full_url(icon_value)
 
         return base_data
 

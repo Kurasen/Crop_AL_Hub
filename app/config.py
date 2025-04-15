@@ -46,10 +46,6 @@ class Config:
 
     USER_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_Data/user').resolve()
 
-    # 上传图片存储路径配置
-    FILE_BASE_URL = "http://10.0.4.71:8080/file/"
-    LOCAL_FILE_BASE = "/home/zhaohonglong/workspace/Crop_Data"
-
     # Redis配置
     REDIS_HOST = "localhost"
     REDIS_PORT = 6379
@@ -76,8 +72,11 @@ class FileConfig:
     FILE_BASE_URL = "http://10.0.4.71:8080/file"
     LOCAL_FILE_BASE = "/home/zhaohonglong/workspace/Crop_Data"
 
+    MODEL_ICON_DEFAULT_URL = "http://10.0.4.71:8080/static/icon/model_default_icon.png"
+
     TEMP_DIR = "/home/zhaohonglong/workspace/Crop_Data/storage/temp"  # 临时存储目录
     TEMP_BASE_URL = "storage/temp"  # 临时文件访问基础路径
+
 
     # 上传文件配置
     UPLOAD_CONFIG = {
