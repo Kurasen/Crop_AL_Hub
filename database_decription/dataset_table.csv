@@ -1,5 +1,5 @@
 # 表内数据
-id,name,path,size,description,type,likes,price,readme,update_at,update_at,user_id
+id,name,path,size,description,type,likes,price,readme,create_at,update_at,user_id
 1,"雄穗数量识别测试集","detetcion-tassel/dataset/test","2.39GB","用来测试雄穗数量识别模型",“玉米;数量”,1,1.0
 2,"冠层覆盖度计算测试集","segmentation-canopy/dataset/test","57.6MB","用来测试冠层覆盖度计算模型",“玉米；覆盖度”,1,1.0
 3,"雄穗面积计算测试集","segmentation-tassel/dataset/test","24.9MB","用来测试雄穗面积计算模型",“玉米；面积”,1,0.0
