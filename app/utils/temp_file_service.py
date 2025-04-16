@@ -1,12 +1,12 @@
 import hashlib
 import time
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
-from typing import Dict
 
 from app.config import FileConfig
 from app.core.exception import ValidationError, logger, FileUploadError, RedisConnectionError, FileSaveError, \
-    NotFoundError
+    NotFoundError, FileCleanupError
 from app.core.redis_connection_pool import redis_pool
 from app.docker.core.celery_app import CeleryManager
 from app.exts import db
@@ -25,6 +25,10 @@ def remove_empty_parents_safely(file_path: Path, stop_at: Path, max_retries: int
         stop_at: 停止删除的父目录（包含该目录本身）
         max_retries: 目录操作最大重试次数
     """
+    # if not file_path.is_relative_to(Path(FileConfig.TEMP_DIR).resolve()):
+    #     logger.warning(f"⚠️ 拒绝处理非临时目录: {file_path}")
+    #     return
+
     current_dir = file_path.parent
 
     while current_dir != stop_at and current_dir.is_relative_to(stop_at):
@@ -76,6 +80,41 @@ class TempFileService:
         with redis_pool.get_redis_connection('files') as conn:
             yield conn
 
+    @staticmethod
+    def _cleanup_temp_files(src_file: Path, is_temp: bool = True):
+        """原子化清理临时文件"""
+        try:
+            if src_file.exists():
+                src_file.unlink(missing_ok=True)
+                # 根据文件类型设置 stop_at
+                stop_at = (
+                    Path(FileConfig.TEMP_DIR).resolve()
+                    if is_temp
+                    else Path(FileConfig.FORMAL_RIR).resolve()
+                )
+                remove_empty_parents_safely(
+                    file_path=src_file,
+                    stop_at=stop_at,
+                    max_retries=3
+                )
+        except Exception as e:
+            logger.error(f"文件清理失败: {e}")
+            raise FileCleanupError("文件清理失败")  # 自定义异常
+
+    @staticmethod
+    def _update_redis_status(redis_key: str, error: Exception = None):
+        """更新Redis状态"""
+        try:
+            with redis_pool.get_redis_connection('files') as conn:
+                if isinstance(error, FileNotFoundError):
+                    conn.delete(redis_key)
+                elif error:
+                    conn.hset(redis_key, "status", "error")
+                else:
+                    conn.delete(redis_key)
+        except Exception as e:
+            logger.error(f"Redis状态更新失败: {e}")
+
     def save_temp(self, file, upload_type: str, data_id: int, file_type: str, user_id: int) -> str:
         """保存到临时目录并生成URL"""
         try:
@@ -95,7 +134,8 @@ class TempFileService:
             logger.info(f"✅ 保存的文件名: {file_hash}{Path(file.filename).suffix}")
 
             # ========== Redis重复检查 ==========
-            redis_key = f"temp:{user_id}:{upload_type}:{data_id}:{file_type}:{file_hash}"
+            version = datetime.now().strftime("%Y%m%d%H%M%S")
+            redis_key = f"temp:{user_id}:{upload_type}:{data_id}:{file_type}:{version}:{file_hash}"
             try:
                 with self.redis.get_redis_connection('files') as conn:
                     if conn.exists(redis_key):
@@ -109,10 +149,11 @@ class TempFileService:
 
             # ========== 临时目录构建 ==========
             try:
-                temp_dir = Path(FileConfig.TEMP_DIR) / FileConfig.UPLOAD_CONFIG[upload_type]['subdirectory'].format(
+                 temp_dir = Path(FileConfig.TEMP_DIR) / FileConfig.UPLOAD_CONFIG[upload_type]['subdirectory'].format(
                     file_type=file_type,
                     data_id=data_id,
-                    user_id=user_id
+                    user_id=user_id,
+                    version=version
                 )
             except KeyError:
                 logger.error("无效的上传类型: %s", upload_type)
@@ -162,7 +203,7 @@ class TempFileService:
 
             # 生成URL路径（使用实际存储路径结构）
             url_path = f"{FileConfig.TEMP_BASE_URL}/{relative_path}/{file_hash}{Path(file.filename).suffix}"
-            logger.info(f"✅ 生成的URL路径: {url_path}")
+            logger.info(f"✅ 生成的URL相对路径: {url_path}")
 
             return url_path
         except FileUploadError:
@@ -220,7 +261,8 @@ class TempFileService:
                 upload_type=url_components['upload_type'],
                 data_id=url_components['data_id'],
                 file_type=url_components['file_type'],
-                user_id=user_id
+                user_id=user_id,
+                version=url_components['version']
             )
             logger.info(f"✅ 解析得到的参数: {url_components}")
             logger.info(f"✅ 生成的Redis键: {redis_key}")
@@ -234,11 +276,16 @@ class TempFileService:
             raise e
 
     @staticmethod
-    @CeleryManager.get_celery().task(bind=True,  expires=86400)
+    @CeleryManager.get_celery().task(bind=True, expires=86400)
     def _move_to_final(self, redis_key: str, src_path: str, upload_type: str, data_id: int, file_type: str,
-                       user_id: int):
+                       user_id: int, version: str) -> None:
         """原子化文件转移操作（增强健壮性）"""
+        src_file = Path(src_path)
+        final_file_path = None
+        error = None
+
         try:
+            src_file = Path(src_path)
             # ========== 1. 初始化检查 ==========
             from myapp import create_app
             app = create_app()  # 创建Flask上下文
@@ -260,7 +307,6 @@ class TempFileService:
                 conn.hset(redis_key, "status", "processing")
 
             # ========== 3. 文件操作 ==========
-            src_file = Path(src_path)
             if not src_file.exists():
                 logger.error(f"⛔ 源文件不存在: {src_path}")
                 with redis_pool.get_redis_connection('files') as conn:
@@ -272,9 +318,9 @@ class TempFileService:
             final_subdir = FileConfig.UPLOAD_CONFIG[upload_type]['subdirectory'].format(
                 file_type=file_type,
                 data_id=data_id,
-                user_id=user_id
+                user_id=user_id,
+                version=version
             )
-
             final_dir = Path(FileConfig.LOCAL_FILE_BASE) / "user_data" / final_subdir
             final_dir.mkdir(parents=True, exist_ok=True)
             final_file_path = final_dir / src_file.name
@@ -287,20 +333,9 @@ class TempFileService:
                     file_name=src_file.name
                 )
 
-            # 3.2 删除临时文件及目录
-            try:
-                src_file.unlink(missing_ok=True)  # 兼容Python 3.8+
-                remove_empty_parents_safely(
-                    file_path=src_file,
-                    stop_at=Path(FileConfig.TEMP_DIR).resolve(),
-                    max_retries=3
-                )
-            except Exception as e:
-                logger.error(f"⛔ 文件删除失败: {str(e)}")
-                raise  # 抛出异常触发重试
-
-            #========== 4. 数据库更新 ==========
+            # ========== 4. 数据库更新 ==========
             relative_path = str(final_file_path.relative_to(FileConfig.LOCAL_FILE_BASE))
+            logger.info("新文件存放相对路径: %s", relative_path)
 
             database_mapping = {
                 "model": {
@@ -313,41 +348,71 @@ class TempFileService:
 
             # 在应用上下文中更新数据库
             with app.app_context():
+                db_committed = False
                 try:
                     # 更新数据库
                     if upload_type in database_mapping and file_type in database_mapping[upload_type]:
                         get_func, field = database_mapping[upload_type][file_type]
                         instance = get_func(data_id)
+
+                        old_relative_path = getattr(instance, field)
+                        logger.info("旧文件存放相对路径：%s", old_relative_path)
+
+                        # 更新数据库
                         setattr(instance, field, relative_path)
                         db.session.commit()
-                except Exception as e:
-                    db.session.rollback()
-                    logger.error(f"⛔ 数据库更新失败: {str(e)}")
-                    raise  # 抛出异常触发重试
+                        db_committed = True
 
-            # ========== 5. 最终清理 ==========
-            with redis_pool.get_redis_connection('files') as conn:
-                conn.delete(redis_key)  # 关键：成功后才删除键
-                logger.info(f"✅ 完成迁移: {redis_key}")
+                        # 获取旧路径并删除对应的文件
+                        if file_type in FileConfig.SINGLE_FILE_TYPES:
+                            if old_relative_path:
+                                old_file = Path(FileConfig.LOCAL_FILE_BASE) / old_relative_path
+                                if old_file.exists():
+                                    try:
+                                        TempFileService._cleanup_temp_files(old_file, is_temp=False)
+                                        logger.info("🗑️ 删除旧文件: %s", old_file)
+                                    except Exception as e:
+                                        logger.error("⛔ 旧文件删除失败: %s", str(e))
+
+                except Exception as e:
+                    error = e
+                    db.session.rollback()
+                    logger.error("⛔ 数据库更新失败: %s", str(e))
+
+            TempFileService._update_redis_status(redis_key)
 
         except FileNotFoundError as e:
+            error = e
             # 6. 文件不存在时的专用处理
             logger.error(f"🛑 文件已删除，终止任务: {src_path}")
             with redis_pool.get_redis_connection('files') as conn:
                 conn.delete(redis_key)  # 确保清理残留
             return  # 直接返回，不重试
         except Exception as e:
+            error = e
             # 7. 其他错误处理
             logger.error(f"迁移失败: {str(e)}")
             with redis_pool.get_redis_connection('files') as conn:
                 conn.hset(redis_key, "status", "error")
             raise self.retry(exc=e, countdown=60, max_retries=2)  # 有限重试
+        finally:
+            # ========== 确保最终清理 ==========
+            # 无论成功与否，都尝试清理临时文件及目录
+            TempFileService._cleanup_temp_files(src_file, is_temp=True)
+
+            # 如果新文件已创建并未提交到数据库中且任务失败，清理新文件
+            if error and final_file_path and final_file_path.exists() and not db_committed:
+                try:
+                    logger.info("回滚删除新文件: %s", final_file_path)
+                    TempFileService._cleanup_temp_files(final_file_path, is_temp=False)
+                except Exception as e:
+                    logger.error("新文件清理失败: %s", str(e))
 
 
 temp_service = TempFileService()
 
 
-@CeleryManager.get_celery().task(bind=True,  expires=86400)
+@CeleryManager.get_celery().task(bind=True, expires=86400)
 def cleanup_temp_files(self):
     logger.info("🚀 开始执行临时文件清理任务")
     try:

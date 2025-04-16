@@ -106,6 +106,12 @@ class FileConfig:
     TEMP_DIR = "/home/zhaohonglong/workspace/Crop_Data/storage/temp"  # 临时存储目录
     TEMP_BASE_URL = "storage/temp"  # 临时文件访问基础路径
 
+    FORMAL_RIR = "/home/zhaohonglong/workspace/Crop_Data/user_data" # 正式存储目录
+
+    # 文件类型约束
+    SINGLE_FILE_TYPES = ["icon", "avatars"]  # 单文件类型
+    MULTI_FILE_TYPES = ["readme"]
+
     # 上传文件配置
     UPLOAD_CONFIG = {
         "user": {
@@ -115,7 +121,7 @@ class FileConfig:
             "max_size": 10 * 1024 * 1024  # 10MB
         },
         "model": {
-            "subdirectory": "{user_id}/model/{data_id}/{file_type}",
+            "subdirectory": "{user_id}/model/{data_id}/{file_type}/{version}",
             "allowed_extensions": ["jpg", "png", "jpeg"],
             "file_types": ["icon", "readme"],  # 固定允许的file_type列表
             "max_size": 100 * 1024 * 1024,  # 100MB
@@ -127,6 +133,8 @@ class FileConfig:
             "max_size": 100 * 1024 * 1024  # 500MB
         }
     }
+
+
 
 
 # 开发环境配置

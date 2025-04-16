@@ -111,6 +111,14 @@ class FileSaveError(CustomError):
         super().__init__(message, status_code)
 
 
+class FileCleanupError(CustomError):
+    def __init__(self, message="文件清理异常", status_code=500):
+        """
+        文件清理失败
+        """
+        super().__init__(message, status_code)
+
+
 class SecurityError(CustomError):
     def __init__(self, message="图片处理失败", status_code=500):
         """

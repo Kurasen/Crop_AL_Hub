@@ -96,7 +96,7 @@ class ImageURLHandlerUtils:
             parts = core_path.split("/")
             logging.debug(f"分割路径参数: {parts}")
 
-            # 参数提取（路径结构: storage/temp/<user_id>/<upload_type>/<data_id>/<file_type>/<file_hash>）
+            # 参数提取（路径结构: storage/temp/<user_id>/<upload_type>/<data_id>/<file_type>/<version>/<file_hash>）
             if len(parts) < 5:
                 raise ValidationError("路径层级不足，需要至少5级结构")
 
@@ -105,7 +105,8 @@ class ImageURLHandlerUtils:
                 "upload_type": parts[3],        # model
                 "data_id": int(parts[4]),        # 76
                 "file_type": parts[5],           # readme
-                "file_hash": Path(parts[6]).stem # 2dd6b8e655b6ee32fddacd63b997
+                "version": parts[6],             # 时间戳
+                "file_hash": Path(parts[7]).stem # 2dd6b8e655b6ee32fddacd63b997
             }
 
         except ValidationError as e:
@@ -129,5 +130,5 @@ class ImageURLHandlerUtils:
     @staticmethod
     def build_temp_redis_key(components: dict) -> str:
         """构建Redis键"""
-        return f"temp:{components['user_id']}:{components['upload_type']}:{components['data_id']}:{components['file_type']}:{components['file_hash']}"
+        return f"temp:{components['user_id']}:{components['upload_type']}:{components['data_id']}:{components['file_type']}:{components['version']}:{components['file_hash']}"
 

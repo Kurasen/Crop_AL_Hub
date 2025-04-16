@@ -57,8 +57,8 @@ class FileStorage:
 
         save_path = save_dir / file_name
 
-        print(f"保存目录：{save_dir.absolute()}")  # 输出：/home/zhaohonglong/.../temp/models/readme
-        print(f"目录是否存在：{save_dir.exists()}")  # 输出：True
+        logger.info("保存目录：%s", save_dir.absolute())  # 输出：/home/zhaohonglong/.../temp/models/readme
+        logger.info("目录是否存在：%s", save_dir.exists())  # 输出：True
 
         # 使用二进制追加模式写入（确保原子性）
         try:
