@@ -46,8 +46,8 @@ class CeleryManager:
             cls._celery.conf.beat_schedule = {
                 'cleanup_temp_files_daily': {
                     'task': 'app.utils.temp_file_service.cleanup_temp_files',
-                    #'schedule': crontab(hour=0, minute=0),  # 每天00:00执行
-                    'schedule': crontab(minute='*/1'),  # 每分钟触发
+                    'schedule': crontab(hour='0', minute='0'),  # 每天00:00执行
+                    #'schedule': crontab(minute='*/2'),  # 每分钟触发
                     'args': ()
                 },
             }

@@ -33,11 +33,17 @@ def create_app(env=None):
 
     app.config.update({
         'broker_url': Config.broker_url,
-        'worker_concurrency': Config.WORKER_CONCURRENCY,
         'result_backend': Config.result_backend,
-        'accept_content': Config.accept_content,
+        'result_expires': Config.result_expires,
+        'task_ignore_result': Config.task_ignore_result,
+        'worker_concurrency': Config.worker_concurrency,
+        'worker_prefetch_multiplier': Config.worker_prefetch_multiplier,
+        'worker_max_tasks_per_child': Config.worker_max_tasks_per_child,
+        'task_acks_late': Config.task_acks_late,
+        'task_reject_on_worker_lost': Config.task_reject_on_worker_lost,
         'task_serializer': Config.task_serializer,
         'result_serializer': Config.result_serializer,
+        'accept_content': Config.accept_content,
         'timezone': Config.timezone
     })
 

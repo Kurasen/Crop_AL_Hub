@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Dict
 
 from app.config import FileConfig
-from app.core.exception import ValidationError, logger, FileUploadError, RedisConnectionError, FileSaveError
+from app.core.exception import ValidationError, logger, FileUploadError, RedisConnectionError, FileSaveError, \
+    NotFoundError
 from app.core.redis_connection_pool import redis_pool
 from app.docker.core.celery_app import CeleryManager
 from app.exts import db
@@ -139,7 +140,7 @@ class TempFileService:
                         "real_path": str(saved_file_path),
                         "user_id": user_id,
                         "status": "pending",
-                        "expire_at": time.time() + 45
+                        "expire_at": time.time() + 43200
                     })
                     # conn.expire(key, 120)  # 原为7天（604800秒）
             except Exception as e:
@@ -229,11 +230,11 @@ class TempFileService:
             logger.error("文件验证失败：%s", str(e))
             raise e
         except Exception as e:
-            logger.error("提交文件时发生未捕获的异常: %s", str(e), exc_info=True)
+            logger.error("提交文件时发生未捕获的异常: %s", str(e))
             raise e
 
     @staticmethod
-    @CeleryManager.get_celery().task(bind=True)
+    @CeleryManager.get_celery().task(bind=True,  expires=86400)
     def _move_to_final(self, redis_key: str, src_path: str, upload_type: str, data_id: int, file_type: str,
                        user_id: int):
         """原子化文件转移操作（增强健壮性）"""
@@ -346,7 +347,7 @@ class TempFileService:
 temp_service = TempFileService()
 
 
-@CeleryManager.get_celery().task(bind=True,  expires=3600)
+@CeleryManager.get_celery().task(bind=True,  expires=86400)
 def cleanup_temp_files(self):
     logger.info("🚀 开始执行临时文件清理任务")
     try:

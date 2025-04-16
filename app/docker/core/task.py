@@ -19,7 +19,7 @@ UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
 
 
-@CeleryManager.get_celery().task(bind=True)
+@CeleryManager.get_celery().task(bind=True,  expires=86400)
 def run_algorithm(self, input_path, task_id, image_name, instruction=None):
     try:
         logger.info(f"\n=== 任务启动 [{task_id}] ===")

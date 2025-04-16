@@ -119,7 +119,7 @@ def upload(upload_type, data_id, file_type):
             file_type=file_type,
             user_id=g.current_user.id
         )
-        logger.info(f"temp_url: {temp_url}")
+        logger.info("temp_url: %s", temp_url)
 
         return create_json_response({
             "data": {
@@ -132,7 +132,7 @@ def upload(upload_type, data_id, file_type):
         logger.warning("文件验证失败: %s", str(e))
         return create_json_response({'error': {"message": str(e)}}, 400)
     except Exception as e:
-        logger.error("服务器异常: %s", str(e), exc_info=True)
+        logger.error("服务器异常: %s", str(e))
         db.session.rollback()
         return create_json_response({'error': {"message": str(e)}}, 500)
 
@@ -152,5 +152,5 @@ def update_avatar():
         logger.info(str(e))
         return create_json_response({"error": {"message": str(e)}}, 400)
     except Exception as e:
-        logger.error("服务器异常: %s", str(e), exc_info=True)
+        logger.error("服务器异常: %s", str(e))
         return create_json_response({"error": {"message": str(e)}}, 500)

@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
+from app.core.exception import logger
+
 # 加载 .env 文件（应用启动时加载）
 load_dotenv(Path('.') / '.env')
 
@@ -33,12 +35,29 @@ class Config:
     """Celery统一配置类"""
     broker_url = 'redis://localhost:6379/0'
     result_backend = 'redis://localhost:6379/0'
-    task_serializer = 'json'
-    result_serializer = 'json'
-    accept_content = ['json']
-    WORKER_CONCURRENCY = os.cpu_count()  # 根据CPU核心数优化
-    task_track_started = True
+
+    # 结果生命周期控制
+    result_expires = 43200  # 任务结果半天后自动删除（单位：秒）
+    task_ignore_result = False  # True=禁用所有结果存储（按需开启）
+
+    # 并发
+    worker_concurrency = max(2, os.cpu_count() - 1)  # 留1核给系统
+    worker_prefetch_multiplier = 4  # 每个worker预取任务数
+    worker_max_tasks_per_child = 100 # 每个子进程执行100个任务后自动重启
+
+    # 可靠性增强
+    task_acks_late = True  # 任务完成后才确认
+    task_reject_on_worker_lost = True  # Worker异常时重新入队
+
+    # 序列化
+    task_serializer = 'json'   # 任务参数使用JSON序列化
+    result_serializer = 'json' # 结果使用JSON序列化
+    accept_content = ['json'] # 仅接受JSON格式任务
+    task_track_started = True # 记录任务开始事件（需配合监控）
+
+    # 时间相关
     timezone = 'Asia/Shanghai'
+    """****"""
 
     # 算法文件存储路径配置
     UPLOAD_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_Data/input').resolve()  # 使用 Path 对象
@@ -63,6 +82,16 @@ class Config:
         return f"mysql+pymysql://{db_username}:{db_password}@{db_host}:{db_port}/{db_name}"
 
     @staticmethod
+    def get_sqlalchemy_test_uri():
+        db_username = 'root'
+        db_password = '123123'
+        db_host = '127.0.0.1'
+        db_port = '3306'
+        db_name = 'crop_al_hub'
+
+        return f"mysql+pymysql://{db_username}:{db_password}@{db_host}:{db_port}/{db_name}"
+
+    @staticmethod
     def init_app(app):
         pass  # 这里可以放置通用初始化逻辑
 
@@ -76,7 +105,6 @@ class FileConfig:
 
     TEMP_DIR = "/home/zhaohonglong/workspace/Crop_Data/storage/temp"  # 临时存储目录
     TEMP_BASE_URL = "storage/temp"  # 临时文件访问基础路径
-
 
     # 上传文件配置
     UPLOAD_CONFIG = {
@@ -104,7 +132,15 @@ class FileConfig:
 # 开发环境配置
 class DevelopmentConfig(Config):
     """开发环境配置"""
-    SQLALCHEMY_DATABASE_URI = Config.get_sqlalchemy_uri()
+    # SQLALCHEMY_DATABASE_URI = Config.get_sqlalchemy_uri()
+    if sys.platform == 'linux':
+        # Linux系统使用服务器地址
+        SQLALCHEMY_DATABASE_URI = Config.get_sqlalchemy_uri()
+        logger.info("已连接远程数据库")
+    else:
+        # Windows/Mac系统自动检测本地Docker
+        SQLALCHEMY_DATABASE_URI = Config.get_sqlalchemy_test_uri()
+        logger.info("已连接本地测试数据库")
 
     @staticmethod
     def init_app(app):
