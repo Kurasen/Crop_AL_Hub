@@ -1,3 +1,5 @@
+import cProfile
+import time
 import uuid
 from datetime import datetime
 from flask import Blueprint, g
@@ -13,7 +15,7 @@ from app.schemas.model_schema import ModelRunSchema, ModelSearchSchema, ModelCre
     ModelUpdateSchema, ModelResponseSchema
 
 from flask import request
-from app.config import Config
+from app.config import Config, FileConfig
 from app.docker.core.docker_clinet import docker_client
 from app.docker.core.task import logger, run_algorithm
 from app.model.model_service import ModelService
@@ -65,18 +67,6 @@ def get_all_types():
     })
 
 
-# @models_bp.route('', methods=['POST'])
-# @admin_required
-# def create_model():
-#     """
-#     创建新模型
-#     """
-#     request_data = request.get_json()
-#     request_data['user_id'] = g.current_user.id
-#     model_instance = ModelCreateSchema().load(request_data, session=db.session)
-#     result, status = ModelService.create_model(model_instance)
-#     return create_json_response(result, status)
-
 @models_bp.route('', methods=['POST'])
 @admin_required
 def create_model():
@@ -104,22 +94,26 @@ def get_model(model_id):
         "data": model.to_dict()
     })
 
-
 @models_bp.route('/<int:model_id>', methods=['PUT'])
 @resource_owner(model=Model, id_param='model_id')
 def update_model(instance):
-    """
-    更新现有模型
-    """
-    updates = request.get_json()
-    model_instance = ModelUpdateSchema().load(
-        updates,
+    request_data = request.get_json()
+    request_data['user_id'] = g.current_user.id
+    # 严格过滤输入字段
+    model = ModelUpdateSchema().load(
+        request_data,
         instance=instance,  # 传入现有实例
         partial=True,  # 允许部分更新
         session=db.session,
     )
-    updated_model, status = ModelService.update_model(model_instance)
-    return create_json_response(updated_model, status)
+    try:
+        db.session.add(model)
+        db.session.commit()
+        serialized_data = ModelResponseSchema().dump(model)
+        return create_json_response({"data": serialized_data}, 201)
+    except IntegrityError:
+        db.session.rollback()
+        raise ApiError("数据更新失败")
 
 
 @models_bp.route('/<int:model_id>', methods=['DELETE'])
@@ -130,11 +124,6 @@ def delete_model(instance):
     """
     response, status = ModelService.delete_model(instance)
     return create_json_response(response, status)
-
-
-@models_bp.before_request
-def log_request():
-    print(f"Request started at: {datetime.now()}")
 
 
 # Flask路由：上传文件并触发任务
@@ -153,6 +142,7 @@ def process_image(model_id):
     task_id = str(uuid.uuid4())
 
     file = request.files.get('file')
+
     if not file or file.filename == '':
         raise FileUploadError("未上传任何文件")
 
@@ -177,8 +167,9 @@ def process_image(model_id):
         logger.error("文件保存失败: %s", str(e))
         return create_json_response({'error': {"message": str(e)}}, 500)
 
-    output_folder = Config.OUTPUT_FOLDER
+    output_folder = FileConfig.OUTPUT_FOLDER
     output_dir = output_folder / image_name / f"task_{task_id}"
+    logger.info("输入目录：: %s, 输出目录：%s", str(target_dir), str(output_dir))
     task = run_algorithm.apply_async(
         args=(str(target_dir), task_id, image_name, instruction),
         task_id=task_id

@@ -45,9 +45,10 @@ class CeleryManager:
             # 添加定时任务配置
             cls._celery.conf.beat_schedule = {
                 'cleanup_temp_files_daily': {
-                    'task': 'app.utils.temp_file_service.cleanup_temp_files',
-                    'schedule': crontab(hour='0', minute='0'),  # 每天00:00执行
-                    #'schedule': crontab(minute='*/2'),  # 每分钟触发
+                    'task': 'app.utils.file.temp_file_service.cleanup_temp_files',
+                    #'schedule': crontab(hour='0, 12', minute='0'),  # 每天00:00和12:00执行
+                    'schedule': crontab(minute='*/1'),  # 每2分钟触发
+                    'options': {'expires': 600},  # 任务结果保留10分钟
                     'args': ()
                 },
             }

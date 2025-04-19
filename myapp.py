@@ -1,4 +1,5 @@
 import os
+import time
 
 from flask import Flask, request
 from flask_limiter import Limiter
@@ -75,14 +76,14 @@ def configure_app(app: FlaskApp, env=None):
 
     app.config['MAX_MEMORY_FILE_SIZE'] = 20 * \
         1024 * 1024  # 单个文件在内存中的最大大小设置为20MB
-    app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 允许200MB请求
+    app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024  # 允许25MB请求
     app.config['MAX_MEMORY_BUFFER_SIZE'] = 1024 * 1024  # 1MB内存缓冲区
     app.config['WERKZEUG_MAX_FORM_PARSER_MEMORY'] = 0   # 禁用内存解析限制
+    app.config['WERKZEUG_MAX_BUFFER_SIZE'] = 0  # 禁用缓冲
 
     # 配置跨域、转码等
     app.config["JSON_AS_ASCII"] = False
     app.json_encoder = CustomJSONEncoder
-    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
 
 def init_extensions(app):
@@ -199,12 +200,7 @@ if __name__ == '__main__':
                     print(f"端点: {rule.endpoint} → 路径: {rule.rule}")
 
                 print("\nSwagger UI available at: http://127.0.0.1:8080/swagger-ui/\n")
-
-                # # 示例：创建订单并更新缓存
-                # model_id = 1
-                # new_order = Order(model_id=1, order_type=OrderType.MODEL, status=OrderStatus.COMPLETED)
-                # db.session.add(new_order)
-                # db.session.commit()
-                # OrderService.invalidate_sales_cache(model_id=1)
+                print()
 
         flask_app.run(host='127.0.0.1', port=5000, debug=True)
+

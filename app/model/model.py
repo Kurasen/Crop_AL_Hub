@@ -42,11 +42,7 @@ class Model(db.Model):
     instruction = db.Column(db.Text, default="")
     output = db.Column(db.String(100), default="")  # 输出字段
     accuracy = db.Column(db.Numeric(4, 2), default=0)  # 精度字段，DECIMAL(4, 2) 对应 Numeric(4, 2)
-    icon = db.Column(
-        db.String(255),
-        nullable=True,
-        default="http://10.0.4.71:8080/static/icon/model_default_icon.png"
-    )
+    icon = db.Column(db.String(255), nullable=True, default="")
     type = db.Column(db.String(100), default="")  # 模型类型
     likes = db.Column(db.Integer, default=0)  # 点赞数字段
     # price = db.Column(db.Numeric(10, 2))

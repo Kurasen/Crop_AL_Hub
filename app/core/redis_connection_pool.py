@@ -3,6 +3,9 @@ import sys
 from contextlib import contextmanager
 import redis
 from typing import Dict
+
+from redis.exceptions import LockError, LockNotOwnedError
+
 from app.core.exception import RedisConnectionError, logger
 
 
@@ -121,8 +124,12 @@ class RedisConnectionPool:
 
             logger.debug(f"成功获取 {pool_name} 连接")
             yield conn  # 在此处交出连接供使用
+        except (LockError, LockNotOwnedError) as e:
+            raise  # 直接抛出原生锁异常
         except redis.RedisError as e:
             logger.error(f"Redis 操作失败: {str(e)}")
+            raise RedisConnectionError(f"Redis 错误: {str(e)}")
+        except Exception as e:
             raise RedisConnectionError(f"Redis 错误: {str(e)}")
         finally:
             if conn:

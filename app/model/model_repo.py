@@ -78,11 +78,6 @@ class ModelRepository:
             logger.error("模型查询失败｜%s", str(e), exc_info=True)
             raise
 
-    @staticmethod
-    def save_model(model_instance):
-        """通用保存方法，用于创建和更新"""
-        db.session.add(model_instance)
-        return model_instance
 
     @staticmethod
     def delete_model(model):

@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 from app.core.exception import logger
@@ -41,19 +42,21 @@ class Config:
     task_ignore_result = False  # True=禁用所有结果存储（按需开启）
 
     # 并发
-    worker_concurrency = max(2, os.cpu_count() - 1)  # 留1核给系统
+    #physical_cores = psutil.cpu_count(logical=False)  # 获取物理核心数（48）
+    #worker_concurrency = max(2, physical_cores)  # 建议设置为物理核心数（48）
+    worker_concurrency = 48
     worker_prefetch_multiplier = 4  # 每个worker预取任务数
-    worker_max_tasks_per_child = 100 # 每个子进程执行100个任务后自动重启
+    worker_max_tasks_per_child = 100  # 每个子进程执行100个任务后自动重启
 
     # 可靠性增强
     task_acks_late = True  # 任务完成后才确认
     task_reject_on_worker_lost = True  # Worker异常时重新入队
 
     # 序列化
-    task_serializer = 'json'   # 任务参数使用JSON序列化
-    result_serializer = 'json' # 结果使用JSON序列化
-    accept_content = ['json'] # 仅接受JSON格式任务
-    task_track_started = True # 记录任务开始事件（需配合监控）
+    task_serializer = 'json'  # 任务参数使用JSON序列化
+    result_serializer = 'json'  # 结果使用JSON序列化
+    accept_content = ['json']  # 仅接受JSON格式任务
+    task_track_started = True  # 记录任务开始事件（需配合监控）
 
     # 时间相关
     timezone = 'Asia/Shanghai'
@@ -62,8 +65,6 @@ class Config:
     # 算法文件存储路径配置
     UPLOAD_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_Data/input').resolve()  # 使用 Path 对象
     OUTPUT_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_Data/output').resolve()  # 使用 Path 对象
-
-    USER_FOLDER = Path(r'/home/zhaohonglong/workspace/Crop_Data/user').resolve()
 
     # Redis配置
     REDIS_HOST = "localhost"
@@ -101,12 +102,18 @@ class FileConfig:
     FILE_BASE_URL = "http://10.0.4.71:8080/file"
     LOCAL_FILE_BASE = "/home/zhaohonglong/workspace/Crop_Data"
 
+    """默认图片配置"""
     MODEL_ICON_DEFAULT_URL = "http://10.0.4.71:8080/static/icon/model_default_icon.png"
+    APP_ICON_DEFAULT_URL = "http://10.0.4.71:8080/static/icon/app_default_icon.jpg"
+    """"""
 
     TEMP_DIR = "/home/zhaohonglong/workspace/Crop_Data/storage/temp"  # 临时存储目录
     TEMP_BASE_URL = "storage/temp"  # 临时文件访问基础路径
 
-    FORMAL_RIR = "/home/zhaohonglong/workspace/Crop_Data/user_data" # 正式存储目录
+    FORMAL_RIR = "/home/zhaohonglong/workspace/Crop_Data/user_data"  # 正式存储目录
+
+    UPLOAD_FOLDER = Path(TEMP_DIR).resolve() / "input"
+    OUTPUT_FOLDER = Path(TEMP_DIR).resolve() / "output"
 
     # 文件类型约束
     SINGLE_FILE_TYPES = ["icon", "avatars"]  # 单文件类型
@@ -115,7 +122,7 @@ class FileConfig:
     # 上传文件配置
     UPLOAD_CONFIG = {
         "user": {
-            "subdirectory": "{user_id}/user/{data_id}/{file_type}",
+            "subdirectory": "{user_id}/user/{data_id}/{file_type}/{version}",
             "allowed_extensions": ["jpg", "png", "jpeg"],
             "file_types": ["avatars"],
             "max_size": 10 * 1024 * 1024  # 10MB
@@ -127,14 +134,15 @@ class FileConfig:
             "max_size": 100 * 1024 * 1024,  # 100MB
         },
         "dataset": {
-            "subdirectory": "{user_id}/dataset/{data_id}/{file_type}",
+            "subdirectory": "{user_id}/dataset/{data_id}/{file_type}/{version}",
             "allowed_extensions": ["jpg", "png", "jpeg"],
             "file_types": ["readme"],
             "max_size": 100 * 1024 * 1024  # 500MB
         }
     }
 
-
+    TEMP_FILE_MAX_AGE = 10  # 7天（单位：秒）
+    ORPHAN_SCAN_INTERVAL = 43200  # 12小时扫描一次
 
 
 # 开发环境配置

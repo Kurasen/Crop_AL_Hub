@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from app.config import Config
+from app.config import Config, FileConfig
 from app.core.exception import logger, ImageProcessingError
 
 from app.docker.core.celery_app import CeleryManager
@@ -11,17 +11,17 @@ from app.utils.storage import FileStorage
 from app.utils.file_process import classify_files
 
 # 文件存储路径配置
-UPLOAD_FOLDER = Config.UPLOAD_FOLDER
-OUTPUT_FOLDER = Config.OUTPUT_FOLDER
-
-# 确保目录存在
-UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
-OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+UPLOAD_FOLDER = FileConfig.UPLOAD_FOLDER
+OUTPUT_FOLDER = FileConfig.OUTPUT_FOLDER
 
 
 @CeleryManager.get_celery().task(bind=True,  expires=86400)
 def run_algorithm(self, input_path, task_id, image_name, instruction=None):
     try:
+        # 确保目录存在
+        UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+        OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+
         logger.info(f"\n=== 任务启动 [{task_id}] ===")
 
         # 宿主机输入目录
@@ -64,7 +64,6 @@ def run_algorithm(self, input_path, task_id, image_name, instruction=None):
         logger.info("输出目录内容: %s", [f.name for f in output_files])
         if not output_files:
             raise RuntimeError("算法未生成任何输出文件")
-
         processed_files = classify_files(output_files, image_name, task_id)
         return {
             'status': 'SUCCESS',

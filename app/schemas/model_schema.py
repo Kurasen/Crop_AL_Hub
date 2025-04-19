@@ -5,6 +5,8 @@ from collections import OrderedDict
 from flask import g
 from marshmallow import fields, validate, validates_schema, validates, pre_load
 from marshmallow_sqlalchemy import auto_field
+
+from app.config import FileConfig
 from app.model.model import Model
 from app.schemas.base_schema import BaseSchema, SortBaseSchema
 from marshmallow import ValidationError as MarshmallowValidationError
@@ -118,8 +120,14 @@ class ModelInputBaseSchema(BaseSchema):
     @pre_load
     def process_icon(self, data, **kwargs):
         if 'icon' in data:
-            print(ImageURLHandlerUtils.validate_photo_file(data['icon']))
-            data['icon'] = ImageURLHandlerUtils.validate_photo_file(data['icon'])
+            excluded_urls = [
+                FileConfig.MODEL_ICON_DEFAULT_URL,
+                FileConfig.APP_ICON_DEFAULT_URL
+            ]
+            if data['icon'] not in excluded_urls:
+                data['icon'] = ImageURLHandlerUtils.validate_photo_file(data['icon'])
+            else:
+                data['icon'] = None
         return data
 
 

@@ -8,7 +8,7 @@ from app.exts import db
 from app.schemas.app_schema import AppCreateSchema, AppUpdateSchema, AppSearchSchema
 from app.token.JWT import resource_owner, admin_required
 from app.utils import create_json_response
-from app.utils.file_process import allowed_file, save_uploaded_file, FileUploader
+
 
 apps_bp = Blueprint('apps', __name__, url_prefix='/api/v1/apps')
 

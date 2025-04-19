@@ -22,6 +22,7 @@ class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user_table.id'), nullable=False, default=1)
     app_id = db.Column(db.Integer, db.ForeignKey('app_table.id'), nullable=False, default=1)
+    name = db.Column(db.String, nullable=False)
     models_ids = db.Column(JSON, nullable=True)  # 存储数组格式的JSON数据
     status = db.Column(db.String(20), nullable=True)
     remarks = db.Column(db.Text, nullable=True)
@@ -45,8 +46,9 @@ class Task(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
-            "user_id": self.user_id,
-            "app_id": self.app_id,
+            "name": self.name,
+            "user_id": self.user.username if self.user else "未知用户",
+            "app_id": self.app.name if self.user else "未知应用",
             "app_name": self.app_name,
             "models_ids": self.models_ids,
             "image_path": self.image_path,

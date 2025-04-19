@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from app.config import FileConfig
 from app.exts import db
 from app.utils.image_url_utils import ImageURLHandlerUtils
 
@@ -56,9 +57,16 @@ class App(db.Model):
             "likes": self.likes,
             "watches": self.watches
         }
-
         # 统一处理空值和空字符串
         icon_value = self.icon.strip() if self.icon else None  # 移除空格并转为 None
-        base_data['icon'] = ImageURLHandlerUtils.build_full_url(icon_value)
+
+        # 新增逻辑：当 icon 为空时，直接指向静态资源默认图标
+        if not icon_value:
+            # 硬编码静态资源路径（绕过 FILE_BASE_URL）
+            base_data['icon'] = FileConfig.APP_ICON_DEFAULT_URL
+        else:
+            # 非空时走原有逻辑（如上传文件路径拼接）
+            base_data['icon'] = ImageURLHandlerUtils.build_full_url(icon_value)
+
 
         return base_data

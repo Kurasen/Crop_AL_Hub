@@ -1,4 +1,4 @@
-from app.config import Config
+from app.config import Config, FileConfig
 import os
 
 from app.core.exception import logger, ImageProcessingError, NotFoundError, ValidationError, FileSaveError, \
@@ -93,7 +93,7 @@ class FileStorage:
     @staticmethod
     def get_result_path(task_id):
         """获取输出文件路径"""
-        result_dir = Path(Config.OUTPUT_FOLDER) / f"task_{task_id}"
+        result_dir = Path(FileConfig.OUTPUT_FOLDER) / f"task_{task_id}"
         if not result_dir.exists():
             raise NotFoundError("结果丢失")
         return str(result_dir)
@@ -102,7 +102,7 @@ class FileStorage:
     def generate_upload_path(image_name, task_id):
         """生成符合Docker规范的宿主机路径"""
         input_subdir = f"task_{task_id}"
-        host_upload_dir = Path(Config.UPLOAD_FOLDER) / image_name / input_subdir
+        host_upload_dir = Path(FileConfig.UPLOAD_FOLDER) / image_name / input_subdir
         host_upload_dir.mkdir(parents=True, exist_ok=True)
         return host_upload_dir
 
